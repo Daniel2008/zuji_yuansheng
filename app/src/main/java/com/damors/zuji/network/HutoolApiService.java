@@ -1,0 +1,682 @@
+package com.damors.zuji.network;
+
+import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
+
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
+import cn.hutool.http.HttpUtil;
+import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
+
+import com.damors.zuji.ZujiApp;
+import com.damors.zuji.manager.UserManager;
+import com.damors.zuji.model.User;
+import com.damors.zuji.model.FootprintMessage;
+import com.damors.zuji.model.response.BaseResponse;
+import com.damors.zuji.model.response.LoginResponse;
+import com.damors.zuji.model.response.FootprintMessageResponse;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+/**
+ * 使用Hutool重构的API服务类
+ * 提供网络请求功能，支持自动重试、网络状态监控等特性
+ * 
+ * @author 开发者
+ * @version 1.0
+ * @since 2024
+ */
+public class HutoolApiService {
+    private static final String TAG = "HutoolApiService";
+    
+    // 使用ApiConfig中的配置
+    private static final String BASE_URL = ApiConfig.getBaseUrl();
+    private static final int TIMEOUT_MS = ApiConfig.TIMEOUT_MS;
+    private static final int MAX_RETRIES = ApiConfig.MAX_RETRIES;
+    
+    private static HutoolApiService instance;
+    private Context context;
+    private NetworkStateMonitor networkStateMonitor;
+    private ExecutorService executorService;
+    private Handler mainHandler;
+    
+    // 保存失败的请求信息，以便在网络恢复时重试
+    private List<RequestInfo<?>> pendingRequests = new ArrayList<>();
+    private boolean isRetryingRequests = false;
+
+    /**
+     * 网络状态变化监听器
+     */
+    private NetworkStateMonitor.NetworkStateListener networkStateListener = new NetworkStateMonitor.NetworkStateListener() {
+        @Override
+        public void onNetworkStateChanged(boolean isAvailable) {
+            Log.d(TAG, "网络状态变化: " + (isAvailable ? "可用" : "不可用"));
+            
+            // 如果网络恢复，尝试重试失败的请求
+            if (isAvailable && !pendingRequests.isEmpty() && !isRetryingRequests) {
+                retryPendingRequests();
+            }
+            
+            // 如果网络断开，显示提示
+            if (!isAvailable) {
+                showNetworkUnavailableMessage();
+            }
+        }
+    };
+
+    /**
+     * 私有构造函数，实现单例模式
+     * 
+     * @param context 应用上下文
+     */
+    private HutoolApiService(Context context) {
+        this.context = context.getApplicationContext();
+        this.executorService = Executors.newFixedThreadPool(4); // 创建线程池
+        this.mainHandler = new Handler(Looper.getMainLooper()); // 主线程Handler
+        
+        // 获取ZujiApp中的NetworkStateMonitor实例
+        this.networkStateMonitor = ((ZujiApp) this.context).getNetworkStateMonitor();
+        if (this.networkStateMonitor != null) {
+            this.networkStateMonitor.addNetworkStateListener(networkStateListener);
+        } else {
+            Log.e(TAG, "NetworkStateMonitor未初始化");
+        }
+    }
+
+    /**
+     * 获取ApiService单例实例
+     * 
+     * @param context 应用上下文
+     * @return ApiService实例
+     */
+    public static synchronized HutoolApiService getInstance(Context context) {
+        if (instance == null) {
+            instance = new HutoolApiService(context);
+        }
+        return instance;
+    }
+
+    /**
+     * 检查网络是否可用
+     * 
+     * @return 网络是否可用
+     */
+    private boolean isNetworkAvailable() {
+        return networkStateMonitor != null && networkStateMonitor.isNetworkAvailable();
+    }
+
+    /**
+     * 获取通用请求头
+     * 
+     * @return 请求头Map
+     */
+    private Map<String, String> getCommonHeaders() {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "application/x-www-form-urlencoded; charset=utf-8");
+        headers.put("Accept", "application/json");
+        headers.put("User-Agent", "ZujiApp/1.0 Android");
+        
+        // 添加认证token
+        try {
+            if (ZujiApp.getInstance() != null) {
+                try {
+                    UserManager userManager = UserManager.getInstance();
+                    if (userManager != null && userManager.isLoggedIn()) {
+                        headers.put("Authorization", "Bearer " + userManager.getToken());
+                    }
+                } catch (IllegalStateException e) {
+                    Log.w(TAG, "UserManager未初始化，跳过添加认证token", e);
+                }
+            } else {
+                Log.w(TAG, "ZujiApp未初始化，跳过添加认证token");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "获取认证token时发生错误", e);
+        }
+        
+        return headers;
+    }
+
+    /**
+     * 执行POST请求
+     * 
+     * @param url 请求URL
+     * @param params 请求参数
+     * @param responseClass 响应数据类型
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     * @param <T> 响应数据泛型
+     */
+    private <T> void executePostRequest(String url, Map<String, Object> params,
+                                       Class<T> responseClass,
+                                       SuccessCallback<T> successCallback,
+                                       ErrorCallback errorCallback) {
+        
+        // 检查网络状态
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "网络不可用，将请求添加到待处理队列: " + url);
+            addPendingRequest(url, params, responseClass, successCallback, errorCallback);
+            showNetworkUnavailableMessage();
+            return;
+        }
+
+        // 在后台线程执行网络请求
+        executorService.execute(() -> {
+            try {
+                Log.d(TAG, "发起POST请求: " + url);
+                Log.d(TAG, "请求参数: " + JSONUtil.toJsonStr(params));
+
+                // 使用 HttpRequest 构建请求，添加请求头和表单参数
+                String response = HttpRequest.post(url)
+                        .headerMap(getCommonHeaders(), true)
+                        .form(params)
+                        .timeout(TIMEOUT_MS)
+                        .execute()
+                        .body();
+                
+                Log.d(TAG, "收到响应: " + response);
+                
+                // 处理响应
+                handleResponse(response, responseClass, successCallback, errorCallback, 
+                             url, params);
+                
+            } catch (Exception e) {
+                Log.e(TAG, "网络请求异常: " + url, e);
+                
+                // 在主线程回调错误
+                mainHandler.post(() -> {
+                    if (errorCallback != null) {
+                        errorCallback.onError("网络请求失败: " + e.getMessage());
+                    }
+                });
+                
+                // 如果是网络相关异常，添加到待处理队列
+                if (isNetworkException(e)) {
+                    addPendingRequest(url, params, responseClass, successCallback, errorCallback);
+                }
+            }
+        });
+    }
+
+    /**
+     * 手动解析JSON数据，避免使用JSONUtil.toBean导致的java.beans相关错误
+     */
+    @SuppressWarnings("unchecked")
+    private <T> T parseDataManually(Object dataObj, Class<T> responseClass) {
+        if (dataObj == null) {
+            return null;
+        }
+        
+        try {
+            if (responseClass == String.class) {
+                return (T) dataObj.toString();
+            }
+            
+            if (dataObj instanceof JSONObject) {
+                JSONObject jsonObj = (JSONObject) dataObj;
+                
+                // 处理 LoginResponse.Data
+                if (responseClass.getName().contains("LoginResponse$Data")) {
+                    return (T) parseLoginData(jsonObj);
+                }
+                
+                // 处理 FootprintMessageResponse.Data
+                if (responseClass.getName().contains("FootprintMessageResponse$Data")) {
+                    return (T) parseFootprintMessageData(jsonObj);
+                }
+            }
+            
+            // 对于其他类型，尝试简单转换
+            return (T) dataObj;
+            
+        } catch (Exception e) {
+            Log.e(TAG, "手动解析JSON数据失败: " + e.getMessage(), e);
+            return null;
+        }
+    }
+    
+    /**
+     * 解析登录响应数据
+     */
+    private LoginResponse.Data parseLoginData(JSONObject jsonObj) {
+        LoginResponse.Data data = new LoginResponse.Data();
+        
+        // 解析token
+        if (jsonObj.containsKey("token")) {
+            data.setToken(jsonObj.getStr("token"));
+        }
+        
+        // 解析user对象
+        if (jsonObj.containsKey("user")) {
+            Object userObj = jsonObj.get("user");
+            if (userObj instanceof JSONObject) {
+                User user = parseUser((JSONObject) userObj);
+                data.setUser(user);
+            }
+        }
+        
+        return data;
+    }
+    
+    /**
+     * 解析用户数据
+     */
+    private User parseUser(JSONObject jsonObj) {
+        User user = new User();
+        
+        if (jsonObj.containsKey("userId")) {
+            user.setUserId(jsonObj.getInt("userId"));
+        }
+        if (jsonObj.containsKey("userName")) {
+            user.setUserName(jsonObj.getStr("userName"));
+        }
+        if (jsonObj.containsKey("nickName")) {
+            user.setNickName(jsonObj.getStr("nickName"));
+        }
+        if (jsonObj.containsKey("email")) {
+            user.setEmail(jsonObj.getStr("email"));
+        }
+        if (jsonObj.containsKey("phonenumber")) {
+            user.setPhonenumber(jsonObj.getStr("phonenumber"));
+        }
+        if (jsonObj.containsKey("avatar")) {
+            user.setAvatar(jsonObj.getStr("avatar"));
+        }
+        // 可以根据需要添加更多字段
+        
+        return user;
+    }
+    
+    /**
+     * 解析足迹消息响应数据
+     */
+    private FootprintMessageResponse.Data parseFootprintMessageData(JSONObject jsonObj) {
+        FootprintMessageResponse.Data data = new FootprintMessageResponse.Data();
+        
+        if (jsonObj.containsKey("total")) {
+            data.setTotal(jsonObj.getInt("total"));
+        }
+        if (jsonObj.containsKey("current")) {
+            data.setCurrent(jsonObj.getInt("current"));
+        }
+        if (jsonObj.containsKey("size")) {
+            data.setSize(jsonObj.getInt("size"));
+        }
+        if (jsonObj.containsKey("pages")) {
+            data.setPages(jsonObj.getInt("pages"));
+        }
+        
+        // 解析records列表
+        if (jsonObj.containsKey("records")) {
+            Object recordsObj = jsonObj.get("records");
+            if (recordsObj instanceof JSONArray) {
+                JSONArray recordsArray = (JSONArray) recordsObj;
+                List<FootprintMessage> records = new ArrayList<>();
+                
+                for (Object item : recordsArray) {
+                    if (item instanceof JSONObject) {
+                        FootprintMessage message = parseFootprintMessage((JSONObject) item);
+                        records.add(message);
+                    }
+                }
+                
+                data.setRecords(records);
+            }
+        }
+        
+        return data;
+    }
+    
+    /**
+     * 解析足迹消息数据
+     */
+    private FootprintMessage parseFootprintMessage(JSONObject jsonObj) {
+        FootprintMessage message = new FootprintMessage();
+        
+        if (jsonObj.containsKey("id")) {
+            message.setId(jsonObj.getInt("id"));
+        }
+        if (jsonObj.containsKey("msgType")) {
+            message.setMsgType(jsonObj.getInt("msgType"));
+        }
+        if (jsonObj.containsKey("textContent")) {
+            message.setTextContent(jsonObj.getStr("textContent"));
+        }
+        if (jsonObj.containsKey("tag")) {
+            message.setTag(jsonObj.getStr("tag"));
+        }
+        if (jsonObj.containsKey("lng")) {
+            message.setLng(jsonObj.getDouble("lng"));
+        }
+        if (jsonObj.containsKey("lat")) {
+            message.setLat(jsonObj.getDouble("lat"));
+        }
+        if (jsonObj.containsKey("localtionTitle")) {
+            message.setLocaltionTitle(jsonObj.getStr("localtionTitle"));
+        }
+        if (jsonObj.containsKey("userId")) {
+            message.setUserId(jsonObj.getInt("userId"));
+        }
+        if (jsonObj.containsKey("userAvatar")) {
+            message.setUserAvatar(jsonObj.getStr("userAvatar"));
+        }
+        if (jsonObj.containsKey("createTime")) {
+            message.setCreateTime(jsonObj.getStr("createTime"));
+        }
+        // 可以根据需要添加更多字段
+        
+        return message;
+    }
+    
+    /**
+     * 处理HTTP响应
+     * 
+     * @param responseBody HTTP响应内容
+     * @param responseClass 响应数据类型
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     * @param url 请求URL（用于日志）
+     * @param params 请求参数（用于重试）
+     * @param <T> 响应数据泛型
+     */
+    private <T> void handleResponse(String responseBody, Class<T> responseClass,
+                                   SuccessCallback<T> successCallback, ErrorCallback errorCallback,
+                                   String url, Map<String, Object> params) {
+        try {
+            Log.d(TAG, "响应内容: " + responseBody);
+            
+            // 解析响应数据
+            if (StrUtil.isNotBlank(responseBody)) {
+                try {
+                    // 先解析为JSONObject
+                    JSONObject jsonResponse = JSONUtil.parseObj(responseBody);
+                    
+                    // 提取基本字段
+                    int code = jsonResponse.getInt("code", -1);
+                    String msg = jsonResponse.getStr("msg", "");
+                    
+                    if (code == 200) {
+                        // 成功响应，解析data字段
+                        Object dataObj = jsonResponse.get("data");
+                        T data = null;
+                        
+                        if (dataObj != null) {
+                            data = parseDataManually(dataObj, responseClass);
+                        }
+                        
+                        Log.d(TAG, "请求成功: " + url);
+                        final T finalData = data;
+                        mainHandler.post(() -> {
+                            if (successCallback != null) {
+                                successCallback.onSuccess(finalData);
+                            }
+                        });
+                    } else {
+                        // 业务失败
+                        String errorMsg = StrUtil.isNotBlank(msg) ? msg : "请求失败，请稍后重试";
+                        Log.e(TAG, "业务失败: " + errorMsg + ", 错误码: " + code);
+                        Log.e(TAG, "原始响应数据: " + responseBody);
+                        
+                        mainHandler.post(() -> {
+                            if (errorCallback != null) {
+                                errorCallback.onError(errorMsg);
+                            }
+                        });
+                    }
+                } catch (Exception parseException) {
+                    Log.e(TAG, "解析响应数据异常: " + parseException.getMessage());
+                    Log.e(TAG, "原始响应数据: " + responseBody);
+                    
+                    mainHandler.post(() -> {
+                        if (errorCallback != null) {
+                            errorCallback.onError("数据解析失败: " + parseException.getMessage());
+                        }
+                    });
+                }
+            } else {
+                Log.e(TAG, "响应内容为空");
+                mainHandler.post(() -> {
+                    if (errorCallback != null) {
+                        errorCallback.onError("服务器响应为空");
+                    }
+                });
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "解析响应数据异常", e);
+            mainHandler.post(() -> {
+                if (errorCallback != null) {
+                    errorCallback.onError("数据解析失败: " + e.getMessage());
+                }
+            });
+        }
+    }
+
+    /**
+     * 判断是否为网络相关异常
+     * 
+     * @param e 异常
+     * @return 是否为网络异常
+     */
+    private boolean isNetworkException(Exception e) {
+        String message = e.getMessage();
+        return message != null && (
+                message.contains("timeout") ||
+                message.contains("connection") ||
+                message.contains("network") ||
+                message.contains("socket")
+        );
+    }
+
+    /**
+     * 添加待处理请求
+     * 
+     * @param url 请求URL
+     * @param params 请求参数
+     * @param responseClass 响应类型
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     * @param <T> 响应数据泛型
+     */
+    private <T> void addPendingRequest(String url, Map<String, Object> params,
+                                      Class<T> responseClass,
+                                      SuccessCallback<T> successCallback,
+                                      ErrorCallback errorCallback) {
+        RequestInfo<T> requestInfo = new RequestInfo<>(url, params, responseClass,
+                                                       successCallback, errorCallback);
+        pendingRequests.add(requestInfo);
+        Log.d(TAG, "添加待处理请求，当前待处理请求数: " + pendingRequests.size());
+    }
+
+    /**
+     * 重试所有待处理的请求
+     */
+    private void retryPendingRequests() {
+        if (pendingRequests.isEmpty() || isRetryingRequests) {
+            return;
+        }
+        
+        isRetryingRequests = true;
+        Log.d(TAG, "开始重试待处理请求，数量: " + pendingRequests.size());
+        
+        // 创建待处理请求的副本
+        List<RequestInfo<?>> requestsToRetry = new ArrayList<>(pendingRequests);
+        pendingRequests.clear();
+        
+        // 在主线程上执行重试
+        mainHandler.post(() -> {
+            for (RequestInfo requestInfo : requestsToRetry) {
+                requestInfo.retry();
+            }
+            isRetryingRequests = false;
+        });
+    }
+
+    /**
+     * 显示网络不可用消息
+     */
+    private void showNetworkUnavailableMessage() {
+        mainHandler.post(() -> {
+            // 这里可以显示Toast或其他UI提示
+            Log.w(TAG, "网络不可用，请检查网络连接");
+        });
+    }
+
+    /**
+     * 发送验证码接口
+     * 
+     * @param phone 手机号
+     * @param successCallback 成功回调（返回原始响应字符串）
+     * @param errorCallback 错误回调
+     */
+    public void sendVerificationCode(String phone,
+                                   SuccessCallback<String> successCallback,
+                                   ErrorCallback errorCallback) {
+        String url = BASE_URL + ApiConfig.Endpoints.SEND_VERIFICATION_CODE;
+        
+        // 准备请求参数
+        Map<String, Object> params = new HashMap<>();
+        params.put("phone", phone);
+        
+        // 检查网络状态
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "网络不可用，将验证码请求添加到待处理队列");
+            
+            // 保存请求信息到待处理队列
+            addPendingRequest(url, params, String.class, successCallback, errorCallback);
+            
+            // 显示网络不可用提示
+            showNetworkUnavailableMessage();
+            return;
+        }
+        
+        Log.d(TAG, "发送验证码请求: phone=" + phone);
+        
+        // 执行POST请求
+        executePostRequest(url, params, String.class, successCallback, errorCallback);
+    }
+    
+    /**
+     * 短信登录接口
+     * 
+     * @param phone 手机号
+     * @param code 验证码
+     * @param deviceId 设备ID
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     */
+    public void smsLogin(String phone, String code, String deviceId,
+                        SuccessCallback<LoginResponse.Data> successCallback,
+                        ErrorCallback errorCallback) {
+        String url = BASE_URL + ApiConfig.Endpoints.SMS_LOGIN;
+        
+        // 准备请求参数
+        Map<String, Object> params = new HashMap<>();
+        params.put("phone", phone);
+        params.put("code", code);
+        params.put("deviceId", deviceId);
+        
+        Log.d(TAG, "发起登录请求: phone=" + phone + ", code=" + code + ", deviceId=" + deviceId);
+        
+        executePostRequest(url, params, LoginResponse.Data.class, successCallback, errorCallback);
+    }
+
+    /**
+     * 获取足迹动态列表
+     * 
+     * @param page 页码
+     * @param size 每页大小
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     */
+    public void getFootprintMessages(int page, int size,
+                                   SuccessCallback<FootprintMessageResponse.Data> successCallback,
+                                   ErrorCallback errorCallback) {
+        String url = BASE_URL + ApiConfig.Endpoints.FOOTPRINT_MESSAGES;
+        
+        Map<String, Object> params = new HashMap<>();
+        params.put("pageNum", page);
+        params.put("pageSize", size);
+        
+        Log.d(TAG, "获取足迹动态列表: page=" + page + ", size=" + size);
+        
+        executePostRequest(url, params, FootprintMessageResponse.Data.class, 
+                         successCallback, errorCallback);
+    }
+
+    /**
+     * 销毁服务，释放资源
+     */
+    public void destroy() {
+        if (networkStateMonitor != null) {
+            networkStateMonitor.removeNetworkStateListener(networkStateListener);
+        }
+        
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdown();
+        }
+        
+        pendingRequests.clear();
+        instance = null;
+    }
+
+    /**
+     * 成功回调接口
+     * 
+     * @param <T> 响应数据类型
+     */
+    public interface SuccessCallback<T> {
+        /**
+         * 成功回调
+         * 
+         * @param data 响应数据
+         */
+        void onSuccess(T data);
+    }
+
+    /**
+     * 错误回调接口
+     */
+    public interface ErrorCallback {
+        /**
+         * 错误回调
+         * 
+         * @param errorMessage 错误消息
+         */
+        void onError(String errorMessage);
+    }
+
+    /**
+     * 请求信息类，用于保存请求的详细信息
+     */
+    private class RequestInfo<T> {
+        private final String url;
+        private final Map<String, Object> params;
+        private final Class<T> responseClass;
+        private final SuccessCallback<T> successCallback;
+        private final ErrorCallback errorCallback;
+        
+        public RequestInfo(String url, Map<String, Object> params, Class<T> responseClass,
+                          SuccessCallback<T> successCallback, ErrorCallback errorCallback) {
+            this.url = url;
+            this.params = params != null ? new HashMap<>(params) : null;
+            this.responseClass = responseClass;
+            this.successCallback = successCallback;
+            this.errorCallback = errorCallback;
+        }
+        
+        public void retry() {
+            Log.d(TAG, "重试请求: " + url);
+            executePostRequest(url, params, responseClass, successCallback, errorCallback);
+        }
+    }
+}

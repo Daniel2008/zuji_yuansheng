@@ -1,0 +1,93 @@
+package com.damors.zuji;
+
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+
+/**
+ * 图片全屏预览Activity
+ * 用于显示足迹中的图片大图
+ */
+public class ImagePreviewActivity extends AppCompatActivity {
+
+    private static final String EXTRA_IMAGE_URI = "image_uri";
+    private static final String EXTRA_POSITION = "position";
+    
+    private ImageView fullImageView;
+    private ImageButton closeButton;
+    
+    /**
+     * 创建启动此Activity的Intent
+     * @param context 上下文
+     * @param imageUri 图片URI
+     * @param position 图片在列表中的位置
+     * @return Intent对象
+     */
+    public static Intent newIntent(Context context, String imageUri, int position) {
+        Intent intent = new Intent(context, ImagePreviewActivity.class);
+        intent.putExtra(EXTRA_IMAGE_URI, imageUri);
+        intent.putExtra(EXTRA_POSITION, position);
+        return intent;
+    }
+    
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_image_preview);
+        
+        // 初始化视图
+        fullImageView = findViewById(R.id.image_view_full);
+        closeButton = findViewById(R.id.button_close);
+        
+        // 获取传入的图片URI
+        String imageUri = getIntent().getStringExtra(EXTRA_IMAGE_URI);
+        int position = getIntent().getIntExtra(EXTRA_POSITION, 0);
+        
+        // 显示图片
+        if (imageUri != null && !imageUri.isEmpty()) {
+            fullImageView.setImageURI(Uri.parse(imageUri));
+        }
+        
+        // 设置关闭按钮点击事件
+        closeButton.setOnClickListener(v -> finish());
+        
+        // 设置图片点击事件（点击图片也可以关闭预览）
+        fullImageView.setOnClickListener(v -> {
+            // 切换顶部关闭按钮的可见性
+            if (closeButton.getVisibility() == View.VISIBLE) {
+                closeButton.setVisibility(View.GONE);
+            } else {
+                closeButton.setVisibility(View.VISIBLE);
+            }
+        });
+    }
+    
+    /**
+     * 单元测试方法
+     * 测试图片预览功能
+     * @return 是否测试通过
+     */
+    public boolean testImagePreview() {
+        try {
+            // 测试Intent创建
+            Intent intent = newIntent(this, "content://test/image.jpg", 0);
+            if (intent == null) return false;
+            
+            // 验证Intent中的数据
+            String uri = intent.getStringExtra(EXTRA_IMAGE_URI);
+            int position = intent.getIntExtra(EXTRA_POSITION, -1);
+            
+            return uri.equals("content://test/image.jpg") && position == 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+}

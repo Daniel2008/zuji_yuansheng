@@ -1,0 +1,34 @@
+<resources>
+    <string name="app_name">足迹</string>
+    <!-- 底部导航菜单项 -->
+    <string name="map">地图</string>
+    <string name="history">足迹</string>
+    <string name="statistics">统计</string>
+    <string name="profile">我的</string>
+    
+    <!-- 地图相关 -->
+    <string name="location_permission_required">需要位置权限才能记录足迹</string>
+    <string name="permission_denied">权限被拒绝，无法记录位置</string>
+    <string name="tracking_started">开始记录足迹</string>
+    <string name="tracking_stopped">停止记录足迹</string>
+    <string name="start_tracking">开始记录</string>
+    <string name="stop_tracking">停止记录</string>
+    
+    <!-- 历史记录相关 -->
+    <string name="no_history">暂无足迹记录</string>
+    <string name="no_footprints_recorded">暂无足迹记录</string>
+    <string name="delete_confirm">确定要删除这条足迹记录吗？</string>
+    <string name="yes">是</string>
+    <string name="no">否</string>
+    
+    <!-- 个人资料相关 -->
+    <string name="settings">设置</string>
+    <string name="about">关于</string>
+    <string name="logout">退出登录</string>
+    <string name="footprint_count">足迹数量</string>
+    <string name="city_count">城市数量</string>
+    <string name="app_info">应用信息示例内容</string>
+    <string name="app_description">这是足迹应用的描述信息</string>
+    <!-- 新增清除所有足迹记录提示 -->
+    <string name="clear_all_footprints">确定要清除所有足迹记录吗？</string>
+</resources>

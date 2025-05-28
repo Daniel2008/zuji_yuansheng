@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
+
+    <!-- 时间轴线条和点 -->
+    <View
+        android:id="@+id/view_timeline_top"
+        android:layout_width="2dp"
+        android:layout_height="0dp"
+        android:background="@color/colorPrimary"
+        app:layout_constraintBottom_toTopOf="@+id/view_timeline_dot"
+        app:layout_constraintEnd_toEndOf="@+id/view_timeline_dot"
+        app:layout_constraintStart_toStartOf="@+id/view_timeline_dot"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/view_timeline_dot"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginStart="24dp"
+        android:background="@drawable/timeline_dot"
+        app:layout_constraintBottom_toBottomOf="@+id/text_view_time"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/text_view_date" />
+
+    <View
+        android:id="@+id/view_timeline_bottom"
+        android:layout_width="2dp"
+        android:layout_height="0dp"
+        android:background="@color/colorPrimary"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@+id/view_timeline_dot"
+        app:layout_constraintStart_toStartOf="@+id/view_timeline_dot"
+        app:layout_constraintTop_toBottomOf="@+id/view_timeline_dot" />
+
+    <!-- 日期和时间 -->
+    <TextView
+        android:id="@+id/text_view_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        app:layout_constraintStart_toEndOf="@+id/view_timeline_dot"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="2023-05-20" />
+
+    <TextView
+        android:id="@+id/text_view_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textSize="14sp"
+        app:layout_constraintStart_toStartOf="@+id/text_view_date"
+        app:layout_constraintTop_toBottomOf="@+id/text_view_date"
+        tools:text="14:30" />
+
+    <!-- 足迹内容卡片 -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/card_view_content"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="2dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/view_timeline_dot"
+        app:layout_constraintTop_toBottomOf="@+id/text_view_time">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <!-- 位置信息 -->
+            <TextView
+                android:id="@+id/text_view_location"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                tools:text="北京 · 天安门" />
+
+            <!-- 分类标签 -->
+            <TextView
+                android:id="@+id/text_view_category"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/category_tag_background"
+                android:paddingStart="8dp"
+                android:paddingTop="2dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="2dp"
+                android:textColor="@android:color/white"
+                android:textSize="12sp"
+                tools:text="旅游" />
+
+            <!-- 描述信息 -->
+            <TextView
+                android:id="@+id/text_view_description"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="14sp"
+                tools:text="这是一段足迹描述信息，记录了在这个地方的美好回忆。" />
+
+            <!-- 图片预览 -->
+            <ImageView
+                android:id="@+id/image_view_preview"
+                android:layout_width="match_parent"
+                android:layout_height="150dp"
+                android:layout_marginTop="8dp"
+                android:contentDescription="图片预览"
+                android:scaleType="centerCrop"
+                android:visibility="gone" />
+
+            <!-- 视频指示器 -->
+            <View
+                android:id="@+id/view_video_indicator"
+                android:layout_width="match_parent"
+                android:layout_height="24dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/video_indicator_background"
+                android:visibility="gone" />
+
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
