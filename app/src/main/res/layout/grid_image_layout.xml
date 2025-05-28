@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="8dp">
+
+    <!-- 单张图片显示 -->
+    <ImageView
+        android:id="@+id/single_image"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:contentDescription="单张图片"
+        android:scaleType="centerCrop"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- 两张图片显示 -->
+    <LinearLayout
+        android:id="@+id/two_images_layout"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:id="@+id/image_1_of_2"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="2dp"
+            android:contentDescription="图片1"
+            android:scaleType="centerCrop" />
+
+        <ImageView
+            android:id="@+id/image_2_of_2"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginStart="2dp"
+            android:contentDescription="图片2"
+            android:scaleType="centerCrop" />
+
+    </LinearLayout>
+
+    <!-- 三张图片显示 -->
+    <LinearLayout
+        android:id="@+id/three_images_layout"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:id="@+id/image_1_of_3"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="2dp"
+            android:contentDescription="图片1"
+            android:scaleType="centerCrop" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/image_2_of_3"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginStart="2dp"
+                android:layout_marginBottom="2dp"
+                android:contentDescription="图片2"
+                android:scaleType="centerCrop" />
+
+            <ImageView
+                android:id="@+id/image_3_of_3"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginStart="2dp"
+                android:layout_marginTop="2dp"
+                android:contentDescription="图片3"
+                android:scaleType="centerCrop" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- 四张及以上图片显示（九宫格） -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/grid_recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- 图片数量标识（用于九宫格最后一张图片） -->
+    <FrameLayout
+        android:id="@+id/more_images_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="@id/grid_recycler_view"
+        app:layout_constraintBottom_toBottomOf="@id/grid_recycler_view"
+        app:layout_constraintStart_toStartOf="@id/grid_recycler_view"
+        app:layout_constraintEnd_toEndOf="@id/grid_recycler_view">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#80000000" />
+
+        <TextView
+            android:id="@+id/more_images_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            tools:text="+5" />
+
+    </FrameLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

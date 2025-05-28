@@ -88,6 +88,31 @@ public class FootprintMessage {
      */
     private List<GuluFile> guluFiles;
     
+    /**
+     * 点赞数量
+     */
+    private int likeCount;
+    
+    /**
+     * 收藏数量
+     */
+    private int favoriteCount;
+    
+    /**
+     * 评论数量
+     */
+    private int commentCount;
+    
+    /**
+     * 当前用户是否已点赞
+     */
+    private boolean isLiked;
+    
+    /**
+     * 当前用户是否已收藏
+     */
+    private boolean isFavorited;
+    
     // 构造函数
     public FootprintMessage() {
     }
@@ -221,6 +246,46 @@ public class FootprintMessage {
         this.guluFiles = guluFiles;
     }
     
+    public int getLikeCount() {
+        return likeCount;
+    }
+    
+    public void setLikeCount(int likeCount) {
+        this.likeCount = likeCount;
+    }
+    
+    public int getFavoriteCount() {
+        return favoriteCount;
+    }
+    
+    public void setFavoriteCount(int favoriteCount) {
+        this.favoriteCount = favoriteCount;
+    }
+    
+    public int getCommentCount() {
+        return commentCount;
+    }
+    
+    public void setCommentCount(int commentCount) {
+        this.commentCount = commentCount;
+    }
+    
+    public boolean isLiked() {
+        return isLiked;
+    }
+    
+    public void setLiked(boolean liked) {
+        isLiked = liked;
+    }
+    
+    public boolean isFavorited() {
+        return isFavorited;
+    }
+    
+    public void setFavorited(boolean favorited) {
+        isFavorited = favorited;
+    }
+    
     @Override
     public String toString() {
         return "FootprintMessage{" +
@@ -240,6 +305,11 @@ public class FootprintMessage {
                 ", userAvatar='" + userAvatar + '\'' +
                 ", delFlag='" + delFlag + '\'' +
                 ", guluFiles=" + guluFiles +
+                ", likeCount=" + likeCount +
+                ", favoriteCount=" + favoriteCount +
+                ", commentCount=" + commentCount +
+                ", isLiked=" + isLiked +
+                ", isFavorited=" + isFavorited +
                 '}';
     }
 }

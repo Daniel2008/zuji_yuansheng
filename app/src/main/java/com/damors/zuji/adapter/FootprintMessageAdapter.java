@@ -11,9 +11,15 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.target.Target;
 import com.damors.zuji.R;
+import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.model.FootprintMessage;
 import com.damors.zuji.model.GuluFile;
+import android.widget.LinearLayout;
+import android.widget.FrameLayout;
 
 import java.util.List;
 
@@ -30,6 +36,9 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         void onItemClick(FootprintMessage message, int position);
         void onUserAvatarClick(FootprintMessage message, int position);
         void onLocationClick(FootprintMessage message, int position);
+        void onLikeClick(FootprintMessage message, int position);
+        void onFavoriteClick(FootprintMessage message, int position);
+        void onCommentClick(FootprintMessage message, int position);
     }
     
     public FootprintMessageAdapter(Context context, List<FootprintMessage> messageList) {
@@ -67,6 +76,9 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         
         // 设置时间轴线条
         setTimelineLines(holder, position);
+        
+        // 设置操作栏数据和点击事件
+        setActionBar(holder, message, position);
         
         // 设置点击事件
         holder.itemView.setOnClickListener(v -> {
@@ -151,63 +163,272 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
     }
     
     /**
-     * 设置图片预览
+     * 设置图片预览（九宫格布局）
      * @param holder ViewHolder
      * @param message 足迹动态
      */
     private void setImagePreview(ViewHolder holder, FootprintMessage message) {
+        android.util.Log.d("FootprintMessageAdapter", "开始设置九宫格图片预览，GuluFiles: " + (message.getGuluFiles() != null ? message.getGuluFiles().size() : "null"));
+        
+        // 首先隐藏所有布局
+        hideAllImageLayouts(holder);
+        
         if (message.getGuluFiles() != null && !message.getGuluFiles().isEmpty()) {
-            // 查找第一个图片文件
-            GuluFile firstImageFile = null;
-            boolean hasVideo = false;
+            // 分类文件：只处理图片文件
+            java.util.List<GuluFile> imageFiles = new java.util.ArrayList<>();
             
             for (GuluFile file : message.getGuluFiles()) {
-                if (file.getFileType() != null) {
-                    if (isImageFile(file.getFileType()) && firstImageFile == null) {
-                        firstImageFile = file;
-                    } else if (isVideoFile(file.getFileType())) {
-                        hasVideo = true;
-                    }
+                if (isImageFile(file.getFileType())) {
+                    imageFiles.add(file);
                 }
             }
             
-            // 显示第一张图片
-            if (firstImageFile != null) {
-                holder.previewImageView.setVisibility(View.VISIBLE);
+            android.util.Log.d("FootprintMessageAdapter", "图片文件数量: " + imageFiles.size());
+            
+            if (!imageFiles.isEmpty()) {
+                holder.gridImageLayout.setVisibility(View.VISIBLE);
                 
-                String imageUrl = getFullImageUrl(firstImageFile.getFilePath());
-                // 添加日志输出，便于调试
-                android.util.Log.d("FootprintMessageAdapter", "加载图片URL: " + imageUrl);
-                
-                Glide.with(context)
-                    .load(imageUrl)
-                    .placeholder(R.drawable.ic_placeholder_image)
-                    .error(R.drawable.ic_error_image)
-                    .centerCrop()
-                    .listener(new com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable>() {
-                        @Override
-                        public boolean onLoadFailed(@androidx.annotation.Nullable com.bumptech.glide.load.engine.GlideException e, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, boolean isFirstResource) {
-                            android.util.Log.e("FootprintMessageAdapter", "图片加载失败: " + imageUrl, e);
-                            return false;
-                        }
-                        
-                        @Override
-                        public boolean onResourceReady(android.graphics.drawable.Drawable resource, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, com.bumptech.glide.load.DataSource dataSource, boolean isFirstResource) {
-                            android.util.Log.d("FootprintMessageAdapter", "图片加载成功: " + imageUrl);
-                            return false;
-                        }
-                    })
-                    .into(holder.previewImageView);
-                    
-                // 如果有多张图片，显示数量标识
-                if (message.getGuluFiles().size() > 1) {
-                    // 可以在这里添加多图标识的逻辑
+                switch (imageFiles.size()) {
+                    case 1:
+                        showSingleImage(holder, imageFiles.get(0));
+                        break;
+                    case 2:
+                        showTwoImages(holder, imageFiles);
+                        break;
+                    case 3:
+                        showThreeImages(holder, imageFiles);
+                        break;
+                    default:
+                        showGridImages(holder, imageFiles);
+                        break;
                 }
             } else {
-                holder.previewImageView.setVisibility(View.GONE);
+                holder.gridImageLayout.setVisibility(View.GONE);
             }
         } else {
-            holder.previewImageView.setVisibility(View.GONE);
+            holder.gridImageLayout.setVisibility(View.GONE);
+        }
+    }
+    
+    /**
+     * 隐藏所有图片布局
+     * @param holder ViewHolder
+     */
+    private void hideAllImageLayouts(ViewHolder holder) {
+        holder.singleImage.setVisibility(View.GONE);
+        holder.twoImagesLayout.setVisibility(View.GONE);
+        holder.threeImagesLayout.setVisibility(View.GONE);
+        holder.gridRecyclerView.setVisibility(View.GONE);
+        holder.moreImagesOverlay.setVisibility(View.GONE);
+    }
+    
+    /**
+     * 显示单张图片
+     * @param holder ViewHolder
+     * @param imageFile 图片文件
+     */
+    private void showSingleImage(ViewHolder holder, GuluFile imageFile) {
+        holder.singleImage.setVisibility(View.VISIBLE);
+        loadImageIntoView(holder.singleImage, imageFile);
+        android.util.Log.d("FootprintMessageAdapter", "显示单张图片");
+    }
+    
+    /**
+     * 显示两张图片
+     * @param holder ViewHolder
+     * @param imageFiles 图片文件列表
+     */
+    private void showTwoImages(ViewHolder holder, java.util.List<GuluFile> imageFiles) {
+        holder.twoImagesLayout.setVisibility(View.VISIBLE);
+        loadImageIntoView(holder.image1Of2, imageFiles.get(0));
+        loadImageIntoView(holder.image2Of2, imageFiles.get(1));
+        android.util.Log.d("FootprintMessageAdapter", "显示两张图片");
+    }
+    
+    /**
+     * 显示三张图片
+     * @param holder ViewHolder
+     * @param imageFiles 图片文件列表
+     */
+    private void showThreeImages(ViewHolder holder, java.util.List<GuluFile> imageFiles) {
+        holder.threeImagesLayout.setVisibility(View.VISIBLE);
+        loadImageIntoView(holder.image1Of3, imageFiles.get(0));
+        loadImageIntoView(holder.image2Of3, imageFiles.get(1));
+        loadImageIntoView(holder.image3Of3, imageFiles.get(2));
+        android.util.Log.d("FootprintMessageAdapter", "显示三张图片");
+    }
+    
+    /**
+     * 显示九宫格图片（4张及以上）
+     * @param holder ViewHolder
+     * @param imageFiles 图片文件列表
+     */
+    private void showGridImages(ViewHolder holder, java.util.List<GuluFile> imageFiles) {
+        holder.gridRecyclerView.setVisibility(View.VISIBLE);
+        
+        // 设置网格布局管理器
+        androidx.recyclerview.widget.GridLayoutManager gridLayoutManager = 
+            new androidx.recyclerview.widget.GridLayoutManager(context, 3);
+        holder.gridRecyclerView.setLayoutManager(gridLayoutManager);
+        
+        // 设置适配器
+        GridImageAdapter adapter = new GridImageAdapter(context, imageFiles);
+        holder.gridRecyclerView.setAdapter(adapter);
+        
+        // 如果图片数量超过9张，显示更多图片的遮罩
+        if (imageFiles.size() > 9) {
+            holder.moreImagesOverlay.setVisibility(View.VISIBLE);
+            holder.moreImagesText.setText("+" + (imageFiles.size() - 8));
+        }
+        
+        android.util.Log.d("FootprintMessageAdapter", "显示九宫格图片，总数: " + imageFiles.size());
+    }
+    
+    /**
+     * 加载图片到ImageView
+     * @param imageView 目标ImageView
+     * @param imageFile 图片文件
+     */
+    private void loadImageIntoView(ImageView imageView, GuluFile imageFile) {
+        String imageUrl = getFullImageUrl(imageFile.getFilePath());
+        android.util.Log.d("FootprintMessageAdapter", "加载图片: " + imageUrl);
+        
+        Glide.with(context)
+            .load(imageUrl)
+            .diskCacheStrategy(DiskCacheStrategy.ALL)
+            .placeholder(R.drawable.ic_placeholder_image)
+            .error(R.drawable.ic_placeholder_image)
+            .centerCrop()
+            .listener(new RequestListener<android.graphics.drawable.Drawable>() {
+                @Override
+                public boolean onLoadFailed(@androidx.annotation.Nullable com.bumptech.glide.load.engine.GlideException e, Object model, Target<android.graphics.drawable.Drawable> target, boolean isFirstResource) {
+                    android.util.Log.e("FootprintMessageAdapter", "图片加载失败: " + model, e);
+                    return false;
+                }
+
+                @Override
+                public boolean onResourceReady(android.graphics.drawable.Drawable resource, Object model, Target<android.graphics.drawable.Drawable> target, com.bumptech.glide.load.DataSource dataSource, boolean isFirstResource) {
+                    android.util.Log.d("FootprintMessageAdapter", "图片加载成功: " + model);
+                    return false;
+                }
+            })
+            .into(imageView);
+    }
+    
+    /**
+     * 设置操作栏数据和点击事件
+     * @param holder ViewHolder
+     * @param message 足迹动态
+     * @param position 位置
+     */
+    private void setActionBar(ViewHolder holder, FootprintMessage message, int position) {
+        // 设置点赞状态和数量
+        updateLikeStatus(holder, message.isLiked(), message.getLikeCount());
+        
+        // 设置收藏状态和数量
+        updateFavoriteStatus(holder, message.isFavorited(), message.getFavoriteCount());
+        
+        // 设置评论数量
+        holder.tvCommentCount.setText(String.valueOf(message.getCommentCount()));
+        
+        // 设置点击事件
+        holder.layoutLike.setOnClickListener(v -> {
+            if (onItemClickListener != null) {
+                onItemClickListener.onLikeClick(message, position);
+            }
+        });
+        
+        holder.layoutFavorite.setOnClickListener(v -> {
+            if (onItemClickListener != null) {
+                onItemClickListener.onFavoriteClick(message, position);
+            }
+        });
+        
+        holder.layoutComment.setOnClickListener(v -> {
+            if (onItemClickListener != null) {
+                onItemClickListener.onCommentClick(message, position);
+            }
+        });
+    }
+    
+    /**
+     * 更新点赞状态
+     * @param holder ViewHolder
+     * @param isLiked 是否已点赞
+     * @param likeCount 点赞数量
+     */
+    private void updateLikeStatus(ViewHolder holder, boolean isLiked, int likeCount) {
+        if (isLiked) {
+            holder.ivLike.setImageResource(R.drawable.ic_like_filled);
+            holder.ivLike.setColorFilter(context.getResources().getColor(R.color.action_icon_active_color));
+            holder.tvLikeCount.setTextColor(context.getResources().getColor(R.color.action_text_active_color));
+        } else {
+            holder.ivLike.setImageResource(R.drawable.ic_like_outline);
+            holder.ivLike.setColorFilter(context.getResources().getColor(R.color.action_icon_color));
+            holder.tvLikeCount.setTextColor(context.getResources().getColor(R.color.action_text_color));
+        }
+        holder.tvLikeCount.setText(String.valueOf(likeCount));
+    }
+    
+    /**
+     * 更新收藏状态
+     * @param holder ViewHolder
+     * @param isFavorited 是否已收藏
+     * @param favoriteCount 收藏数量
+     */
+    private void updateFavoriteStatus(ViewHolder holder, boolean isFavorited, int favoriteCount) {
+        if (isFavorited) {
+            holder.ivFavorite.setImageResource(R.drawable.ic_favorite_filled);
+            holder.ivFavorite.setColorFilter(context.getResources().getColor(R.color.action_icon_active_color));
+            holder.tvFavoriteCount.setTextColor(context.getResources().getColor(R.color.action_text_active_color));
+        } else {
+            holder.ivFavorite.setImageResource(R.drawable.ic_favorite_outline);
+            holder.ivFavorite.setColorFilter(context.getResources().getColor(R.color.action_icon_color));
+            holder.tvFavoriteCount.setTextColor(context.getResources().getColor(R.color.action_text_color));
+        }
+        holder.tvFavoriteCount.setText(String.valueOf(favoriteCount));
+    }
+    
+    /**
+     * 公开方法：更新指定位置的点赞状态
+     * @param position 位置
+     * @param isLiked 是否已点赞
+     * @param likeCount 点赞数量
+     */
+    public void updateItemLikeStatus(int position, boolean isLiked, int likeCount) {
+        if (position >= 0 && position < messageList.size()) {
+            FootprintMessage message = messageList.get(position);
+            message.setLiked(isLiked);
+            message.setLikeCount(likeCount);
+            notifyItemChanged(position);
+        }
+    }
+    
+    /**
+     * 公开方法：更新指定位置的收藏状态
+     * @param position 位置
+     * @param isFavorited 是否已收藏
+     * @param favoriteCount 收藏数量
+     */
+    public void updateItemFavoriteStatus(int position, boolean isFavorited, int favoriteCount) {
+        if (position >= 0 && position < messageList.size()) {
+            FootprintMessage message = messageList.get(position);
+            message.setFavorited(isFavorited);
+            message.setFavoriteCount(favoriteCount);
+            notifyItemChanged(position);
+        }
+    }
+    
+    /**
+     * 公开方法：更新指定位置的评论数量
+     * @param position 位置
+     * @param commentCount 评论数量
+     */
+    public void updateItemCommentCount(int position, int commentCount) {
+        if (position >= 0 && position < messageList.size()) {
+            FootprintMessage message = messageList.get(position);
+            message.setCommentCount(commentCount);
+            notifyItemChanged(position);
         }
     }
     
@@ -263,24 +484,42 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
     
     /**
      * 获取完整的图片URL
+     * 使用ApiConfig获取正确的服务器地址
      */
     private String getFullImageUrl(String imagePath) {
         if (imagePath == null || imagePath.isEmpty()) {
+            android.util.Log.w("FootprintMessageAdapter", "图片路径为空");
             return "";
         }
         
         // 如果已经是完整URL，直接返回
         if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+            android.util.Log.d("FootprintMessageAdapter", "使用完整URL: " + imagePath);
             return imagePath;
         }
         
-        // 拼接基础URL
-        String baseUrl = "http://192.168.1.5:8080";
-        if (imagePath.startsWith("/")) {
-            return baseUrl + imagePath;
+        // 从ApiConfig获取基础URL，并去掉API路径部分
+        String apiBaseUrl = ApiConfig.getBaseUrl();
+        String serverBaseUrl;
+        
+        // 提取服务器基础地址（去掉/zuji/api/部分）
+        if (apiBaseUrl.contains("/zuji/api/")) {
+            serverBaseUrl = apiBaseUrl.substring(0, apiBaseUrl.indexOf("/zuji/api/"));
         } else {
-            return baseUrl + "/" + imagePath;
+            // 如果URL格式不符合预期，使用默认处理
+            serverBaseUrl = apiBaseUrl.replaceAll("/api/?$", "");
         }
+        
+        // 构建完整的图片URL
+        String fullImageUrl;
+        if (imagePath.startsWith("/")) {
+            fullImageUrl = serverBaseUrl + imagePath;
+        } else {
+            fullImageUrl = serverBaseUrl + "/" + imagePath;
+        }
+        
+        android.util.Log.d("FootprintMessageAdapter", "构建图片URL: " + imagePath + " -> " + fullImageUrl);
+        return fullImageUrl;
     }
     
     static class ViewHolder extends RecyclerView.ViewHolder {
@@ -295,7 +534,29 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         TextView locationTextView;
         TextView categoryTextView;
         TextView descriptionTextView;
-        ImageView previewImageView;
+        
+        // 九宫格图片布局相关控件
+        View gridImageLayout;
+        ImageView singleImage;
+        LinearLayout twoImagesLayout;
+        ImageView image1Of2, image2Of2;
+        LinearLayout threeImagesLayout;
+        ImageView image1Of3, image2Of3, image3Of3;
+        androidx.recyclerview.widget.RecyclerView gridRecyclerView;
+        FrameLayout moreImagesOverlay;
+        TextView moreImagesText;
+        
+        // 操作栏相关控件
+        LinearLayout layoutActions;
+        LinearLayout layoutLike;
+        ImageView ivLike;
+        TextView tvLikeCount;
+        LinearLayout layoutFavorite;
+        ImageView ivFavorite;
+        TextView tvFavoriteCount;
+        LinearLayout layoutComment;
+        ImageView ivComment;
+        TextView tvCommentCount;
         
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -310,7 +571,32 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
             locationTextView = itemView.findViewById(R.id.text_view_location);
             categoryTextView = itemView.findViewById(R.id.text_view_category);
             descriptionTextView = itemView.findViewById(R.id.text_view_description);
-            previewImageView = itemView.findViewById(R.id.image_view_preview);
+            
+            // 初始化九宫格图片布局控件
+            gridImageLayout = itemView.findViewById(R.id.grid_image_layout);
+            singleImage = itemView.findViewById(R.id.single_image);
+            twoImagesLayout = itemView.findViewById(R.id.two_images_layout);
+            image1Of2 = itemView.findViewById(R.id.image_1_of_2);
+            image2Of2 = itemView.findViewById(R.id.image_2_of_2);
+            threeImagesLayout = itemView.findViewById(R.id.three_images_layout);
+            image1Of3 = itemView.findViewById(R.id.image_1_of_3);
+            image2Of3 = itemView.findViewById(R.id.image_2_of_3);
+            image3Of3 = itemView.findViewById(R.id.image_3_of_3);
+            gridRecyclerView = itemView.findViewById(R.id.grid_recycler_view);
+            moreImagesOverlay = itemView.findViewById(R.id.more_images_overlay);
+            moreImagesText = itemView.findViewById(R.id.more_images_text);
+            
+            // 初始化操作栏控件
+            layoutActions = itemView.findViewById(R.id.layout_actions);
+            layoutLike = itemView.findViewById(R.id.layout_like);
+            ivLike = itemView.findViewById(R.id.iv_like);
+            tvLikeCount = itemView.findViewById(R.id.tv_like_count);
+            layoutFavorite = itemView.findViewById(R.id.layout_favorite);
+            ivFavorite = itemView.findViewById(R.id.iv_favorite);
+            tvFavoriteCount = itemView.findViewById(R.id.tv_favorite_count);
+            layoutComment = itemView.findViewById(R.id.layout_comment);
+            ivComment = itemView.findViewById(R.id.iv_comment);
+            tvCommentCount = itemView.findViewById(R.id.tv_comment_count);
         }
     }
 }

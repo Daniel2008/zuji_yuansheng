@@ -64,10 +64,8 @@ public class HistoryFragment extends Fragment {
         adapter.setOnItemClickListener(new FootprintMessageAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(FootprintMessage message, int position) {
-                // 点击足迹动态项时，跳转到详情页
-                Intent intent = new Intent(requireContext(), AddFootprintActivity.class);
-                intent.putExtra("footprint_message_id", message.getId());
-                startActivity(intent);
+                // 移除跳转到发布足迹页面的功能
+                // 如果需要其他处理逻辑，可以在这里添加
             }
             
             @Override
@@ -84,6 +82,24 @@ public class HistoryFragment extends Fragment {
                     // 这里可以添加跳转到地图的逻辑
                     // 例如：打开地图应用显示该位置
                 }
+            }
+            
+            @Override
+            public void onLikeClick(FootprintMessage message, int position) {
+                // 处理点赞点击事件
+                handleLikeClick(message, position);
+            }
+            
+            @Override
+            public void onFavoriteClick(FootprintMessage message, int position) {
+                // 处理收藏点击事件
+                handleFavoriteClick(message, position);
+            }
+            
+            @Override
+            public void onCommentClick(FootprintMessage message, int position) {
+                // 处理评论点击事件
+                handleCommentClick(message, position);
             }
         });
         
@@ -118,28 +134,22 @@ public class HistoryFragment extends Fragment {
         apiService.getFootprintMessages(
             currentPage,
             PAGE_SIZE,
-            new HutoolApiService.SuccessCallback<FootprintMessageResponse.Data>() {
-                @Override
-                public void onSuccess(FootprintMessageResponse.Data data) {
+                data -> {
                     if (!isAdded() || getContext() == null) {
                         return;
                     }
-                    
+
                     isLoading = false;
                     handleFootprintMessagesSuccess(data);
-                }
-            },
-            new HutoolApiService.ErrorCallback() {
-                @Override
-                public void onError(String errorMessage) {
+                },
+                errorMessage -> {
                     if (!isAdded() || getContext() == null) {
                         return;
                     }
-                    
+
                     isLoading = false;
                     handleFootprintMessagesError(errorMessage);
                 }
-            }
         );
     }
     
@@ -235,6 +245,66 @@ public class HistoryFragment extends Fragment {
             e.printStackTrace();
             return false;
         }
+    }
+    
+    /**
+     * 处理点赞点击事件
+     * @param message 足迹动态
+     * @param position 位置
+     */
+    private void handleLikeClick(FootprintMessage message, int position) {
+        // 切换点赞状态
+        boolean newLikeStatus = !message.isLiked();
+        int newLikeCount = message.getLikeCount() + (newLikeStatus ? 1 : -1);
+        
+        // 更新适配器中的数据
+        adapter.updateItemLikeStatus(position, newLikeStatus, newLikeCount);
+        
+        // 这里可以添加网络请求，将点赞状态同步到服务器
+        // 例如：调用API更新点赞状态
+        // apiService.updateLikeStatus(message.getId(), newLikeStatus);
+        
+        // 显示提示信息
+        String toastMessage = newLikeStatus ? "已点赞" : "已取消点赞";
+        Toast.makeText(requireContext(), toastMessage, Toast.LENGTH_SHORT).show();
+    }
+    
+    /**
+     * 处理收藏点击事件
+     * @param message 足迹动态
+     * @param position 位置
+     */
+    private void handleFavoriteClick(FootprintMessage message, int position) {
+        // 切换收藏状态
+        boolean newFavoriteStatus = !message.isFavorited();
+        int newFavoriteCount = message.getFavoriteCount() + (newFavoriteStatus ? 1 : -1);
+        
+        // 更新适配器中的数据
+        adapter.updateItemFavoriteStatus(position, newFavoriteStatus, newFavoriteCount);
+        
+        // 这里可以添加网络请求，将收藏状态同步到服务器
+        // 例如：调用API更新收藏状态
+        // apiService.updateFavoriteStatus(message.getId(), newFavoriteStatus);
+        
+        // 显示提示信息
+        String toastMessage = newFavoriteStatus ? "已收藏" : "已取消收藏";
+        Toast.makeText(requireContext(), toastMessage, Toast.LENGTH_SHORT).show();
+    }
+    
+    /**
+     * 处理评论点击事件
+     * @param message 足迹动态
+     * @param position 位置
+     */
+    private void handleCommentClick(FootprintMessage message, int position) {
+        // 这里可以打开评论页面或评论对话框
+        // 例如：跳转到评论详情页面
+        // Intent intent = new Intent(requireContext(), CommentActivity.class);
+        // intent.putExtra("footprint_message_id", message.getId());
+        // startActivity(intent);
+        
+        // 临时显示提示信息
+        Toast.makeText(requireContext(), "评论功能开发中", Toast.LENGTH_SHORT).show();
     }
     
     /**

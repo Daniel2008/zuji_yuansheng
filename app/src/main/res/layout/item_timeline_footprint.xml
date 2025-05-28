@@ -65,11 +65,10 @@
         android:id="@+id/card_view_content"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
+        android:layout_margin="8dp"
         app:cardCornerRadius="8dp"
         app:cardElevation="2dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/view_timeline_dot"
         app:layout_constraintTop_toBottomOf="@+id/text_view_time">
@@ -113,14 +112,12 @@
                 android:textSize="14sp"
                 tools:text="这是一段足迹描述信息，记录了在这个地方的美好回忆。" />
 
-            <!-- 图片预览 -->
-            <ImageView
-                android:id="@+id/image_view_preview"
+            <!-- 图片预览区域（九宫格布局） -->
+            <include
+                android:id="@+id/grid_image_layout"
+                layout="@layout/grid_image_layout"
                 android:layout_width="match_parent"
-                android:layout_height="150dp"
-                android:layout_marginTop="8dp"
-                android:contentDescription="图片预览"
-                android:scaleType="centerCrop"
+                android:layout_height="wrap_content"
                 android:visibility="gone" />
 
             <!-- 视频指示器 -->
@@ -131,6 +128,110 @@
                 android:layout_marginTop="8dp"
                 android:background="@drawable/video_indicator_background"
                 android:visibility="gone" />
+
+            <!-- 操作栏：点赞、收藏、评论 -->
+            <LinearLayout
+                android:id="@+id/layout_actions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal"
+                android:background="@drawable/action_bar_background">
+
+                <!-- 点赞按钮 -->
+                <LinearLayout
+                    android:id="@+id/layout_like"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:padding="8dp"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:id="@+id/iv_like"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_like_outline"
+                        android:tint="@color/action_icon_color" />
+
+                    <TextView
+                        android:id="@+id/tv_like_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="0"
+                        android:textColor="@color/action_text_color"
+                        android:textSize="12sp" />
+
+                </LinearLayout>
+
+                <!-- 收藏按钮 -->
+                <LinearLayout
+                    android:id="@+id/layout_favorite"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:padding="8dp"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:id="@+id/iv_favorite"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_favorite_outline"
+                        android:tint="@color/action_icon_color" />
+
+                    <TextView
+                        android:id="@+id/tv_favorite_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="0"
+                        android:textColor="@color/action_text_color"
+                        android:textSize="12sp" />
+
+                </LinearLayout>
+
+                <!-- 评论按钮 -->
+                <LinearLayout
+                    android:id="@+id/layout_comment"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:padding="8dp"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:id="@+id/iv_comment"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_comment_outline"
+                        android:tint="@color/action_icon_color" />
+
+                    <TextView
+                        android:id="@+id/tv_comment_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="0"
+                        android:textColor="@color/action_text_color"
+                        android:textSize="12sp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
 
         </LinearLayout>
     </androidx.cardview.widget.CardView>

@@ -13,4 +13,11 @@
     <color name="colorLightGray">#F5F5F5</color>
     <color name="colorGray">#E0E0E0</color>
     <color name="colorDarkGray">#757575</color>
+    
+    <!-- 操作栏相关颜色 -->
+    <color name="action_icon_color">#757575</color>
+    <color name="action_text_color">#757575</color>
+    <color name="action_icon_active_color">#FF6200EE</color>
+    <color name="action_text_active_color">#FF6200EE</color>
+    <color name="divider_color">#E0E0E0</color>
 </resources>

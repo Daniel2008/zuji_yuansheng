@@ -17,6 +17,7 @@ import com.damors.zuji.ZujiApp;
 import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.User;
 import com.damors.zuji.model.FootprintMessage;
+import com.damors.zuji.model.GuluFile;
 import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.model.response.LoginResponse;
 import com.damors.zuji.model.response.FootprintMessageResponse;
@@ -373,7 +374,23 @@ public class HutoolApiService {
         if (jsonObj.containsKey("createTime")) {
             message.setCreateTime(jsonObj.getStr("createTime"));
         }
-        // 可以根据需要添加更多字段
+        
+        // 解析guluFiles字段
+        if (jsonObj.containsKey("guluFiles")) {
+            JSONArray guluFilesArray = jsonObj.getJSONArray("guluFiles");
+            if (guluFilesArray != null && !guluFilesArray.isEmpty()) {
+                List<GuluFile> guluFiles = new ArrayList<>();
+                for (int i = 0; i < guluFilesArray.size(); i++) {
+                    JSONObject fileObj = guluFilesArray.getJSONObject(i);
+                    GuluFile guluFile = parseGuluFile(fileObj);
+                    if (guluFile != null) {
+                        guluFiles.add(guluFile);
+                    }
+                }
+                message.setGuluFiles(guluFiles);
+                Log.d(TAG, "解析到 " + guluFiles.size() + " 个文件");
+            }
+        }
         
         return message;
     }
@@ -655,6 +672,61 @@ public class HutoolApiService {
         void onError(String errorMessage);
     }
 
+    /**
+     * 解析GuluFile对象
+     * 
+     * @param jsonObj JSON对象
+     * @return GuluFile对象
+     */
+    private GuluFile parseGuluFile(JSONObject jsonObj) {
+        if (jsonObj == null) {
+            return null;
+        }
+        
+        GuluFile guluFile = new GuluFile();
+        
+        if (jsonObj.containsKey("id")) {
+            guluFile.setId(jsonObj.getInt("id"));
+        }
+        if (jsonObj.containsKey("fileName")) {
+            guluFile.setFileName(jsonObj.getStr("fileName"));
+        }
+        if (jsonObj.containsKey("fileType")) {
+            guluFile.setFileType(jsonObj.getStr("fileType"));
+        }
+        if (jsonObj.containsKey("filePath")) {
+            guluFile.setFilePath(jsonObj.getStr("filePath"));
+        }
+        if (jsonObj.containsKey("ofType")) {
+            guluFile.setOfType(jsonObj.getStr("ofType"));
+        }
+        if (jsonObj.containsKey("ofId")) {
+            guluFile.setOfId(jsonObj.getInt("ofId"));
+        }
+        if (jsonObj.containsKey("createBy")) {
+            guluFile.setCreateBy(jsonObj.getStr("createBy"));
+        }
+        if (jsonObj.containsKey("createTime")) {
+            guluFile.setCreateTime(jsonObj.getStr("createTime"));
+        }
+        if (jsonObj.containsKey("updateBy")) {
+            guluFile.setUpdateBy(jsonObj.getStr("updateBy"));
+        }
+        if (jsonObj.containsKey("updateTime")) {
+            guluFile.setUpdateTime(jsonObj.getStr("updateTime"));
+        }
+        if (jsonObj.containsKey("remark")) {
+            guluFile.setRemark(jsonObj.getStr("remark"));
+        }
+        if (jsonObj.containsKey("delFlag")) {
+            guluFile.setDelFlag(jsonObj.getStr("delFlag"));
+        }
+        
+        Log.d(TAG, "解析GuluFile: " + guluFile.getFileName() + ", 类型: " + guluFile.getFileType());
+        
+        return guluFile;
+    }
+    
     /**
      * 请求信息类，用于保存请求的详细信息
      */
