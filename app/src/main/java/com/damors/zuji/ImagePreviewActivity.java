@@ -5,11 +5,21 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.target.Target;
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.GlideException;
+import android.util.Log;
 
 /**
  * 图片全屏预览Activity
@@ -40,6 +50,9 @@ public class ImagePreviewActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // 隐藏状态栏
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_image_preview);
         
         // 初始化视图
@@ -50,9 +63,32 @@ public class ImagePreviewActivity extends AppCompatActivity {
         String imageUri = getIntent().getStringExtra(EXTRA_IMAGE_URI);
         int position = getIntent().getIntExtra(EXTRA_POSITION, 0);
         
-        // 显示图片
+        // 使用Glide加载网络图片
         if (imageUri != null && !imageUri.isEmpty()) {
-            fullImageView.setImageURI(Uri.parse(imageUri));
+            Log.d("ImagePreview", "Loading image: " + imageUri);
+            
+            Glide.with(this)
+                .load(imageUri)
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .placeholder(R.drawable.ic_placeholder_image)
+                .error(R.drawable.ic_error_image)
+                .transition(DrawableTransitionOptions.withCrossFade())
+                .listener(new RequestListener<android.graphics.drawable.Drawable>() {
+                    @Override
+                    public boolean onLoadFailed(@androidx.annotation.Nullable GlideException e, Object model, Target<android.graphics.drawable.Drawable> target, boolean isFirstResource) {
+                        Log.e("ImagePreview", "Failed to load image: " + imageUri, e);
+                        return false; // 让Glide显示错误图片
+                    }
+                    
+                    @Override
+                    public boolean onResourceReady(android.graphics.drawable.Drawable resource, Object model, Target<android.graphics.drawable.Drawable> target, DataSource dataSource, boolean isFirstResource) {
+                        Log.d("ImagePreview", "Image loaded successfully: " + imageUri);
+                        return false; // 让Glide正常显示图片
+                    }
+                })
+                .into(fullImageView);
+        } else {
+            Log.w("ImagePreview", "Image URI is null or empty");
         }
         
         // 设置关闭按钮点击事件

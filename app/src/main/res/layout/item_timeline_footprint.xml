@@ -38,16 +38,28 @@
         app:layout_constraintStart_toStartOf="@+id/view_timeline_dot"
         app:layout_constraintTop_toBottomOf="@+id/view_timeline_dot" />
 
+    <!-- 用户头像占位 -->
+    <ImageView
+        android:id="@+id/image_view_avatar"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="16dp"
+        android:background="@drawable/circle_background"
+        android:scaleType="centerCrop"
+        android:src="@drawable/ic_person"
+        app:layout_constraintStart_toEndOf="@+id/view_timeline_dot"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <!-- 日期和时间 -->
     <TextView
         android:id="@+id/text_view_date"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
+        android:layout_marginStart="12dp"
         android:textStyle="bold"
         android:textSize="16sp"
-        app:layout_constraintStart_toEndOf="@+id/view_timeline_dot"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/image_view_avatar"
+        app:layout_constraintTop_toTopOf="@+id/image_view_avatar"
         tools:text="2023-05-20" />
 
     <TextView

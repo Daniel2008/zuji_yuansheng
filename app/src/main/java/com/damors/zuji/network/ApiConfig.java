@@ -13,6 +13,9 @@ public class ApiConfig {
     // 生产环境API地址
     private static final String PROD_BASE_URL = "https://api.zuji.com/api/";
 
+    // 图片API地址
+    private static final String IMAGE_BASE_URL = "http://192.168.1.5:8080";
+
     // 当前环境，可以通过BuildConfig.DEBUG等条件来自动切换
     private static final boolean IS_PRODUCTION = false;
 
@@ -29,6 +32,14 @@ public class ApiConfig {
         }
     }
 
+    /**
+     * 获取图片服务器基础URL
+     * @return 图片基础URL
+     */
+    public static String getImageBaseUrl() {
+        return IMAGE_BASE_URL;
+    }
+
     // API超时设置（毫秒）
     public static final int TIMEOUT_MS = 30000;
 
@@ -42,6 +53,7 @@ public class ApiConfig {
     public static final class Endpoints {
         public static final String SEND_VERIFICATION_CODE = "sendMsg";
         public static final String SMS_LOGIN = "smsLogin";
+        public static final String PUBLISH_FOOTPRINT = "publishMsg";
         public static final String GET_MSG_LIST = "getMsgList";
         public static final String FOOTPRINT_MESSAGES = "getMsgList"; // 足迹动态消息接口
     }

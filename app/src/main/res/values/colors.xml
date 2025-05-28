@@ -1,15 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
+    <!-- 蓝色主题色系 -->
+    <color name="blue_200">#BBDEFB</color>
+    <color name="blue_500">#2196F3</color>
+    <color name="blue_700">#1976D2</color>
+    <color name="blue_900">#0D47A1</color>
+    <color name="indigo_500">#3F51B5</color>
+    <color name="indigo_700">#303F9F</color>
+    <color name="indigo_900">#1A237E</color>
+    
+    <!-- 基础颜色 -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="colorPrimary">@color/purple_500</color>
-    <color name="colorPrimaryDark">@color/purple_700</color>
-    <color name="colorAccent">@color/teal_200</color>
+    
+    <!-- 主题颜色配置 -->
+    <color name="colorPrimary">@color/indigo_500</color>
+    <color name="colorPrimaryDark">@color/indigo_700</color>
+    <color name="colorAccent">@color/blue_500</color>
     <color name="colorLightGray">#F5F5F5</color>
     <color name="colorGray">#E0E0E0</color>
     <color name="colorDarkGray">#757575</color>
@@ -17,7 +24,20 @@
     <!-- 操作栏相关颜色 -->
     <color name="action_icon_color">#757575</color>
     <color name="action_text_color">#757575</color>
-    <color name="action_icon_active_color">#FF6200EE</color>
-    <color name="action_text_active_color">#FF6200EE</color>
+    <color name="action_icon_active_color">@color/blue_500</color>
+    <color name="action_text_active_color">@color/blue_500</color>
     <color name="divider_color">#E0E0E0</color>
+    
+    <!-- 头像相关颜色 -->
+    <color name="avatar_background_color">#E3F2FD</color>
+    <color name="avatar_border_color">@color/blue_200</color>
+    
+    <!-- 个人资料页面专用颜色 -->
+    <color name="profile_background">#F8FAFE</color>
+    <color name="profile_card_background">@color/white</color>
+    <color name="profile_primary_text">#1A237E</color>
+    <color name="profile_secondary_text">#5C6BC0</color>
+    <color name="profile_accent">#3949AB</color>
+    <color name="profile_button_background">@color/blue_500</color>
+    <color name="profile_button_text">@color/white</color>
 </resources>

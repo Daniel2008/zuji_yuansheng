@@ -34,10 +34,10 @@ public class GridImageAdapter extends RecyclerView.Adapter<GridImageAdapter.Imag
     public interface OnImageClickListener {
         /**
          * 图片被点击时调用
+         * @param imageFile 被点击的图片文件
          * @param position 点击的图片位置
-         * @param imageFiles 所有图片文件列表
          */
-        void onImageClick(int position, List<GuluFile> imageFiles);
+        void onImageClick(GuluFile imageFile, int position);
     }
 
     /**
@@ -82,7 +82,7 @@ public class GridImageAdapter extends RecyclerView.Adapter<GridImageAdapter.Imag
         // 设置点击事件
         holder.imageView.setOnClickListener(v -> {
             if (onImageClickListener != null) {
-                onImageClickListener.onImageClick(position, imageFiles);
+                onImageClickListener.onImageClick(imageFile, position);
             }
         });
 

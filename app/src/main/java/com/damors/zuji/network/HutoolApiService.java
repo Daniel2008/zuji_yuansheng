@@ -18,10 +18,12 @@ import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.User;
 import com.damors.zuji.model.FootprintMessage;
 import com.damors.zuji.model.GuluFile;
+import com.damors.zuji.model.PublishTrandsInfoPO;
 import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.model.response.LoginResponse;
 import com.damors.zuji.model.response.FootprintMessageResponse;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -123,7 +125,7 @@ public class HutoolApiService {
      */
     private Map<String, String> getCommonHeaders() {
         Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "application/x-www-form-urlencoded; charset=utf-8");
+        headers.put("Content-Type", "multipart/form-data; charset=utf-8");
         headers.put("Accept", "application/json");
         headers.put("User-Agent", "ZujiApp/1.0 Android");
         
@@ -628,6 +630,78 @@ public class HutoolApiService {
         
         executePostRequest(url, params, FootprintMessageResponse.Data.class, 
                          successCallback, errorCallback);
+    }
+
+    /**
+     * 发布足迹动态
+     * 
+     * @param publishInfo 发布信息
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     */
+    public void publishFootprint(PublishTrandsInfoPO publishInfo,
+                               SuccessCallback<String> successCallback,
+                               ErrorCallback errorCallback) {
+        String url = BASE_URL + ApiConfig.Endpoints.PUBLISH_FOOTPRINT;
+        
+        // 检查网络状态
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "网络不可用，无法发布足迹");
+            showNetworkUnavailableMessage();
+            return;
+        }
+        
+        // 在后台线程执行文件上传请求
+        executorService.execute(() -> {
+            try {
+                Log.d(TAG, "发布足迹动态: userId=" + publishInfo.getUserId() + 
+                          ", content=" + publishInfo.getContent() + 
+                          ", location=" + publishInfo.getLocationInfo());
+                
+                // 构建multipart请求
+                HttpRequest request = HttpRequest.post(url)
+                        .headerMap(getCommonHeaders(), true)
+                        .timeout(TIMEOUT_MS);
+                
+                // 添加普通表单字段
+                request.form("userId", publishInfo.getUserId());
+                request.form("locationInfo", publishInfo.getLocationInfo());
+                request.form("type", publishInfo.getType());
+                request.form("content", publishInfo.getContent());
+                request.form("tag", publishInfo.getTag());
+                request.form("lng", publishInfo.getLng());
+                request.form("lat", publishInfo.getLat());
+                request.form("msgType", publishInfo.getMsgType());
+                
+                // 添加图片文件
+                if (publishInfo.getImages() != null && !publishInfo.getImages().isEmpty()) {
+                    for (File imageFile : publishInfo.getImages()) {
+                        if (imageFile != null && imageFile.exists()) {
+                            request.form("images", imageFile);
+                        }
+                    }
+                }
+                
+                // 执行请求
+                String response = request.execute().body();
+                
+                Log.d(TAG, "收到响应: " + response);
+                
+                // 处理响应
+                handleResponse(response, String.class, successCallback, errorCallback, 
+                             url, new HashMap<>());
+                
+            } catch (Exception e) {
+                Log.e(TAG, "发布足迹请求异常: " + url, e);
+                
+                // 在主线程回调错误
+                mainHandler.post(() -> {
+                    if (errorCallback != null) {
+                        errorCallback.onError("发布足迹失败: " + e.getMessage());
+                    }
+                });
+            }
+        });
     }
 
     /**

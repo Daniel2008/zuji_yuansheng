@@ -66,6 +66,9 @@ public class TimelineFootprintAdapter extends RecyclerView.Adapter<TimelineFootp
     public void onBindViewHolder(@NonNull FootprintViewHolder holder, int position) {
         FootprintEntity footprint = footprints.get(position);
         
+        // 设置头像（暂时使用默认头像占位）
+        holder.avatarImageView.setImageResource(R.drawable.ic_person);
+        
         // 设置日期和时间
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
         SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
@@ -170,6 +173,7 @@ public class TimelineFootprintAdapter extends RecyclerView.Adapter<TimelineFootp
      * 足迹视图持有者
      */
     static class FootprintViewHolder extends RecyclerView.ViewHolder {
+        ImageView avatarImageView;
         TextView dateTextView;
         TextView timeTextView;
         TextView locationTextView;
@@ -183,6 +187,7 @@ public class TimelineFootprintAdapter extends RecyclerView.Adapter<TimelineFootp
 
         public FootprintViewHolder(@NonNull View itemView) {
             super(itemView);
+            avatarImageView = itemView.findViewById(R.id.image_view_avatar);
             dateTextView = itemView.findViewById(R.id.text_view_date);
             timeTextView = itemView.findViewById(R.id.text_view_time);
             locationTextView = itemView.findViewById(R.id.text_view_location);

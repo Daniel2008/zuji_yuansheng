@@ -39,6 +39,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         void onLikeClick(FootprintMessage message, int position);
         void onFavoriteClick(FootprintMessage message, int position);
         void onCommentClick(FootprintMessage message, int position);
+        void onImageClick(FootprintMessage message, int position, int imageIndex, List<GuluFile> imageFiles);
     }
     
     public FootprintMessageAdapter(Context context, List<FootprintMessage> messageList) {
@@ -100,7 +101,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
                 java.util.Date date = inputFormat.parse(createTime);
                 
                 if (date != null) {
-                    java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("MM-dd", java.util.Locale.getDefault());
+                    java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
                     java.text.SimpleDateFormat timeFormat = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault());
                     
                     holder.dateTextView.setText(dateFormat.format(date));
@@ -230,6 +231,16 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
     private void showSingleImage(ViewHolder holder, GuluFile imageFile) {
         holder.singleImage.setVisibility(View.VISIBLE);
         loadImageIntoView(holder.singleImage, imageFile);
+        
+        // 添加图片点击事件
+        holder.singleImage.setOnClickListener(v -> {
+            if (onItemClickListener != null) {
+                FootprintMessage message = messageList.get(holder.getAdapterPosition());
+                List<GuluFile> imageFiles = getImageFiles(message);
+                onItemClickListener.onImageClick(message, holder.getAdapterPosition(), 0, imageFiles);
+            }
+        });
+        
         android.util.Log.d("FootprintMessageAdapter", "显示单张图片");
     }
     
@@ -242,6 +253,22 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         holder.twoImagesLayout.setVisibility(View.VISIBLE);
         loadImageIntoView(holder.image1Of2, imageFiles.get(0));
         loadImageIntoView(holder.image2Of2, imageFiles.get(1));
+        
+        // 添加图片点击事件
+        holder.image1Of2.setOnClickListener(v -> {
+            if (onItemClickListener != null) {
+                FootprintMessage message = messageList.get(holder.getAdapterPosition());
+                onItemClickListener.onImageClick(message, holder.getAdapterPosition(), 0, imageFiles);
+            }
+        });
+        
+        holder.image2Of2.setOnClickListener(v -> {
+            if (onItemClickListener != null) {
+                FootprintMessage message = messageList.get(holder.getAdapterPosition());
+                onItemClickListener.onImageClick(message, holder.getAdapterPosition(), 1, imageFiles);
+            }
+        });
+        
         android.util.Log.d("FootprintMessageAdapter", "显示两张图片");
     }
     
@@ -255,6 +282,29 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         loadImageIntoView(holder.image1Of3, imageFiles.get(0));
         loadImageIntoView(holder.image2Of3, imageFiles.get(1));
         loadImageIntoView(holder.image3Of3, imageFiles.get(2));
+        
+        // 添加图片点击事件
+        holder.image1Of3.setOnClickListener(v -> {
+            if (onItemClickListener != null) {
+                FootprintMessage message = messageList.get(holder.getAdapterPosition());
+                onItemClickListener.onImageClick(message, holder.getAdapterPosition(), 0, imageFiles);
+            }
+        });
+        
+        holder.image2Of3.setOnClickListener(v -> {
+            if (onItemClickListener != null) {
+                FootprintMessage message = messageList.get(holder.getAdapterPosition());
+                onItemClickListener.onImageClick(message, holder.getAdapterPosition(), 1, imageFiles);
+            }
+        });
+        
+        holder.image3Of3.setOnClickListener(v -> {
+            if (onItemClickListener != null) {
+                FootprintMessage message = messageList.get(holder.getAdapterPosition());
+                onItemClickListener.onImageClick(message, holder.getAdapterPosition(), 2, imageFiles);
+            }
+        });
+        
         android.util.Log.d("FootprintMessageAdapter", "显示三张图片");
     }
     
@@ -273,6 +323,15 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         
         // 设置适配器
         GridImageAdapter adapter = new GridImageAdapter(context, imageFiles);
+        
+        // 设置图片点击事件
+        adapter.setOnImageClickListener((imageFile, position) -> {
+            if (onItemClickListener != null) {
+                FootprintMessage message = messageList.get(holder.getAdapterPosition());
+                onItemClickListener.onImageClick(message, holder.getAdapterPosition(), position, imageFiles);
+            }
+        });
+        
         holder.gridRecyclerView.setAdapter(adapter);
         
         // 如果图片数量超过9张，显示更多图片的遮罩
@@ -282,6 +341,23 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         }
         
         android.util.Log.d("FootprintMessageAdapter", "显示九宫格图片，总数: " + imageFiles.size());
+    }
+    
+    /**
+     * 获取图片文件列表
+     * @param message 足迹动态
+     * @return 图片文件列表
+     */
+    private List<GuluFile> getImageFiles(FootprintMessage message) {
+        List<GuluFile> imageFiles = new java.util.ArrayList<>();
+        if (message.getGuluFiles() != null) {
+            for (GuluFile file : message.getGuluFiles()) {
+                if (isImageFile(file.getFileType())) {
+                    imageFiles.add(file);
+                }
+            }
+        }
+        return imageFiles;
     }
     
     /**
@@ -461,8 +537,13 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
     private boolean isImageFile(String fileType) {
         if (fileType == null) return false;
         String type = fileType.toLowerCase();
-        return type.equals("jpg") || type.equals("jpeg") || type.equals("png") || 
-               type.equals("gif") || type.equals("bmp") || type.equals("webp");
+        return type.equals("jpg")
+            || type.equals("jpeg")
+            || type.equals("png")
+            || type.equals("gif")
+            || type.equals("bmp")
+            || type.equals("webp")
+            || type.equals("image/jpeg");
     }
     
     /**
@@ -484,7 +565,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
     
     /**
      * 获取完整的图片URL
-     * 使用ApiConfig获取正确的服务器地址
+     * 使用ApiConfig中的图片基础URL
      */
     private String getFullImageUrl(String imagePath) {
         if (imagePath == null || imagePath.isEmpty()) {
@@ -498,27 +579,12 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
             return imagePath;
         }
         
-        // 从ApiConfig获取基础URL，并去掉API路径部分
-        String apiBaseUrl = ApiConfig.getBaseUrl();
-        String serverBaseUrl;
-        
-        // 提取服务器基础地址（去掉/zuji/api/部分）
-        if (apiBaseUrl.contains("/zuji/api/")) {
-            serverBaseUrl = apiBaseUrl.substring(0, apiBaseUrl.indexOf("/zuji/api/"));
-        } else {
-            // 如果URL格式不符合预期，使用默认处理
-            serverBaseUrl = apiBaseUrl.replaceAll("/api/?$", "");
-        }
-        
-        // 构建完整的图片URL
-        String fullImageUrl;
-        if (imagePath.startsWith("/")) {
-            fullImageUrl = serverBaseUrl + imagePath;
-        } else {
-            fullImageUrl = serverBaseUrl + "/" + imagePath;
-        }
+        // 使用ApiConfig中的图片基础URL构建完整的图片URL
+        String imageBaseUrl = ApiConfig.getImageBaseUrl();
+        String fullImageUrl = imageBaseUrl + imagePath;
         
         android.util.Log.d("FootprintMessageAdapter", "构建图片URL: " + imagePath + " -> " + fullImageUrl);
+        android.util.Log.d("FootprintMessageAdapter", "图片基础URL: " + imageBaseUrl);
         return fullImageUrl;
     }
     

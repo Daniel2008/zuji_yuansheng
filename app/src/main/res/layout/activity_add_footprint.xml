@@ -74,6 +74,52 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"/>
 
+            <!-- 消息类型选择 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="消息类型"
+                    android:textColor="#333333"
+                    android:textSize="14sp"
+                    android:textStyle="bold"/>
+
+                <RadioGroup
+                    android:id="@+id/rg_msg_type"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <RadioButton
+                        android:id="@+id/rb_public"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:checked="true"
+                        android:text="公开"
+                        android:textColor="#333333"
+                        android:textSize="14sp"/>
+
+                    <RadioButton
+                        android:id="@+id/rb_private"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="个人可见"
+                        android:textColor="#333333"
+                        android:textSize="14sp"/>
+
+                </RadioGroup>
+
+            </LinearLayout>
+
             <!-- 位置信息 -->
             <LinearLayout
                 android:id="@+id/layout_location"
@@ -98,7 +144,9 @@
                     android:text="所在位置"
                     android:textColor="#333333"
                     android:textSize="14sp"/>
+
             </LinearLayout>
+
         </LinearLayout>
     </ScrollView>
 </LinearLayout>
