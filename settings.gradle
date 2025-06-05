@@ -16,6 +16,10 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // 高德地图Maven仓库
+        maven { url 'https://maven.aliyun.com/repository/releases/' }
+        maven { url 'https://developer.huawei.com/repo/' }
+        maven { url 'https://jitpack.io' }
     }
 }
 

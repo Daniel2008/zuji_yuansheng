@@ -22,6 +22,11 @@ import androidx.fragment.app.Fragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationBarView;
 
+// 高德地图相关导入 (暂时注释)
+import com.amap.api.location.AMapLocationClient;
+import com.amap.api.maps.MapsInitializer;
+import com.damors.zuji.utils.AMapHelper;
+
 /**
  * 主活动类，作为应用的入口点
  * 管理底部导航和不同的功能Fragment
@@ -52,6 +57,9 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
+        // 初始化高德地图SDK (暂时注释)
+        initAMapSDK();
+        
         // 初始化视图
         initViews();
         
@@ -70,6 +78,25 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         }
     }
 
+    /**
+     * 初始化高德地图SDK
+     */
+    private void initAMapSDK() {
+        try {
+            // 初始化高德地图SDK
+            AMapHelper.initialize(this);
+            
+            Log.d(TAG, "高德地图SDK初始化成功");
+            
+            // 设置隐私政策同意状态
+            AMapLocationClient.updatePrivacyShow(this, true, true);
+            AMapLocationClient.updatePrivacyAgree(this, true);
+            
+        } catch (Exception e) {
+            Log.e(TAG, "高德地图SDK初始化失败: " + e.getMessage(), e);
+        }
+    }
+    
     /**
      * 初始化视图组件
      */

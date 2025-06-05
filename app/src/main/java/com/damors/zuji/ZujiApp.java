@@ -6,8 +6,9 @@ import java.io.File;
 
 import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.network.NetworkStateMonitor;
-import org.osmdroid.config.Configuration;
-import org.osmdroid.tileprovider.constants.OpenStreetMapTileProviderConstants;
+import com.damors.zuji.utils.MapCacheManager;
+import com.amap.api.maps.MapsInitializer;
+import com.amap.api.location.AMapLocationClient;
 
 /**
  * 应用程序类，负责初始化全局组件
@@ -30,8 +31,11 @@ public class ZujiApp extends Application {
         super.onCreate();
         instance = this;
         
-        // 初始化OSMDroid地图缓存配置
-        initOSMDroidCache();
+        // 初始化高德地图配置
+        initAMapConfig();
+        
+        // 初始化地图缓存管理器
+        MapCacheManager.init(this);
         
         // 初始化用户管理器
         UserManager.init(this);
@@ -43,45 +47,26 @@ public class ZujiApp extends Application {
     }
     
     /**
-     * 初始化OSMDroid地图缓存配置
-     * 设置地图瓦片缓存目录和缓存参数，提升地图加载性能
+     * 初始化高德地图配置
      */
-    private void initOSMDroidCache() {
+    private void initAMapConfig() {
         try {
-            // 设置用户代理
-            Configuration.getInstance().setUserAgentValue(getPackageName());
+            // 设置隐私政策同意状态（必须在使用地图功能前调用）
+            MapsInitializer.updatePrivacyShow(this, true, true);
+            MapsInitializer.updatePrivacyAgree(this, true);
             
-            // 设置地图瓦片缓存目录
-            File osmCacheDir = new File(getCacheDir(), "osmdroid");
-            if (!osmCacheDir.exists()) {
-                osmCacheDir.mkdirs();
-            }
-            Configuration.getInstance().setOsmdroidBasePath(osmCacheDir);
+            // 初始化定位SDK的隐私政策
+            AMapLocationClient.updatePrivacyShow(this, true, true);
+            AMapLocationClient.updatePrivacyAgree(this, true);
             
-            // 设置瓦片缓存目录
-            File tileCache = new File(osmCacheDir, "tiles");
-            if (!tileCache.exists()) {
-                tileCache.mkdirs();
-            }
-            Configuration.getInstance().setOsmdroidTileCache(tileCache);
+            // 设置是否已经包含高德隐私政策并弹窗展示显示用户查看，如果未包含或者没有弹窗展示，请设置为false
+            MapsInitializer.updatePrivacyShow(this, true, true);
+            // 设置是否已经取得用户同意，如果未取得用户同意，请设置为false
+            MapsInitializer.updatePrivacyAgree(this, true);
             
-            // 设置缓存参数
-            Configuration.getInstance().setCacheMapTileCount((short) 12); // 内存中缓存的瓦片数量
-            Configuration.getInstance().setTileFileSystemCacheMaxBytes(50L * 1024 * 1024); // 磁盘缓存最大50MB
-            Configuration.getInstance().setTileFileSystemCacheTrimBytes(40L * 1024 * 1024); // 缓存清理阈值40MB
-            
-            // 设置瓦片下载线程数
-            Configuration.getInstance().setTileDownloadThreads((short) 4);
-            
-            // 设置瓦片文件系统缓存的最大年龄（7天）
-            Configuration.getInstance().setExpirationExtendedDuration(7L * 24 * 60 * 60 * 1000);
-            
-            Log.d(TAG, "OSMDroid地图缓存配置初始化完成");
-            Log.d(TAG, "缓存目录: " + osmCacheDir.getAbsolutePath());
-            Log.d(TAG, "瓦片缓存目录: " + tileCache.getAbsolutePath());
-            
+            Log.d(TAG, "高德地图SDK初始化成功");
         } catch (Exception e) {
-            Log.e(TAG, "OSMDroid缓存配置初始化失败", e);
+            Log.e(TAG, "高德地图SDK初始化失败: " + e.getMessage(), e);
         }
     }
     

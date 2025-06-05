@@ -15,7 +15,8 @@ import cn.hutool.json.JSONUtil;
 
 import com.damors.zuji.ZujiApp;
 import com.damors.zuji.manager.UserManager;
-import com.damors.zuji.model.User;
+import com.damors.zuji.model.UserInfoResponse;
+import com.damors.zuji.model.Dept;
 import com.damors.zuji.model.FootprintMessage;
 import com.damors.zuji.model.GuluFile;
 import com.damors.zuji.model.PublishTrandsInfoPO;
@@ -237,6 +238,11 @@ public class HutoolApiService {
                 if (responseClass.getName().contains("FootprintMessageResponse$Data")) {
                     return (T) parseFootprintMessageData(jsonObj);
                 }
+                
+                // 处理 UserInfoResponse
+                if (responseClass == UserInfoResponse.class) {
+                    return (T) parseUserInfoResponse(jsonObj);
+                }
             }
             
             // 对于其他类型，尝试简单转换
@@ -263,42 +269,14 @@ public class HutoolApiService {
         if (jsonObj.containsKey("user")) {
             Object userObj = jsonObj.get("user");
             if (userObj instanceof JSONObject) {
-                User user = parseUser((JSONObject) userObj);
-                data.setUser(user);
+                data.setUser((JSONObject) userObj);
             }
         }
         
         return data;
     }
     
-    /**
-     * 解析用户数据
-     */
-    private User parseUser(JSONObject jsonObj) {
-        User user = new User();
-        
-        if (jsonObj.containsKey("userId")) {
-            user.setUserId(jsonObj.getInt("userId"));
-        }
-        if (jsonObj.containsKey("userName")) {
-            user.setUserName(jsonObj.getStr("userName"));
-        }
-        if (jsonObj.containsKey("nickName")) {
-            user.setNickName(jsonObj.getStr("nickName"));
-        }
-        if (jsonObj.containsKey("email")) {
-            user.setEmail(jsonObj.getStr("email"));
-        }
-        if (jsonObj.containsKey("phonenumber")) {
-            user.setPhonenumber(jsonObj.getStr("phonenumber"));
-        }
-        if (jsonObj.containsKey("avatar")) {
-            user.setAvatar(jsonObj.getStr("avatar"));
-        }
-        // 可以根据需要添加更多字段
-        
-        return user;
-    }
+
     
     /**
      * 解析足迹消息响应数据
@@ -610,6 +588,27 @@ public class HutoolApiService {
     }
 
     /**
+     * 获取用户信息
+     * 
+     * @param token 用户token
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     */
+    public void getUserInfo(String token,
+                           SuccessCallback<UserInfoResponse> successCallback,
+                           ErrorCallback errorCallback) {
+        String url = BASE_URL + ApiConfig.Endpoints.GET_USER_INFO;
+        
+        // 准备请求参数
+        Map<String, Object> params = new HashMap<>();
+        params.put("token", token);
+        
+        Log.d(TAG, "发起获取用户信息请求: token=" + token);
+        
+        executePostRequest(url, params, UserInfoResponse.class, successCallback, errorCallback);
+    }
+
+    /**
      * 获取足迹动态列表
      * 
      * @param page 页码
@@ -799,6 +798,103 @@ public class HutoolApiService {
         Log.d(TAG, "解析GuluFile: " + guluFile.getFileName() + ", 类型: " + guluFile.getFileType());
         
         return guluFile;
+    }
+    
+    /**
+     * 解析用户信息响应数据
+     */
+    private UserInfoResponse parseUserInfoResponse(JSONObject jsonObj) {
+        UserInfoResponse response = new UserInfoResponse();
+        
+        if (jsonObj.containsKey("code")) {
+            response.setCode(jsonObj.getInt("code"));
+        }
+        if (jsonObj.containsKey("msg")) {
+            response.setMsg(jsonObj.getStr("msg"));
+        }
+        
+        // 解析data对象
+        if (jsonObj.containsKey("data")) {
+            Object dataObj = jsonObj.get("data");
+            if (dataObj instanceof JSONObject) {
+                UserInfoResponse.UserInfoData data = parseUserInfoData((JSONObject) dataObj);
+                response.setData(data);
+            }
+        }
+        
+        return response;
+    }
+    
+    /**
+     * 解析用户信息数据
+     */
+    private UserInfoResponse.UserInfoData parseUserInfoData(JSONObject jsonObj) {
+        UserInfoResponse.UserInfoData data = new UserInfoResponse.UserInfoData();
+        
+        if (jsonObj.containsKey("token")) {
+            data.setToken(jsonObj.getStr("token"));
+        }
+        
+        // 解析user对象
+        if (jsonObj.containsKey("user")) {
+            Object userObj = jsonObj.get("user");
+            if (userObj instanceof JSONObject) {
+                data.setUser((JSONObject) userObj);
+            }
+        }
+        
+        return data;
+    }
+    
+
+    
+    /**
+     * 解析部门数据
+     */
+    private Dept parseDept(JSONObject jsonObj) {
+        Dept dept = new Dept();
+        
+        if (jsonObj.containsKey("deptId")) {
+            dept.setDeptId(jsonObj.getInt("deptId"));
+        }
+        if (jsonObj.containsKey("parentId")) {
+            dept.setParentId(jsonObj.getInt("parentId"));
+        }
+        if (jsonObj.containsKey("deptName")) {
+            dept.setDeptName(jsonObj.getStr("deptName"));
+        }
+        if (jsonObj.containsKey("orderNum")) {
+            dept.setOrderNum(jsonObj.getInt("orderNum"));
+        }
+        if (jsonObj.containsKey("leader")) {
+            dept.setLeader(jsonObj.getStr("leader"));
+        }
+        if (jsonObj.containsKey("phone")) {
+            dept.setPhone(jsonObj.getStr("phone"));
+        }
+        if (jsonObj.containsKey("email")) {
+            dept.setEmail(jsonObj.getStr("email"));
+        }
+        if (jsonObj.containsKey("status")) {
+            dept.setStatus(jsonObj.getStr("status"));
+        }
+        if (jsonObj.containsKey("delFlag")) {
+            dept.setDelFlag(jsonObj.getStr("delFlag"));
+        }
+        if (jsonObj.containsKey("createBy")) {
+            dept.setCreateBy(jsonObj.getStr("createBy"));
+        }
+        if (jsonObj.containsKey("createTime")) {
+            dept.setCreateTime(jsonObj.getStr("createTime"));
+        }
+        if (jsonObj.containsKey("updateBy")) {
+            dept.setUpdateBy(jsonObj.getStr("updateBy"));
+        }
+        if (jsonObj.containsKey("updateTime")) {
+            dept.setUpdateTime(jsonObj.getStr("updateTime"));
+        }
+        
+        return dept;
     }
     
     /**

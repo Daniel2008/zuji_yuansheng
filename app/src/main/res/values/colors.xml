@@ -17,6 +17,7 @@
     <color name="colorPrimary">@color/indigo_500</color>
     <color name="colorPrimaryDark">@color/indigo_700</color>
     <color name="colorAccent">@color/blue_500</color>
+    <color name="colorSecondary">@color/indigo_500</color>
     <color name="colorLightGray">#F5F5F5</color>
     <color name="colorGray">#E0E0E0</color>
     <color name="colorDarkGray">#757575</color>

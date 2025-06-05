@@ -56,5 +56,6 @@ public class ApiConfig {
         public static final String PUBLISH_FOOTPRINT = "publishMsg";
         public static final String GET_MSG_LIST = "getMsgList";
         public static final String FOOTPRINT_MESSAGES = "getMsgList"; // 足迹动态消息接口
+        public static final String GET_USER_INFO = "getUserInfo"; // 获取用户信息接口
     }
 }

@@ -52,6 +52,8 @@ public class LoginActivity extends AppCompatActivity {
     private void initViews() {
         phoneEditText = findViewById(R.id.phoneEditText);
         verificationCodeEditText = findViewById(R.id.verificationCodeEditText);
+        phoneEditText.setText("18201307930");
+        verificationCodeEditText.setText("313131");
         getVerificationCodeButton = findViewById(R.id.getVerificationCodeButton);
         countdownTextView = findViewById(R.id.countdownTextView);
         loginButton = findViewById(R.id.loginButton);
@@ -194,14 +196,14 @@ public class LoginActivity extends AppCompatActivity {
                             // 登录成功，获取用户信息和token
                             String token = response.getToken();
 
-                            // 将用户对象和token保存到UserManager
-                            UserManager.getInstance().saveUserAndToken(response.getUser(), token);
-
                             // 保存token和用户信息到SharedPreferences
                             Gson gson = new Gson();
                             String userDataJson = gson.toJson(response.getUser());
                             JSONObject userData = new JSONObject(userDataJson);
                             saveUserSession(userData, token);
+                            
+                            // 将用户JSON数据和token保存到UserManager
+                            UserManager.getInstance().saveUserAndToken(userDataJson, token);
 
                             // 跳转到主页面
                             Intent intent = new Intent(LoginActivity.this, MainActivity.class);

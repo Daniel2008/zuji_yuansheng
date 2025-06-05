@@ -27,12 +27,14 @@ public class NetworkStateMonitor {
     private static final String TAG = "NetworkStateMonitor";
     private static final String TEST_URL = "https://www.baidu.com"; // 用于测试网络连接的URL
     private static final int CONNECTION_TIMEOUT_MS = 3000; // 连接超时时间
+    private static final long NETWORK_CHECK_DEBOUNCE_MS = 2000; // 网络检测防抖时间（2秒）
 
     private Context context;
     private ConnectivityManager connectivityManager;
     private List<NetworkStateListener> listeners = new ArrayList<>();
     private boolean isNetworkAvailable = false;
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private long lastNetworkCheckTime = 0; // 最后一次网络检测时间
 
     // 网络状态变化监听器接口
     public interface NetworkStateListener {
@@ -106,6 +108,16 @@ public class NetworkStateMonitor {
      * 检查网络是否可用
      */
     public void checkNetworkAvailability() {
+        long currentTime = System.currentTimeMillis();
+        
+        // 防抖机制：如果距离上次检测时间不足2秒，则跳过本次检测
+        if (currentTime - lastNetworkCheckTime < NETWORK_CHECK_DEBOUNCE_MS) {
+            Log.d(TAG, "网络检测防抖，跳过本次检测");
+            return;
+        }
+        
+        lastNetworkCheckTime = currentTime;
+        
         // 首先检查网络连接是否存在
         boolean isConnected = isNetworkConnected();
 
@@ -187,8 +199,8 @@ public class NetworkStateMonitor {
     public void addNetworkStateListener(NetworkStateListener listener) {
         if (!listeners.contains(listener)) {
             listeners.add(listener);
-            // 立即通知当前状态
-            listener.onNetworkStateChanged(isNetworkAvailable);
+            // 不立即通知当前状态，避免在初始化时触发不必要的网络状态变化事件
+            // 只有在真正的网络状态变化时才通知监听器
         }
     }
 

@@ -104,18 +104,18 @@ public class ProfileFragment extends Fragment {
         // 观察足迹数据变化，更新统计信息
         viewModel.getAllFootprints().observe(getViewLifecycleOwner(), footprints -> {
             if (footprints != null) {
-                textViewFootprintCount.setText(String.format("已记录 %d 个足迹点", footprints.size()));
+                textViewFootprintCount.setText(String.format("%d", footprints.size()));
             } else {
-                textViewFootprintCount.setText("已记录 0 个足迹点");
+                textViewFootprintCount.setText("0");
             }
         });
         
         // 观察城市数量变化，更新统计信息
         viewModel.getCityCount().observe(getViewLifecycleOwner(), cityCount -> {
             if (cityCount != null) {
-                textViewCityCount.setText(String.format("已到访 %d 个城市", cityCount));
+                textViewCityCount.setText(String.format("%d", cityCount));
             } else {
-                textViewCityCount.setText("已到访 0 个城市");
+                textViewCityCount.setText("0");
             }
         });
         

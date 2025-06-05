@@ -30,7 +30,7 @@ import com.damors.zuji.data.FootprintEntity;
 import com.damors.zuji.viewmodel.FootprintViewModel;
 import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.PublishTrandsInfoPO;
-import com.damors.zuji.model.User;
+
 import com.damors.zuji.network.HutoolApiService;
 
 import com.damors.zuji.adapter.ImageGridAdapter;
@@ -309,8 +309,8 @@ public class AddFootprintActivity extends AppCompatActivity {
             return;
         }
         
-        User currentUser = userManager.getCurrentUser();
-        if (currentUser == null) {
+        String userId = userManager.getUserField("userId");
+        if (userId == null) {
             Toast.makeText(this, "获取用户信息失败", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -331,7 +331,7 @@ public class AddFootprintActivity extends AppCompatActivity {
         
         // 创建发布参数对象
         PublishTrandsInfoPO publishInfo = new PublishTrandsInfoPO();
-        publishInfo.setUserId(String.valueOf(currentUser.getUserId())); // 当前用户ID
+        publishInfo.setUserId(userId); // 当前用户ID
         publishInfo.setContent(content); // 足迹内容
         publishInfo.setLocationInfo(location); // 位置信息
         publishInfo.setType(msgType+""); // 类型 (1: 公开, 2: 个人可见)

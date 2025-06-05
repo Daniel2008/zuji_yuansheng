@@ -30,18 +30,22 @@ import com.damors.zuji.viewmodel.FootprintViewModel;
 import com.damors.zuji.network.HutoolApiService;
 import com.damors.zuji.model.FootprintMessage;
 import com.damors.zuji.model.response.FootprintMessageResponse;
-import org.osmdroid.config.Configuration;
-import org.osmdroid.tileprovider.tilesource.ITileSource;
-import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase;
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
-import org.osmdroid.tileprovider.tilesource.XYTileSource;
-import org.osmdroid.util.GeoPoint;
-import org.osmdroid.util.MapTileIndex;
-import org.osmdroid.views.MapView;
-import org.osmdroid.views.overlay.Marker;
-import org.osmdroid.views.overlay.Polyline;
-import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
-import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
+// 高德地图相关导入
+import com.amap.api.maps.AMap;
+import com.amap.api.maps.CameraUpdate;
+import com.amap.api.maps.CameraUpdateFactory;
+import com.amap.api.maps.MapView;
+import com.amap.api.maps.model.BitmapDescriptorFactory;
+import com.amap.api.maps.model.LatLng;
+import com.amap.api.maps.model.Marker;
+import com.amap.api.maps.model.MarkerOptions;
+import com.amap.api.maps.model.MyLocationStyle;
+import com.amap.api.maps.model.Polyline;
+import com.amap.api.maps.model.PolylineOptions;
+import com.amap.api.location.AMapLocation;
+import com.amap.api.location.AMapLocationClient;
+import com.amap.api.location.AMapLocationClientOption;
+import com.amap.api.location.AMapLocationListener;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -72,12 +76,18 @@ public class MapFragment extends Fragment implements LocationListener {
     private MapView mapView;
     private FloatingActionButton addFootprintButton;
     
+    // 高德地图相关
+    private AMap aMap;
+    private AMapLocationClient locationClient;
+    private AMapLocationClientOption locationOption;
+    
     // 核心服务
     private LocationManager locationManager;
     private FootprintViewModel viewModel;
     private HutoolApiService apiService;
     
     // 位置相关
+    private AMapLocation lastAMapLocation;
     private Location lastLocation;
     private Marker currentLocationMarker;
     
@@ -102,6 +112,11 @@ public class MapFragment extends Fragment implements LocationListener {
             
             // 初始化核心组件
             initializeComponents(view);
+            
+            // 初始化地图视图生命周期
+            if (mapView != null) {
+                mapView.onCreate(savedInstanceState);
+            }
             
             // 初始化地图
             initializeMap();
@@ -143,7 +158,7 @@ public class MapFragment extends Fragment implements LocationListener {
     }
     
     /**
-     * 初始化地图配置
+     * 初始化高德地图配置
      */
     private void initializeMap() {
         if (mapView == null) {
@@ -151,33 +166,39 @@ public class MapFragment extends Fragment implements LocationListener {
         }
         
         try {
-            // OSMDroid配置已在Application中初始化，这里直接设置瓦片源
-            final ITileSource tileSource = new XYTileSource("AutoNavi-Vector",
-                    5, 18, 256, ".png", new String[]{
-                    "https://wprd01.is.autonavi.com/appmaptile?",
-                    "https://wprd02.is.autonavi.com/appmaptile?",
-                    "https://wprd03.is.autonavi.com/appmaptile?",
-                    "https://wprd04.is.autonavi.com/appmaptile?",
-            }) {
-                @Override
-                public String getTileURLString(long pMapTileIndex) {
-                    return getBaseUrl() + "x=" + MapTileIndex.getX(pMapTileIndex) + 
-                           "&y=" + MapTileIndex.getY(pMapTileIndex) + 
-                           "&z=" + MapTileIndex.getZoom(pMapTileIndex) + 
-                           "&lang=zh_cn&size=1&scl=1&style=7&ltype=7";
-                }
-            };
+            // 获取高德地图实例
+            aMap = mapView.getMap();
             
-            mapView.setTileSource(tileSource);
-            mapView.setMultiTouchControls(true);
-            mapView.getController().setZoom(17.0);
+            // 设置地图类型为普通地图
+            aMap.setMapType(AMap.MAP_TYPE_NORMAL);
+            
+            // 设置缩放控件
+            aMap.getUiSettings().setZoomControlsEnabled(true);
+            
+            // 设置指南针
+            aMap.getUiSettings().setCompassEnabled(true);
+            
+            // 设置比例尺
+            aMap.getUiSettings().setScaleControlsEnabled(true);
+            
+            // 设置定位样式
+            MyLocationStyle myLocationStyle = new MyLocationStyle();
+            myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE);
+            myLocationStyle.interval(2000);
+            aMap.setMyLocationStyle(myLocationStyle);
+            
+            // 启用定位图层
+            aMap.setMyLocationEnabled(true);
+            
+            // 设置默认缩放级别
+            aMap.moveCamera(CameraUpdateFactory.zoomTo(17));
             
             isMapInitialized = true;
-            Log.d(TAG, "地图初始化完成");
+            Log.d(TAG, "高德地图初始化完成");
             
         } catch (Exception e) {
-            Log.e(TAG, "地图初始化失败: " + e.getMessage(), e);
-            throw new RuntimeException("地图初始化失败", e);
+            Log.e(TAG, "高德地图初始化失败: " + e.getMessage(), e);
+            throw new RuntimeException("高德地图初始化失败", e);
         }
     }
     
@@ -233,8 +254,8 @@ public class MapFragment extends Fragment implements LocationListener {
 
 
     /**
-     * 开始位置更新（优化版本）
-     * 添加了状态检查、重试机制和更好的错误处理
+     * 开始高德地图位置更新
+     * 使用高德地图定位服务
      */
     private void startLocationUpdates() {
         // 检查是否已在更新中，避免重复请求
@@ -250,54 +271,50 @@ public class MapFragment extends Fragment implements LocationListener {
             return;
         }
         
-        if (locationManager == null) {
-            Log.e(TAG, "LocationManager未初始化");
-            return;
-        }
-        
         try {
-            // 检查定位服务可用性
-            boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-            boolean isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-            
-            if (!isGPSEnabled && !isNetworkEnabled) {
-                showErrorToast("请开启GPS或网络定位服务");
-                Log.w(TAG, "所有定位服务都不可用");
-                return;
+            // 初始化高德定位客户端
+            if (locationClient == null) {
+                locationClient = new AMapLocationClient(requireContext());
+                
+                // 设置定位参数
+                locationOption = new AMapLocationClientOption();
+                locationOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy);
+                locationOption.setInterval(MIN_TIME_BETWEEN_UPDATES);
+                locationOption.setNeedAddress(true);
+                locationOption.setOnceLocation(false);
+                locationOption.setWifiActiveScan(true);
+                locationOption.setMockEnable(false);
+                
+                locationClient.setLocationOption(locationOption);
+                
+                // 设置定位监听
+                locationClient.setLocationListener(new AMapLocationListener() {
+                    @Override
+                    public void onLocationChanged(AMapLocation aMapLocation) {
+                        if (aMapLocation != null) {
+                            if (aMapLocation.getErrorCode() == 0) {
+                                // 定位成功
+                                lastAMapLocation = aMapLocation;
+                                updateLocationOnMap(aMapLocation);
+                                Log.d(TAG, "高德定位成功: " + aMapLocation.getLatitude() + ", " + aMapLocation.getLongitude());
+                            } else {
+                                // 定位失败
+                                Log.e(TAG, "高德定位失败: " + aMapLocation.getErrorCode() + ", " + aMapLocation.getErrorInfo());
+                                showErrorToast("定位失败: " + aMapLocation.getErrorInfo());
+                            }
+                        }
+                    }
+                });
             }
             
             isLocationUpdating.set(true);
+            locationClient.startLocation();
+            Log.d(TAG, "已启动高德地图位置更新");
             
-            // 优先使用GPS，备用网络定位
-            if (isGPSEnabled) {
-                locationManager.requestLocationUpdates(
-                        LocationManager.GPS_PROVIDER,
-                        MIN_TIME_BETWEEN_UPDATES,
-                        MIN_DISTANCE_CHANGE,
-                        this);
-                Log.d(TAG, "已启动GPS位置更新");
-            }
-            
-            if (isNetworkEnabled) {
-                locationManager.requestLocationUpdates(
-                        LocationManager.NETWORK_PROVIDER,
-                        MIN_TIME_BETWEEN_UPDATES,
-                        MIN_DISTANCE_CHANGE,
-                        this);
-                Log.d(TAG, "已启动网络位置更新");
-            }
-            
-            // 设置超时检查
-            mainHandler.postDelayed(this::checkLocationTimeout, LOCATION_TIMEOUT);
-            
-        } catch (SecurityException e) {
-            Log.e(TAG, "位置权限异常: " + e.getMessage());
-            isLocationUpdating.set(false);
-            showErrorToast("位置权限被拒绝");
         } catch (Exception e) {
-            Log.e(TAG, "位置更新请求失败: " + e.getMessage(), e);
+            Log.e(TAG, "高德定位启动失败: " + e.getMessage(), e);
             isLocationUpdating.set(false);
-            handleLocationUpdateError();
+            showErrorToast("定位服务启动失败");
         }
     }
     
@@ -333,23 +350,52 @@ public class MapFragment extends Fragment implements LocationListener {
     }
 
     /**
-     * 停止位置更新（优化版本）
+     * 停止高德地图位置更新
      */
     private void stopLocationUpdates() {
         try {
-            if (locationManager != null) {
-                locationManager.removeUpdates(this);
+            if (locationClient != null) {
+                locationClient.stopLocation();
                 isLocationUpdating.set(false);
-                Log.d(TAG, "已停止位置更新");
-            }
-            
-            // 清除超时检查
-            if (mainHandler != null) {
-                mainHandler.removeCallbacks(this::checkLocationTimeout);
+                Log.d(TAG, "已停止高德地图位置更新");
             }
             
         } catch (Exception e) {
-            Log.e(TAG, "停止位置更新时出错: " + e.getMessage(), e);
+            Log.e(TAG, "停止高德地图位置更新时出错: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 更新高德地图位置
+     */
+    private void updateLocationOnMap(AMapLocation aMapLocation) {
+        if (!isMapInitialized || aMap == null || aMapLocation == null) {
+            Log.w(TAG, "地图未初始化或位置信息无效，跳过位置更新");
+            return;
+        }
+        
+        try {
+            LatLng latLng = new LatLng(aMapLocation.getLatitude(), aMapLocation.getLongitude());
+            
+            // 移动地图到当前位置
+            aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17));
+            
+            // 更新当前位置标记
+            if (currentLocationMarker != null) {
+                currentLocationMarker.remove();
+            }
+            
+            MarkerOptions markerOptions = new MarkerOptions()
+                    .position(latLng)
+                    .title("当前位置")
+                    .snippet(aMapLocation.getAddress());
+            
+            currentLocationMarker = aMap.addMarker(markerOptions);
+            
+            Log.d(TAG, "高德地图位置已更新: " + aMapLocation.getLatitude() + ", " + aMapLocation.getLongitude());
+            
+        } catch (Exception e) {
+            Log.e(TAG, "更新高德地图位置失败: " + e.getMessage(), e);
         }
     }
 
@@ -366,10 +412,11 @@ public class MapFragment extends Fragment implements LocationListener {
         try {
             // 转换为火星坐标系
             double[] locationPoint = GPSUtil.gps84_To_Gcj02(location.getLatitude(), location.getLongitude());
-            GeoPoint currentLocation = new GeoPoint(locationPoint[0], locationPoint[1]);
+            LatLng currentLocation = new LatLng(locationPoint[0], locationPoint[1]);
             
             // 平滑移动到新位置
-            mapView.getController().animateTo(currentLocation);
+            CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(currentLocation, 15f);
+            aMap.animateCamera(cameraUpdate);
             
             Log.d(TAG, "地图位置已更新: " + locationPoint[0] + ", " + locationPoint[1]);
             
@@ -463,32 +510,28 @@ public class MapFragment extends Fragment implements LocationListener {
      * 更新当前位置标记
      */
     private void updateCurrentLocationMarker(Location location) {
-        if (mapView == null || location == null) {
+        if (aMap == null || location == null) {
             return;
         }
         
         try {
             // 转换为火星坐标系
             double[] locationPoint = GPSUtil.gps84_To_Gcj02(location.getLatitude(), location.getLongitude());
-            GeoPoint currentLocation = new GeoPoint(locationPoint[0], locationPoint[1]);
+            LatLng currentLocation = new LatLng(locationPoint[0], locationPoint[1]);
             
             if (currentLocationMarker == null) {
                 // 创建新的位置标记
-                currentLocationMarker = new Marker(mapView);
-                currentLocationMarker.setPosition(currentLocation);
-                currentLocationMarker.setTitle("我的位置");
-                currentLocationMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
-                currentLocationMarker.setIcon(ContextCompat.getDrawable(requireContext(), R.drawable.ic_location_marker));
-                mapView.getOverlays().add(currentLocationMarker);
+                MarkerOptions markerOptions = new MarkerOptions()
+                        .position(currentLocation)
+                        .title("我的位置")
+                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
+                currentLocationMarker = aMap.addMarker(markerOptions);
                 Log.d(TAG, "已创建当前位置标记");
             } else {
                 // 更新现有标记位置
                 currentLocationMarker.setPosition(currentLocation);
                 Log.d(TAG, "已更新当前位置标记");
             }
-            
-            // 刷新地图
-            mapView.invalidate();
             
         } catch (Exception e) {
             Log.e(TAG, "更新位置标记失败: " + e.getMessage(), e);
@@ -541,62 +584,71 @@ public class MapFragment extends Fragment implements LocationListener {
      * 在地图上显示足迹点
      */
     private void displayFootprintsOnMap(List<FootprintEntity> footprints) {
-        // 清除所有覆盖层，但保留当前位置标记
-        Marker tempCurrentLocationMarker = currentLocationMarker;
-        mapView.getOverlays().clear();
-        currentLocationMarker = tempCurrentLocationMarker; // 恢复当前位置标记引用
+        if (aMap == null) {
+            return;
+        }
         
-        // 创建连线
-        Polyline polyline = new Polyline();
-        polyline.setColor(ContextCompat.getColor(requireContext(), android.R.color.holo_blue_dark));
-        polyline.setWidth(5f);
-        List<GeoPoint> points = new ArrayList<>();
+        // 清除地图上的所有标记和线条（除了当前位置标记）
+        aMap.clear();
+        
+        // 创建连线点列表
+        List<LatLng> points = new ArrayList<>();
         
         for (FootprintEntity footprint : footprints) {
-            GeoPoint position = new GeoPoint(footprint.getLatitude(), footprint.getLongitude());
+            LatLng position = new LatLng(footprint.getLatitude(), footprint.getLongitude());
             
             // 添加标记
-            Marker marker = new Marker(mapView);
-            marker.setPosition(position);
-            marker.setTitle(footprint.getDescription());
-            marker.setSnippet("时间: " + new Date(footprint.getTimestamp()).toString());
-            mapView.getOverlays().add(marker);
+            MarkerOptions markerOptions = new MarkerOptions()
+                    .position(position)
+                    .title(footprint.getDescription())
+                    .snippet("时间: " + new Date(footprint.getTimestamp()).toString())
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
+            aMap.addMarker(markerOptions);
             
             // 添加到连线
             points.add(position);
         }
         
         // 绘制足迹路线
-        polyline.setPoints(points);
-        mapView.getOverlays().add(polyline);
+        if (points.size() > 1) {
+            PolylineOptions polylineOptions = new PolylineOptions()
+                    .addAll(points)
+                    .color(ContextCompat.getColor(requireContext(), android.R.color.holo_blue_dark))
+                    .width(5f);
+            aMap.addPolyline(polylineOptions);
+        }
         
-        // 如果当前位置标记存在，重新添加到覆盖层以确保它在最上层
-        if (currentLocationMarker != null) {
-            mapView.getOverlays().add(currentLocationMarker);
-            Log.d(TAG, "在显示足迹后重新添加当前位置标记");
+        // 重新添加当前位置标记
+        if (lastAMapLocation != null) {
+            updateCurrentLocationMarker(lastAMapLocation);
         }
         
         // 移动相机到最后一个足迹点
         if (!footprints.isEmpty()) {
             FootprintEntity lastFootprint = footprints.get(footprints.size() - 1);
-            GeoPoint lastPosition = new GeoPoint(lastFootprint.getLatitude(), lastFootprint.getLongitude());
-            mapView.getController().animateTo(lastPosition);
-            mapView.getController().setZoom(15.0);
+            LatLng lastPosition = new LatLng(lastFootprint.getLatitude(), lastFootprint.getLongitude());
+            CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(lastPosition, 15f);
+            aMap.animateCamera(cameraUpdate);
         }
-        
-        // 刷新地图
-        mapView.invalidate();
     }
 
     @Override
     public void onResume() {
         super.onResume();
+        // 恢复地图视图
+        if (mapView != null) {
+            mapView.onResume();
+        }
         startLocationUpdates();
     }
     
     @Override
     public void onPause() {
         super.onPause();
+        // 暂停地图视图
+        if (mapView != null) {
+            mapView.onPause();
+        }
         stopLocationUpdates();
     }
     
@@ -897,26 +949,21 @@ public class MapFragment extends Fragment implements LocationListener {
         Log.d(TAG, "开始处理足迹动态数据，共 " + messages.size() + " 条记录");
         
         // 在地图上显示足迹动态标记
-        for (FootprintMessage message : messages) {
-            // 创建足迹动态标记
-            Marker messageMarker = new Marker(mapView);
-            GeoPoint position = new GeoPoint(message.getLat(), message.getLng());
-            messageMarker.setPosition(position);
-            messageMarker.setTitle(message.getCreateBy() + " - " + message.getTag());
-            messageMarker.setSnippet(message.getTextContent());
-            messageMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
-            
-            // 设置不同的图标以区分足迹动态和普通足迹
-            messageMarker.setIcon(ContextCompat.getDrawable(getContext(), R.drawable.ic_message_marker));
-            
-            // 添加到地图
-            mapView.getOverlays().add(messageMarker);
-            
-            Log.d(TAG, "添加足迹动态标记: " + message.getCreateBy() + " - " + message.getTextContent());
+        if (aMap != null) {
+            for (FootprintMessage message : messages) {
+                // 创建足迹动态标记
+                LatLng position = new LatLng(message.getLat(), message.getLng());
+                MarkerOptions markerOptions = new MarkerOptions()
+                        .position(position)
+                        .title(message.getCreateBy() + " - " + message.getTag())
+                        .snippet(message.getTextContent())
+                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
+                
+                aMap.addMarker(markerOptions);
+                
+                Log.d(TAG, "添加足迹动态标记: " + message.getCreateBy() + " - " + message.getTextContent());
+            }
         }
-        
-        // 刷新地图
-        mapView.invalidate();
     }
     
     /**
@@ -932,7 +979,7 @@ public class MapFragment extends Fragment implements LocationListener {
      * 改进了刷新逻辑和状态管理
      */
     public void refreshMap() {
-        if (!isMapInitialized || mapView == null) {
+        if (!isMapInitialized || aMap == null) {
             Log.w(TAG, "地图未初始化，无法刷新");
             return;
         }
@@ -955,8 +1002,7 @@ public class MapFragment extends Fragment implements LocationListener {
                 
                 // 延迟刷新地图显示，确保数据加载完成
                 mainHandler.postDelayed(() -> {
-                    if (mapView != null) {
-                        mapView.invalidate();
+                    if (aMap != null) {
                         Log.d(TAG, "地图刷新完成");
                     }
                 }, 500);
@@ -976,6 +1022,12 @@ public class MapFragment extends Fragment implements LocationListener {
             // 停止位置更新
             stopLocationUpdates();
             
+            // 销毁高德定位客户端
+            if (locationClient != null) {
+                locationClient.onDestroy();
+                locationClient = null;
+            }
+            
             // 清除所有Handler回调
             if (mainHandler != null) {
                 mainHandler.removeCallbacksAndMessages(null);
@@ -988,19 +1040,20 @@ public class MapFragment extends Fragment implements LocationListener {
             isLoadingMessages.set(false);
             isMapInitialized = false;
             
-            // 清理地图资源
+            // 清理高德地图资源
             if (mapView != null) {
                 try {
-                    mapView.getOverlays().clear();
-                    mapView.onDetach();
+                    mapView.onDestroy();
                 } catch (Exception e) {
-                    Log.w(TAG, "清理地图资源时出现异常: " + e.getMessage());
+                    Log.w(TAG, "清理高德地图资源时出现异常: " + e.getMessage());
                 }
             }
             
             // 清理标记引用
             currentLocationMarker = null;
-            lastLocation = null;
+            lastAMapLocation = null;
+            aMap = null;
+            locationOption = null;
             locationManager = null;
             
             Log.d(TAG, "MapFragment资源清理完成");

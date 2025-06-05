@@ -19,4 +19,25 @@
         <item name="materialButtonStyle">@style/Widget.MaterialComponents.Button</item>
         <item name="textInputStyle">@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox</item>
     </style>
+    
+    <!-- 足迹应用主题 -->
+    <style name="Theme.Footprint" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">@color/blue_500</item>
+        <item name="colorPrimaryVariant">@color/blue_700</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <!-- Secondary brand color. -->
+        <item name="colorSecondary">@color/indigo_500</item>
+        <item name="colorSecondaryVariant">@color/indigo_700</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <!-- Status bar color. -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowNoTitle">true</item>
+        
+        <!-- Material Components defaults -->
+        <item name="materialButtonStyle">@style/Widget.MaterialComponents.Button</item>
+        <item name="textInputStyle">@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox</item>
+    </style>
 </resources>

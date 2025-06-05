@@ -3,7 +3,7 @@ package com.damors.zuji.utils;
 import android.content.Context;
 import android.util.Log;
 
-import org.osmdroid.config.Configuration;
+// 高德地图缓存管理不需要特殊导入
 
 import java.io.File;
 import java.text.DecimalFormat;
@@ -14,6 +14,32 @@ import java.text.DecimalFormat;
  */
 public class MapCacheManager {
     private static final String TAG = "MapCacheManager";
+    private static Context sContext;
+    
+    /**
+     * 初始化缓存管理器
+     * @param context 应用上下文
+     */
+    public static void init(Context context) {
+        sContext = context.getApplicationContext();
+    }
+    
+    /**
+     * 获取高德地图缓存目录
+     * @return 高德地图缓存目录
+     */
+    private static File getAMapCacheDir() {
+        if (sContext == null) {
+            Log.w(TAG, "MapCacheManager未初始化，请先调用init方法");
+            return null;
+        }
+        // 高德地图缓存目录通常在应用缓存目录下的amap文件夹
+        File amapCacheDir = new File(sContext.getCacheDir(), "amap");
+        if (!amapCacheDir.exists()) {
+            amapCacheDir.mkdirs();
+        }
+        return amapCacheDir;
+    }
     
     /**
      * 获取地图缓存大小（字节）
@@ -21,7 +47,8 @@ public class MapCacheManager {
      */
     public static long getCacheSize() {
         try {
-            File cacheDir = Configuration.getInstance().getOsmdroidTileCache();
+            // 高德地图缓存目录通常在应用的缓存目录下
+            File cacheDir = getAMapCacheDir();
             if (cacheDir != null && cacheDir.exists()) {
                 return getFolderSize(cacheDir);
             }
@@ -46,7 +73,7 @@ public class MapCacheManager {
      */
     public static boolean clearCache() {
         try {
-            File cacheDir = Configuration.getInstance().getOsmdroidTileCache();
+            File cacheDir = getAMapCacheDir();
             if (cacheDir != null && cacheDir.exists()) {
                 boolean result = deleteFolder(cacheDir);
                 if (result) {
@@ -72,7 +99,7 @@ public class MapCacheManager {
     public static int clearExpiredCache(long maxAgeMillis) {
         int deletedCount = 0;
         try {
-            File cacheDir = Configuration.getInstance().getOsmdroidTileCache();
+            File cacheDir = getAMapCacheDir();
             if (cacheDir != null && cacheDir.exists()) {
                 long currentTime = System.currentTimeMillis();
                 deletedCount = deleteExpiredFiles(cacheDir, currentTime - maxAgeMillis);
@@ -90,7 +117,7 @@ public class MapCacheManager {
      */
     public static String getCachePath() {
         try {
-            File cacheDir = Configuration.getInstance().getOsmdroidTileCache();
+            File cacheDir = getAMapCacheDir();
             if (cacheDir != null) {
                 return cacheDir.getAbsolutePath();
             }
@@ -106,7 +133,7 @@ public class MapCacheManager {
      */
     public static boolean isCacheAvailable() {
         try {
-            File cacheDir = Configuration.getInstance().getOsmdroidTileCache();
+            File cacheDir = getAMapCacheDir();
             return cacheDir != null && cacheDir.exists() && cacheDir.canWrite();
         } catch (Exception e) {
             Log.e(TAG, "检查缓存可用性失败", e);
@@ -120,7 +147,7 @@ public class MapCacheManager {
      */
     public static int getCacheFileCount() {
         try {
-            File cacheDir = Configuration.getInstance().getOsmdroidTileCache();
+            File cacheDir = getAMapCacheDir();
             if (cacheDir != null && cacheDir.exists()) {
                 return countFiles(cacheDir);
             }
