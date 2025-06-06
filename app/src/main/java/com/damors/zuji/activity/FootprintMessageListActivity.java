@@ -84,10 +84,7 @@ public class FootprintMessageListActivity extends AppCompatActivity {
                 // 处理点赞点击事件
             }
             
-            @Override
-            public void onFavoriteClick(FootprintMessage message, int position) {
-                // 处理收藏点击事件
-            }
+            // 收藏功能已移除
             
             @Override
             public void onCommentClick(FootprintMessage message, int position) {

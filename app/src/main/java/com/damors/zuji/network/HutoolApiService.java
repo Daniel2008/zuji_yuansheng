@@ -16,7 +16,7 @@ import cn.hutool.json.JSONUtil;
 import com.damors.zuji.ZujiApp;
 import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.UserInfoResponse;
-import com.damors.zuji.model.Dept;
+
 import com.damors.zuji.model.FootprintMessage;
 import com.damors.zuji.model.GuluFile;
 import com.damors.zuji.model.PublishTrandsInfoPO;
@@ -403,12 +403,18 @@ public class HutoolApiService {
                     String msg = jsonResponse.getStr("msg", "");
                     
                     if (code == 200) {
-                        // 成功响应，解析data字段
-                        Object dataObj = jsonResponse.get("data");
+                        // 成功响应，解析数据
                         T data = null;
                         
-                        if (dataObj != null) {
-                            data = parseDataManually(dataObj, responseClass);
+                        // 对于UserInfoResponse，需要传递完整的响应对象
+                        if (responseClass == UserInfoResponse.class) {
+                            data = parseDataManually(jsonResponse, responseClass);
+                        } else {
+                            // 对于其他类型，传递data字段
+                            Object dataObj = jsonResponse.get("data");
+                            if (dataObj != null) {
+                                data = parseDataManually(dataObj, responseClass);
+                            }
                         }
                         
                         Log.d(TAG, "请求成功: " + url);
@@ -806,9 +812,11 @@ public class HutoolApiService {
     private UserInfoResponse parseUserInfoResponse(JSONObject jsonObj) {
         UserInfoResponse response = new UserInfoResponse();
         
+        // 解析基本响应信息
         if (jsonObj.containsKey("code")) {
             response.setCode(jsonObj.getInt("code"));
         }
+        
         if (jsonObj.containsKey("msg")) {
             response.setMsg(jsonObj.getStr("msg"));
         }
@@ -831,6 +839,8 @@ public class HutoolApiService {
     private UserInfoResponse.UserInfoData parseUserInfoData(JSONObject jsonObj) {
         UserInfoResponse.UserInfoData data = new UserInfoResponse.UserInfoData();
         
+        // 注意：根据实际JSON结构，token可能不在data级别，而在user级别或其他位置
+        // 这里先尝试在data级别查找token
         if (jsonObj.containsKey("token")) {
             data.setToken(jsonObj.getStr("token"));
         }
@@ -839,7 +849,16 @@ public class HutoolApiService {
         if (jsonObj.containsKey("user")) {
             Object userObj = jsonObj.get("user");
             if (userObj instanceof JSONObject) {
-                data.setUser((JSONObject) userObj);
+                // 将JSONObject转换为cn.hutool.json.JSONObject
+                JSONObject userJsonObj = (JSONObject) userObj;
+                cn.hutool.json.JSONObject hutoolUserObj = new cn.hutool.json.JSONObject();
+                
+                // 复制所有字段到hutool的JSONObject
+                for (String key : userJsonObj.keySet()) {
+                    hutoolUserObj.set(key, userJsonObj.get(key));
+                }
+                
+                data.setUser(hutoolUserObj);
             }
         }
         
@@ -848,54 +867,7 @@ public class HutoolApiService {
     
 
     
-    /**
-     * 解析部门数据
-     */
-    private Dept parseDept(JSONObject jsonObj) {
-        Dept dept = new Dept();
-        
-        if (jsonObj.containsKey("deptId")) {
-            dept.setDeptId(jsonObj.getInt("deptId"));
-        }
-        if (jsonObj.containsKey("parentId")) {
-            dept.setParentId(jsonObj.getInt("parentId"));
-        }
-        if (jsonObj.containsKey("deptName")) {
-            dept.setDeptName(jsonObj.getStr("deptName"));
-        }
-        if (jsonObj.containsKey("orderNum")) {
-            dept.setOrderNum(jsonObj.getInt("orderNum"));
-        }
-        if (jsonObj.containsKey("leader")) {
-            dept.setLeader(jsonObj.getStr("leader"));
-        }
-        if (jsonObj.containsKey("phone")) {
-            dept.setPhone(jsonObj.getStr("phone"));
-        }
-        if (jsonObj.containsKey("email")) {
-            dept.setEmail(jsonObj.getStr("email"));
-        }
-        if (jsonObj.containsKey("status")) {
-            dept.setStatus(jsonObj.getStr("status"));
-        }
-        if (jsonObj.containsKey("delFlag")) {
-            dept.setDelFlag(jsonObj.getStr("delFlag"));
-        }
-        if (jsonObj.containsKey("createBy")) {
-            dept.setCreateBy(jsonObj.getStr("createBy"));
-        }
-        if (jsonObj.containsKey("createTime")) {
-            dept.setCreateTime(jsonObj.getStr("createTime"));
-        }
-        if (jsonObj.containsKey("updateBy")) {
-            dept.setUpdateBy(jsonObj.getStr("updateBy"));
-        }
-        if (jsonObj.containsKey("updateTime")) {
-            dept.setUpdateTime(jsonObj.getStr("updateTime"));
-        }
-        
-        return dept;
-    }
+
     
     /**
      * 请求信息类，用于保存请求的详细信息

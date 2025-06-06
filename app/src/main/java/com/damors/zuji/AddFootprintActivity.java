@@ -26,6 +26,14 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.amap.api.services.geocoder.GeocodeSearch;
+import com.amap.api.services.geocoder.RegeocodeQuery;
+import com.amap.api.services.geocoder.RegeocodeResult;
+import com.amap.api.services.geocoder.RegeocodeAddress;
+import com.amap.api.services.geocoder.GeocodeResult;
+import com.amap.api.services.core.LatLonPoint;
+
+
 import com.damors.zuji.data.FootprintEntity;
 import com.damors.zuji.viewmodel.FootprintViewModel;
 import com.damors.zuji.manager.UserManager;
@@ -41,13 +49,14 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AddFootprintActivity extends AppCompatActivity {
+public class AddFootprintActivity extends AppCompatActivity implements GeocodeSearch.OnGeocodeSearchListener {
 
     private static final int REQUEST_PICK_IMAGES = 1;
     private static final int REQUEST_SELECT_LOCATION = 2;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1003;
 
     private EditText etContent;
+    private GeocodeSearch geocodeSearch;
     private RecyclerView rvImages;
     private TextView tvLocation;
     private Button btnPublish;
@@ -109,10 +118,13 @@ public class AddFootprintActivity extends AppCompatActivity {
             // 获取其他位置相关信息
             double altitude = intent.getDoubleExtra("altitude", 0.0);
             float accuracy = intent.getFloatExtra("accuracy", 0.0f);
-            
+
+            // 获取地址信息
+            String address = intent.getStringExtra("address");
+
             // 如果有有效的经纬度信息，设置默认位置文本
             if (latitude != 0.0 && longitude != 0.0) {
-                selectedLocation = String.format("当前位置 (%.6f, %.6f)", latitude, longitude);
+                selectedLocation =address;
                 Log.d("AddFootprintActivity", "从Intent获取位置信息: " + selectedLocation + 
                       ", 海拔: " + altitude + "m, 精度: " + accuracy + "m");
             } else {
@@ -141,8 +153,15 @@ public class AddFootprintActivity extends AppCompatActivity {
                  // 转换为火星坐标系（如果需要）
                  latitude = location.getLatitude();
                  longitude = location.getLongitude();
-                 selectedLocation = String.format("当前位置 (%.6f, %.6f)", latitude, longitude);
-                 Log.d("AddFootprintActivity", "获取到当前位置: " + selectedLocation);
+                 
+                 // 临时显示经纬度
+                 selectedLocation = String.format("正在获取位置信息... (%.6f, %.6f)", latitude, longitude);
+                 updateLocationUI();
+                 
+                 // 使用高德地图SDK进行逆地理编码
+                 performReverseGeocode(latitude, longitude);
+                 
+                 Log.d("AddFootprintActivity", "获取到当前位置坐标: " + latitude + ", " + longitude);
              } else {
                  Log.w("AddFootprintActivity", "无法获取当前位置");
              }
@@ -258,7 +277,7 @@ public class AddFootprintActivity extends AppCompatActivity {
                 return;
             }
 
-            // TODO: 实现发布逻辑
+            // 发布足迹到服务器
             publishFootprint(content, selectedLocation);
         });
     }
@@ -398,6 +417,103 @@ public class AddFootprintActivity extends AppCompatActivity {
                 }
             }
         );
+    }
+    
+    /**
+     * 更新位置显示UI
+     */
+    private void updateLocationUI() {
+        if (tvLocation != null && selectedLocation != null) {
+            tvLocation.setText(selectedLocation);
+        }
+    }
+    
+    /**
+     * 执行逆地理编码
+     * @param lat 纬度
+     * @param lng 经度
+     */
+    private void performReverseGeocode(double lat, double lng) {
+        try {
+            // 初始化GeocodeSearch
+            if (geocodeSearch == null) {
+                geocodeSearch = new GeocodeSearch(this);
+                geocodeSearch.setOnGeocodeSearchListener(this);
+            }
+            
+            // 创建逆地理编码查询条件
+            LatLonPoint latLonPoint = new LatLonPoint(lat, lng);
+            // 查询范围500米，使用高德坐标系
+            RegeocodeQuery query = new RegeocodeQuery(latLonPoint, 500f, GeocodeSearch.AMAP);
+            
+            // 异步查询
+            geocodeSearch.getFromLocationAsyn(query);
+            
+        } catch (Exception e) {
+            Log.e("AddFootprintActivity", "逆地理编码初始化失败: " + e.getMessage());
+            // 失败时显示经纬度
+            selectedLocation = String.format("当前位置 (%.6f, %.6f)", lat, lng);
+            updateLocationUI();
+        }
+    }
+    
+    @Override
+    public void onRegeocodeSearched(RegeocodeResult regeocodeResult, int rCode) {
+        if (rCode == 1000) { // 查询成功
+            if (regeocodeResult != null && regeocodeResult.getRegeocodeAddress() != null) {
+                RegeocodeAddress regeocodeAddress = regeocodeResult.getRegeocodeAddress();
+                String formatAddress = regeocodeAddress.getFormatAddress();
+                
+                if (formatAddress != null && !formatAddress.isEmpty()) {
+                    selectedLocation = formatAddress;
+                    Log.d("AddFootprintActivity", "获取到地址描述: " + formatAddress);
+                } else {
+                    // 如果格式化地址为空，尝试组合地址信息
+                    StringBuilder addressBuilder = new StringBuilder();
+                    if (regeocodeAddress.getProvince() != null) {
+                        addressBuilder.append(regeocodeAddress.getProvince());
+                    }
+                    if (regeocodeAddress.getCity() != null) {
+                        addressBuilder.append(regeocodeAddress.getCity());
+                    }
+                    if (regeocodeAddress.getDistrict() != null) {
+                        addressBuilder.append(regeocodeAddress.getDistrict());
+                    }
+                    if (regeocodeAddress.getTownship() != null) {
+                        addressBuilder.append(regeocodeAddress.getTownship());
+                    }
+                    
+                    selectedLocation = addressBuilder.length() > 0 ? 
+                        addressBuilder.toString() : 
+                        String.format("当前位置 (%.6f, %.6f)", latitude, longitude);
+                    
+                    Log.d("AddFootprintActivity", "组合地址描述: " + selectedLocation);
+                }
+            } else {
+                selectedLocation = String.format("当前位置 (%.6f, %.6f)", latitude, longitude);
+                Log.w("AddFootprintActivity", "逆地理编码结果为空");
+            }
+        } else {
+            selectedLocation = String.format("当前位置 (%.6f, %.6f)", latitude, longitude);
+            Log.w("AddFootprintActivity", "逆地理编码失败，错误码: " + rCode);
+        }
+        
+        // 更新UI
+        updateLocationUI();
+    }
+    
+    @Override
+    public void onGeocodeSearched(GeocodeResult geocodeResult, int rCode) {
+        // 地理编码回调，这里不需要处理
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // 清理资源
+        if (geocodeSearch != null) {
+            geocodeSearch.setOnGeocodeSearchListener(null);
+        }
     }
     
     /**

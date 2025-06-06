@@ -40,4 +40,25 @@
         <item name="materialButtonStyle">@style/Widget.MaterialComponents.Button</item>
         <item name="textInputStyle">@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox</item>
     </style>
+    
+    <!-- 离线地图管理全屏主题 -->
+    <style name="Theme.OfflineMap.Fullscreen" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">@color/blue_500</item>
+        <item name="colorPrimaryVariant">@color/blue_700</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <!-- Secondary brand color. -->
+        <item name="colorSecondary">@color/indigo_500</item>
+        <item name="colorSecondaryVariant">@color/indigo_700</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <!-- 全屏设置 - 隐藏状态栏 -->
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowContentOverlay">@null</item>
+        
+        <!-- Material Components defaults -->
+        <item name="materialButtonStyle">@style/Widget.MaterialComponents.Button</item>
+        <item name="textInputStyle">@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox</item>
+    </style>
 </resources>

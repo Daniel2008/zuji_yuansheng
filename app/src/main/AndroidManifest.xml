@@ -97,6 +97,15 @@
             android:label="选择位置"
             android:theme="@style/Theme.Footprint" />
             
+
+            
+        <!-- 高德地图原生离线地图管理活动 -->
+        <activity
+            android:name="com.amap.api.maps.offlinemap.OfflineMapActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.OfflineMap.Fullscreen" />
+            
         <!-- FileProvider配置 -->
         <provider
             android:name="androidx.core.content.FileProvider"

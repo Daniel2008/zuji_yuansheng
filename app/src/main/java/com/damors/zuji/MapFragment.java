@@ -4,9 +4,7 @@ import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
+
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -25,7 +23,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.damors.zuji.data.FootprintEntity;
-import com.damors.zuji.utils.GPSUtil;
+
 import com.damors.zuji.viewmodel.FootprintViewModel;
 import com.damors.zuji.network.HutoolApiService;
 import com.damors.zuji.model.FootprintMessage;
@@ -63,7 +61,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 4. 增强了位置更新逻辑
  * 5. 添加了加载状态指示
  */
-public class MapFragment extends Fragment implements LocationListener {
+public class MapFragment extends Fragment {
 
     private static final String TAG = "MapFragment";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001; // 位置权限请求码
@@ -82,13 +80,11 @@ public class MapFragment extends Fragment implements LocationListener {
     private AMapLocationClientOption locationOption;
     
     // 核心服务
-    private LocationManager locationManager;
     private FootprintViewModel viewModel;
     private HutoolApiService apiService;
     
     // 位置相关
     private AMapLocation lastAMapLocation;
-    private Location lastLocation;
     private Marker currentLocationMarker;
     
     // 状态管理
@@ -151,8 +147,7 @@ public class MapFragment extends Fragment implements LocationListener {
         mapView = view.findViewById(R.id.map);
         addFootprintButton = view.findViewById(R.id.btn_add_footprint);
         
-        // 初始化位置管理器
-        locationManager = (LocationManager) requireActivity().getSystemService(Context.LOCATION_SERVICE);
+
         
         Log.d(TAG, "核心组件初始化完成");
     }
@@ -172,8 +167,8 @@ public class MapFragment extends Fragment implements LocationListener {
             // 设置地图类型为普通地图
             aMap.setMapType(AMap.MAP_TYPE_NORMAL);
             
-            // 设置缩放控件
-            aMap.getUiSettings().setZoomControlsEnabled(true);
+            // 设置缩放控件（禁用）
+            aMap.getUiSettings().setZoomControlsEnabled(false);
             
             // 设置指南针
             aMap.getUiSettings().setCompassEnabled(true);
@@ -215,9 +210,7 @@ public class MapFragment extends Fragment implements LocationListener {
      * 初始化位置服务
      */
     private void initializeLocationService() {
-        if (locationManager == null) {
-            throw new IllegalStateException("LocationManager未正确初始化");
-        }
+
         
         // 延迟加载数据，避免阻塞UI
         mainHandler.post(() -> {
@@ -322,7 +315,7 @@ public class MapFragment extends Fragment implements LocationListener {
      * 检查位置获取超时
      */
     private void checkLocationTimeout() {
-        if (isLocationUpdating.get() && lastLocation == null) {
+        if (isLocationUpdating.get() && lastAMapLocation == null) {
             Log.w(TAG, "位置获取超时");
             if (retryCount < MAX_RETRY_COUNT) {
                 retryCount++;
@@ -366,7 +359,7 @@ public class MapFragment extends Fragment implements LocationListener {
     }
     
     /**
-     * 更新高德地图位置
+     * 更新地图上的位置标记
      */
     private void updateLocationOnMap(AMapLocation aMapLocation) {
         if (!isMapInitialized || aMap == null || aMapLocation == null) {
@@ -375,6 +368,7 @@ public class MapFragment extends Fragment implements LocationListener {
         }
         
         try {
+            // 直接使用高德定位的坐标，无需转换
             LatLng latLng = new LatLng(aMapLocation.getLatitude(), aMapLocation.getLongitude());
             
             // 移动地图到当前位置
@@ -388,42 +382,19 @@ public class MapFragment extends Fragment implements LocationListener {
             MarkerOptions markerOptions = new MarkerOptions()
                     .position(latLng)
                     .title("当前位置")
-                    .snippet(aMapLocation.getAddress());
+                    .snippet(aMapLocation.getAddress())
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
             
             currentLocationMarker = aMap.addMarker(markerOptions);
             
-            Log.d(TAG, "高德地图位置已更新: " + aMapLocation.getLatitude() + ", " + aMapLocation.getLongitude());
-            
-        } catch (Exception e) {
-            Log.e(TAG, "更新高德地图位置失败: " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * 更新地图位置（优化版本）
-     * 添加了坐标转换和错误处理
-     */
-    private void updateMapLocation(Location location) {
-        if (!isMapInitialized || mapView == null || location == null) {
-            Log.w(TAG, "地图未初始化或位置信息无效，跳过位置更新");
-            return;
-        }
-        
-        try {
-            // 转换为火星坐标系
-            double[] locationPoint = GPSUtil.gps84_To_Gcj02(location.getLatitude(), location.getLongitude());
-            LatLng currentLocation = new LatLng(locationPoint[0], locationPoint[1]);
-            
-            // 平滑移动到新位置
-            CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(currentLocation, 15f);
-            aMap.animateCamera(cameraUpdate);
-            
-            Log.d(TAG, "地图位置已更新: " + locationPoint[0] + ", " + locationPoint[1]);
+            Log.d(TAG, "地图位置已更新: " + aMapLocation.getLatitude() + ", " + aMapLocation.getLongitude());
             
         } catch (Exception e) {
             Log.e(TAG, "更新地图位置失败: " + e.getMessage(), e);
         }
     }
+
+
 
 
 
@@ -445,22 +416,19 @@ public class MapFragment extends Fragment implements LocationListener {
             return;
         }
         
-        if (locationManager == null) {
-            Log.e(TAG, "LocationManager未初始化");
-            return;
-        }
+
         
         try {
-            Location bestLocation = getBestLastKnownLocation();
+            // 启用地图的我的位置功能
+            aMap.setMyLocationEnabled(true);
             
-            if (bestLocation != null) {
-                updateCurrentLocationMarker(bestLocation);
-                updateMapLocation(bestLocation);
-                lastLocation = bestLocation;
-                retryCount = 0; // 重置重试计数
+            // 启动高德定位
+            if (lastAMapLocation != null) {
+                updateLocationOnMap(lastAMapLocation);
+                retryCount = 0;
                 Log.d(TAG, "位置功能启用成功");
             } else {
-                Log.d(TAG, "无可用的历史位置，启动位置更新");
+                Log.d(TAG, "无历史位置，启动位置更新");
                 startLocationUpdates();
             }
             
@@ -473,70 +441,9 @@ public class MapFragment extends Fragment implements LocationListener {
         }
     }
     
-    /**
-     * 获取最佳的历史位置信息
-     */
-    private Location getBestLastKnownLocation() throws SecurityException {
-        Location gpsLocation = null;
-        Location networkLocation = null;
-        
-        // 尝试获取GPS位置
-        if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-            gpsLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        }
-        
-        // 尝试获取网络位置
-        if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-            networkLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-        }
-        
-        // 选择最佳位置（优先GPS，考虑时间新旧）
-        if (gpsLocation != null && networkLocation != null) {
-            // 如果GPS位置较新或精度更高，优先使用GPS
-            long timeDiff = gpsLocation.getTime() - networkLocation.getTime();
-            if (timeDiff > -60000 || gpsLocation.getAccuracy() < networkLocation.getAccuracy()) { // 1分钟内或精度更高
-                return gpsLocation;
-            } else {
-                return networkLocation;
-            }
-        } else if (gpsLocation != null) {
-            return gpsLocation;
-        } else {
-            return networkLocation;
-        }
-    }
+
     
-    /**
-     * 更新当前位置标记
-     */
-    private void updateCurrentLocationMarker(Location location) {
-        if (aMap == null || location == null) {
-            return;
-        }
-        
-        try {
-            // 转换为火星坐标系
-            double[] locationPoint = GPSUtil.gps84_To_Gcj02(location.getLatitude(), location.getLongitude());
-            LatLng currentLocation = new LatLng(locationPoint[0], locationPoint[1]);
-            
-            if (currentLocationMarker == null) {
-                // 创建新的位置标记
-                MarkerOptions markerOptions = new MarkerOptions()
-                        .position(currentLocation)
-                        .title("我的位置")
-                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
-                currentLocationMarker = aMap.addMarker(markerOptions);
-                Log.d(TAG, "已创建当前位置标记");
-            } else {
-                // 更新现有标记位置
-                currentLocationMarker.setPosition(currentLocation);
-                Log.d(TAG, "已更新当前位置标记");
-            }
-            
-        } catch (Exception e) {
-            Log.e(TAG, "更新位置标记失败: " + e.getMessage(), e);
-        }
-    }
+
 
     /**
      * 加载并显示所有足迹点（优化版本）
@@ -620,7 +527,7 @@ public class MapFragment extends Fragment implements LocationListener {
         
         // 重新添加当前位置标记
         if (lastAMapLocation != null) {
-            updateCurrentLocationMarker(lastAMapLocation);
+            updateLocationOnMap(lastAMapLocation);
         }
         
         // 移动相机到最后一个足迹点
@@ -652,111 +559,9 @@ public class MapFragment extends Fragment implements LocationListener {
         stopLocationUpdates();
     }
     
-    /**
-     * 位置变化回调
-     */
-    @Override
-    public void onLocationChanged(@NonNull Location location) {
-        if (location == null) {
-            Log.w(TAG, "接收到空位置信息");
-            return;
-        }
-        
-        try {
-            Log.d(TAG, String.format("位置更新: %.6f, %.6f (精度: %.1fm)", 
-                location.getLatitude(), location.getLongitude(), location.getAccuracy()));
-            
-            // 检查位置精度，过滤低精度位置
-            if (location.getAccuracy() > 100) { // 精度大于100米的位置可能不准确
-                Log.w(TAG, "位置精度较低，跳过更新: " + location.getAccuracy() + "m");
-                return;
-            }
-            
-            // 检查位置变化距离，避免频繁更新
-            if (lastLocation != null) {
-                float distance = location.distanceTo(lastLocation);
-                if (distance < MIN_DISTANCE_CHANGE && 
-                    (System.currentTimeMillis() - lastLocation.getTime()) < MIN_TIME_BETWEEN_UPDATES) {
-                    Log.d(TAG, "位置变化距离过小，跳过更新: " + distance + "m");
-                    return;
-                }
-            }
-            
-            // 清除超时检查
-            mainHandler.removeCallbacks(this::checkLocationTimeout);
-            
-            // 更新地图位置和标记
-            updateMapLocation(location);
-            updateCurrentLocationMarker(location);
-            
-            // 保存最后位置
-            lastLocation = location;
-            retryCount = 0; // 重置重试计数
-            
-            Log.d(TAG, "位置更新成功");
-            
-        } catch (Exception e) {
-            Log.e(TAG, "处理位置更新失败: " + e.getMessage(), e);
-            handleLocationUpdateError();
-        }
-    }
+
     
-    /**
-     * 位置提供者状态变化回调
-     */
-    @Override
-    public void onProviderEnabled(@NonNull String provider) {
-        Log.d(TAG, "位置提供者已启用: " + provider);
-        
-        // 如果GPS启用且当前没有在更新位置，尝试重新启动位置更新
-        if (LocationManager.GPS_PROVIDER.equals(provider) && !isLocationUpdating.get()) {
-            Log.d(TAG, "GPS已启用，尝试重新启动位置更新");
-            mainHandler.postDelayed(() -> {
-                if (!isLocationUpdating.get()) {
-                    startLocationUpdates();
-                }
-            }, 1000);
-        }
-        
-        showInfoToast("位置服务已启用: " + getProviderDisplayName(provider));
-    }
-    
-    /**
-     * 位置提供者状态变化回调
-     */
-    @Override
-    public void onProviderDisabled(@NonNull String provider) {
-        Log.w(TAG, "位置提供者已禁用: " + provider);
-        
-        // 如果GPS被禁用，显示提示信息
-        if (LocationManager.GPS_PROVIDER.equals(provider)) {
-            showErrorToast("GPS已关闭，位置精度可能降低");
-            
-            // 如果网络定位也不可用，停止位置更新
-            if (locationManager != null && 
-                !locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                Log.w(TAG, "所有位置提供者都不可用，停止位置更新");
-                stopLocationUpdates();
-                showErrorToast("位置服务不可用，请检查设置");
-            }
-        }
-    }
-    
-    /**
-     * 获取位置提供者的显示名称
-     */
-    private String getProviderDisplayName(String provider) {
-        switch (provider) {
-            case LocationManager.GPS_PROVIDER:
-                return "GPS";
-            case LocationManager.NETWORK_PROVIDER:
-                return "网络定位";
-            case LocationManager.PASSIVE_PROVIDER:
-                return "被动定位";
-            default:
-                return provider;
-        }
-    }
+
     
     /**
      * 在当前位置添加足迹点（优化版本）
@@ -776,27 +581,23 @@ public class MapFragment extends Fragment implements LocationListener {
                 return;
             }
             
-            Location location = getCurrentBestLocation();
-            
-            if (location != null) {
+            if (lastAMapLocation != null) {
                 // 检查位置精度
-                if (location.getAccuracy() > 50) {
-                    Log.w(TAG, "当前位置精度较低: " + location.getAccuracy() + "m");
+                if (lastAMapLocation.getAccuracy() > 50) {
+                    Log.w(TAG, "当前位置精度较低: " + lastAMapLocation.getAccuracy() + "m");
                     showInfoToast("位置精度较低，建议等待GPS信号更好时再添加");
                 }
                 
-                // 转换为火星坐标系
-                double[] locationPoint = GPSUtil.gps84_To_Gcj02(location.getLatitude(), location.getLongitude());
-                
-                // 跳转到足迹详情页面
+                // 直接使用高德定位的坐标，无需转换
                 Intent intent = new Intent(getActivity(), AddFootprintActivity.class);
-                intent.putExtra("latitude", locationPoint[0]);
-                intent.putExtra("longitude", locationPoint[1]);
-                intent.putExtra("altitude", location.getAltitude());
-                intent.putExtra("accuracy", location.getAccuracy());
+                intent.putExtra("latitude", lastAMapLocation.getLatitude());
+                intent.putExtra("longitude", lastAMapLocation.getLongitude());
+                intent.putExtra("altitude", lastAMapLocation.getAltitude());
+                intent.putExtra("accuracy", lastAMapLocation.getAccuracy());
+                intent.putExtra("address", lastAMapLocation.getAddress());
                 startActivity(intent);
                 
-                Log.d(TAG, "准备添加足迹 - 纬度: " + locationPoint[0] + ", 经度: " + locationPoint[1]);
+                Log.d(TAG, "准备添加足迹 - 纬度: " + lastAMapLocation.getLatitude() + ", 经度: " + lastAMapLocation.getLongitude());
             } else {
                 handleNoLocationAvailable();
             }
@@ -809,47 +610,26 @@ public class MapFragment extends Fragment implements LocationListener {
         }
     }
     
-    /**
-     * 获取当前最佳位置
-     */
-    private Location getCurrentBestLocation() throws SecurityException {
-        // 优先使用最近的位置信息
-        if (lastLocation != null) {
-            long timeDiff = System.currentTimeMillis() - lastLocation.getTime();
-            if (timeDiff < 300000) { // 5分钟内的位置认为是有效的
-                Log.d(TAG, "使用最近的位置信息: " + timeDiff + "ms前");
-                return lastLocation;
-            }
-        }
-        
-        // 获取历史最佳位置
-        return getBestLastKnownLocation();
-    }
+
     
     /**
      * 处理无位置可用的情况
      */
     private void handleNoLocationAvailable() {
-        // 检查位置服务是否可用
-        boolean gpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-        boolean networkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-        
-        if (!gpsEnabled && !networkEnabled) {
-            showErrorToast("位置服务未开启，请在设置中开启GPS或网络定位");
-        } else if (!isLocationUpdating.get()) {
+        if (!isLocationUpdating.get()) {
             showInfoToast("正在获取位置信息，请稍候...");
             startLocationUpdates();
             
             // 延迟重试
             mainHandler.postDelayed(() -> {
-                if (lastLocation != null) {
+                if (lastAMapLocation != null) {
                     addCurrentLocationFootprint();
                 } else {
-                    showErrorToast("无法获取位置信息，请检查GPS设置或移动到信号更好的地方");
+                    showErrorToast("无法获取位置信息，请检查定位设置或移动到信号更好的地方");
                 }
             }, 5000);
         } else {
-            showErrorToast("无法获取位置信息，请检查GPS设置或移动到信号更好的地方");
+            showErrorToast("无法获取位置信息，请检查定位设置或移动到信号更好的地方");
         }
     }
     
@@ -1054,7 +834,6 @@ public class MapFragment extends Fragment implements LocationListener {
             lastAMapLocation = null;
             aMap = null;
             locationOption = null;
-            locationManager = null;
             
             Log.d(TAG, "MapFragment资源清理完成");
             

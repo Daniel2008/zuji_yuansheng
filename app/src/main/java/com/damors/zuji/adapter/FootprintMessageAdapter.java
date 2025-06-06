@@ -37,7 +37,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         void onUserAvatarClick(FootprintMessage message, int position);
         void onLocationClick(FootprintMessage message, int position);
         void onLikeClick(FootprintMessage message, int position);
-        void onFavoriteClick(FootprintMessage message, int position);
+        // 收藏功能已移除
         void onCommentClick(FootprintMessage message, int position);
         void onImageClick(FootprintMessage message, int position, int imageIndex, List<GuluFile> imageFiles);
     }
@@ -401,8 +401,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         // 设置点赞状态和数量
         updateLikeStatus(holder, message.isLiked(), message.getLikeCount());
         
-        // 设置收藏状态和数量
-        updateFavoriteStatus(holder, message.isFavorited(), message.getFavoriteCount());
+        // 收藏功能已移除
         
         // 设置评论数量
         holder.tvCommentCount.setText(String.valueOf(message.getCommentCount()));
@@ -414,11 +413,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
             }
         });
         
-        holder.layoutFavorite.setOnClickListener(v -> {
-            if (onItemClickListener != null) {
-                onItemClickListener.onFavoriteClick(message, position);
-            }
-        });
+        // 收藏功能已移除
         
         holder.layoutComment.setOnClickListener(v -> {
             if (onItemClickListener != null) {
@@ -446,24 +441,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         holder.tvLikeCount.setText(String.valueOf(likeCount));
     }
     
-    /**
-     * 更新收藏状态
-     * @param holder ViewHolder
-     * @param isFavorited 是否已收藏
-     * @param favoriteCount 收藏数量
-     */
-    private void updateFavoriteStatus(ViewHolder holder, boolean isFavorited, int favoriteCount) {
-        if (isFavorited) {
-            holder.ivFavorite.setImageResource(R.drawable.ic_favorite_filled);
-            holder.ivFavorite.setColorFilter(context.getResources().getColor(R.color.action_icon_active_color));
-            holder.tvFavoriteCount.setTextColor(context.getResources().getColor(R.color.action_text_active_color));
-        } else {
-            holder.ivFavorite.setImageResource(R.drawable.ic_favorite_outline);
-            holder.ivFavorite.setColorFilter(context.getResources().getColor(R.color.action_icon_color));
-            holder.tvFavoriteCount.setTextColor(context.getResources().getColor(R.color.action_text_color));
-        }
-        holder.tvFavoriteCount.setText(String.valueOf(favoriteCount));
-    }
+    // 收藏功能已移除
     
     /**
      * 公开方法：更新指定位置的点赞状态
@@ -480,20 +458,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         }
     }
     
-    /**
-     * 公开方法：更新指定位置的收藏状态
-     * @param position 位置
-     * @param isFavorited 是否已收藏
-     * @param favoriteCount 收藏数量
-     */
-    public void updateItemFavoriteStatus(int position, boolean isFavorited, int favoriteCount) {
-        if (position >= 0 && position < messageList.size()) {
-            FootprintMessage message = messageList.get(position);
-            message.setFavorited(isFavorited);
-            message.setFavoriteCount(favoriteCount);
-            notifyItemChanged(position);
-        }
-    }
+    // 收藏功能已移除
     
     /**
      * 公开方法：更新指定位置的评论数量
@@ -617,9 +582,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         LinearLayout layoutLike;
         ImageView ivLike;
         TextView tvLikeCount;
-        LinearLayout layoutFavorite;
-        ImageView ivFavorite;
-        TextView tvFavoriteCount;
+        // 收藏功能已移除
         LinearLayout layoutComment;
         ImageView ivComment;
         TextView tvCommentCount;
@@ -657,9 +620,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
             layoutLike = itemView.findViewById(R.id.layout_like);
             ivLike = itemView.findViewById(R.id.iv_like);
             tvLikeCount = itemView.findViewById(R.id.tv_like_count);
-            layoutFavorite = itemView.findViewById(R.id.layout_favorite);
-            ivFavorite = itemView.findViewById(R.id.iv_favorite);
-            tvFavoriteCount = itemView.findViewById(R.id.tv_favorite_count);
+            // 收藏功能已移除
             layoutComment = itemView.findViewById(R.id.layout_comment);
             ivComment = itemView.findViewById(R.id.iv_comment);
             tvCommentCount = itemView.findViewById(R.id.tv_comment_count);

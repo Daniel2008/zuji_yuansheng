@@ -76,10 +76,52 @@ public class UserManager {
         editor.apply();
     }
 
+    /**
+     * 清理旧的登录数据（兼容性处理）
+     * 清理可能存在的"user_prefs"中的旧数据
+     * 
+     * @param context 应用上下文
+     */
+    public void clearLegacyLoginData(Context context) {
+        try {
+            SharedPreferences legacyPrefs = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE);
+            if (legacyPrefs.contains("token") || legacyPrefs.contains("user_data") || legacyPrefs.contains("is_logged_in")) {
+                android.util.Log.d("UserManager", "发现旧的登录数据，正在清理...");
+                legacyPrefs.edit().clear().apply();
+                android.util.Log.d("UserManager", "旧登录数据清理完成");
+            }
+        } catch (Exception e) {
+            android.util.Log.e("UserManager", "清理旧登录数据时发生错误", e);
+        }
+    }
+
+    /**
+     * 用户登出
+     * 清除所有用户数据和token
+     */
     public void logout() {
         currentUserJson = null;
         token = null;
         preferences.edit().clear().apply();
+    }
+    
+    /**
+     * 用户登出（带Context参数）
+     * 清除所有用户数据和token，并清理旧数据
+     * 
+     * @param context 上下文对象
+     */
+    public void logout(Context context) {
+        logout();
+        
+        // 同时清理可能存在的旧数据
+        try {
+            if (context != null) {
+                clearLegacyLoginData(context);
+            }
+        } catch (Exception e) {
+            android.util.Log.e("UserManager", "清理旧数据时发生错误", e);
+        }
     }
 
     /**
@@ -118,8 +160,34 @@ public class UserManager {
         return token;
     }
 
+    /**
+     * 检查用户是否已登录
+     * 增强版本：同时验证数据完整性
+     * 
+     * @return 是否已登录
+     */
     public boolean isLoggedIn() {
         return !TextUtils.isEmpty(currentUserJson) && !TextUtils.isEmpty(token);
+    }
+
+    /**
+     * 检查并同步登录状态
+     * 确保不会出现重复登录的情况
+     * 
+     * @return 登录状态是否有效
+     */
+    public boolean checkAndSyncLoginState() {
+        boolean hasValidData = !TextUtils.isEmpty(currentUserJson) && !TextUtils.isEmpty(token);
+        
+        if (!hasValidData) {
+            // 如果数据不完整，清理所有登录状态
+            android.util.Log.w("UserManager", "发现不完整的登录数据，正在清理...");
+            logout();
+            return false;
+        }
+        
+        android.util.Log.d("UserManager", "登录状态检查通过");
+        return true;
     }
 
     /**

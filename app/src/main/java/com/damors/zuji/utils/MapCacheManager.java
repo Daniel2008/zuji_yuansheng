@@ -33,12 +33,66 @@ public class MapCacheManager {
             Log.w(TAG, "MapCacheManager未初始化，请先调用init方法");
             return null;
         }
-        // 高德地图缓存目录通常在应用缓存目录下的amap文件夹
-        File amapCacheDir = new File(sContext.getCacheDir(), "amap");
-        if (!amapCacheDir.exists()) {
-            amapCacheDir.mkdirs();
+        
+        // 高德地图可能的缓存目录路径
+        String[] possibleCachePaths = {
+            "amap",           // 应用缓存目录下的amap文件夹
+            "map",            // 应用缓存目录下的map文件夹
+            "tiles",          // 瓦片缓存目录
+            "offlinemap",     // 离线地图缓存目录
+            "com.amap.api"    // 高德API缓存目录
+        };
+        
+        File largestCacheDir = null;
+        long largestSize = 0;
+        
+        // 检查应用缓存目录下的各种可能路径
+        for (String cachePath : possibleCachePaths) {
+            File cacheDir = new File(sContext.getCacheDir(), cachePath);
+            if (cacheDir.exists() && cacheDir.isDirectory()) {
+                long size = getFolderSize(cacheDir);
+                if (size > largestSize) {
+                    largestSize = size;
+                    largestCacheDir = cacheDir;
+                }
+            }
         }
-        return amapCacheDir;
+        
+        // 检查应用文件目录下的缓存
+        for (String cachePath : possibleCachePaths) {
+            File cacheDir = new File(sContext.getFilesDir(), cachePath);
+            if (cacheDir.exists() && cacheDir.isDirectory()) {
+                long size = getFolderSize(cacheDir);
+                if (size > largestSize) {
+                    largestSize = size;
+                    largestCacheDir = cacheDir;
+                }
+            }
+        }
+        
+        // 检查外部缓存目录
+        if (sContext.getExternalCacheDir() != null) {
+            for (String cachePath : possibleCachePaths) {
+                File cacheDir = new File(sContext.getExternalCacheDir(), cachePath);
+                if (cacheDir.exists() && cacheDir.isDirectory()) {
+                    long size = getFolderSize(cacheDir);
+                    if (size > largestSize) {
+                        largestSize = size;
+                        largestCacheDir = cacheDir;
+                    }
+                }
+            }
+        }
+        
+        // 如果没有找到现有缓存目录，创建默认的amap目录
+        if (largestCacheDir == null) {
+            largestCacheDir = new File(sContext.getCacheDir(), "amap");
+            if (!largestCacheDir.exists()) {
+                largestCacheDir.mkdirs();
+            }
+        }
+        
+        return largestCacheDir;
     }
     
     /**
@@ -47,11 +101,40 @@ public class MapCacheManager {
      */
     public static long getCacheSize() {
         try {
-            // 高德地图缓存目录通常在应用的缓存目录下
-            File cacheDir = getAMapCacheDir();
-            if (cacheDir != null && cacheDir.exists()) {
-                return getFolderSize(cacheDir);
+            long totalSize = 0;
+            
+            // 获取所有可能的缓存目录并计算总大小
+            String[] possibleCachePaths = {
+                "amap", "map", "tiles", "offlinemap", "com.amap.api"
+            };
+            
+            // 检查应用缓存目录
+            for (String cachePath : possibleCachePaths) {
+                File cacheDir = new File(sContext.getCacheDir(), cachePath);
+                if (cacheDir.exists() && cacheDir.isDirectory()) {
+                    totalSize += getFolderSize(cacheDir);
+                }
             }
+            
+            // 检查应用文件目录
+            for (String cachePath : possibleCachePaths) {
+                File cacheDir = new File(sContext.getFilesDir(), cachePath);
+                if (cacheDir.exists() && cacheDir.isDirectory()) {
+                    totalSize += getFolderSize(cacheDir);
+                }
+            }
+            
+            // 检查外部缓存目录
+            if (sContext.getExternalCacheDir() != null) {
+                for (String cachePath : possibleCachePaths) {
+                    File cacheDir = new File(sContext.getExternalCacheDir(), cachePath);
+                    if (cacheDir.exists() && cacheDir.isDirectory()) {
+                        totalSize += getFolderSize(cacheDir);
+                    }
+                }
+            }
+            
+            return totalSize;
         } catch (Exception e) {
             Log.e(TAG, "获取缓存大小失败", e);
         }
@@ -73,18 +156,69 @@ public class MapCacheManager {
      */
     public static boolean clearCache() {
         try {
-            File cacheDir = getAMapCacheDir();
-            if (cacheDir != null && cacheDir.exists()) {
-                boolean result = deleteFolder(cacheDir);
-                if (result) {
-                    // 重新创建缓存目录
-                    cacheDir.mkdirs();
-                    Log.d(TAG, "地图缓存清理成功");
-                } else {
-                    Log.w(TAG, "地图缓存清理失败");
+            boolean allSuccess = true;
+            int clearedDirs = 0;
+            
+            String[] possibleCachePaths = {
+                "amap", "map", "tiles", "offlinemap", "com.amap.api"
+            };
+            
+            // 清理应用缓存目录下的地图缓存
+            for (String cachePath : possibleCachePaths) {
+                File cacheDir = new File(sContext.getCacheDir(), cachePath);
+                if (cacheDir.exists() && cacheDir.isDirectory()) {
+                    boolean result = deleteFolder(cacheDir);
+                    if (result) {
+                        clearedDirs++;
+                        // 重新创建缓存目录
+                        cacheDir.mkdirs();
+                    } else {
+                        allSuccess = false;
+                    }
                 }
-                return result;
             }
+            
+            // 清理应用文件目录下的地图缓存
+            for (String cachePath : possibleCachePaths) {
+                File cacheDir = new File(sContext.getFilesDir(), cachePath);
+                if (cacheDir.exists() && cacheDir.isDirectory()) {
+                    boolean result = deleteFolder(cacheDir);
+                    if (result) {
+                        clearedDirs++;
+                        // 重新创建缓存目录
+                        cacheDir.mkdirs();
+                    } else {
+                        allSuccess = false;
+                    }
+                }
+            }
+            
+            // 清理外部缓存目录下的地图缓存
+            if (sContext.getExternalCacheDir() != null) {
+                for (String cachePath : possibleCachePaths) {
+                    File cacheDir = new File(sContext.getExternalCacheDir(), cachePath);
+                    if (cacheDir.exists() && cacheDir.isDirectory()) {
+                        boolean result = deleteFolder(cacheDir);
+                        if (result) {
+                            clearedDirs++;
+                            // 重新创建缓存目录
+                            cacheDir.mkdirs();
+                        } else {
+                            allSuccess = false;
+                        }
+                    }
+                }
+            }
+            
+            if (allSuccess && clearedDirs > 0) {
+                Log.d(TAG, "地图缓存清理成功，清理了 " + clearedDirs + " 个缓存目录");
+            } else if (clearedDirs > 0) {
+                Log.w(TAG, "地图缓存部分清理成功，清理了 " + clearedDirs + " 个缓存目录");
+            } else {
+                Log.w(TAG, "未找到需要清理的地图缓存目录");
+            }
+            
+            return allSuccess;
         } catch (Exception e) {
             Log.e(TAG, "清理缓存失败", e);
         }
@@ -117,14 +251,54 @@ public class MapCacheManager {
      */
     public static String getCachePath() {
         try {
-            File cacheDir = getAMapCacheDir();
-            if (cacheDir != null) {
-                return cacheDir.getAbsolutePath();
+            StringBuilder pathBuilder = new StringBuilder();
+            int foundDirs = 0;
+            
+            String[] possibleCachePaths = {
+                "amap", "map", "tiles", "offlinemap", "com.amap.api"
+            };
+            
+            // 检查应用缓存目录
+            for (String cachePath : possibleCachePaths) {
+                File cacheDir = new File(sContext.getCacheDir(), cachePath);
+                if (cacheDir.exists() && cacheDir.isDirectory()) {
+                    if (foundDirs > 0) pathBuilder.append("\n");
+                    pathBuilder.append("缓存: ").append(cacheDir.getAbsolutePath());
+                    foundDirs++;
+                }
+            }
+            
+            // 检查应用文件目录
+            for (String cachePath : possibleCachePaths) {
+                File cacheDir = new File(sContext.getFilesDir(), cachePath);
+                if (cacheDir.exists() && cacheDir.isDirectory()) {
+                    if (foundDirs > 0) pathBuilder.append("\n");
+                    pathBuilder.append("文件: ").append(cacheDir.getAbsolutePath());
+                    foundDirs++;
+                }
+            }
+            
+            // 检查外部缓存目录
+            if (sContext.getExternalCacheDir() != null) {
+                for (String cachePath : possibleCachePaths) {
+                    File cacheDir = new File(sContext.getExternalCacheDir(), cachePath);
+                    if (cacheDir.exists() && cacheDir.isDirectory()) {
+                        if (foundDirs > 0) pathBuilder.append("\n");
+                        pathBuilder.append("外部: ").append(cacheDir.getAbsolutePath());
+                        foundDirs++;
+                    }
+                }
+            }
+            
+            if (foundDirs > 0) {
+                return pathBuilder.toString();
+            } else {
+                return "未找到地图缓存目录";
             }
         } catch (Exception e) {
             Log.e(TAG, "获取缓存路径失败", e);
         }
-        return "未知";
+        return "获取路径失败";
     }
     
     /**
@@ -147,10 +321,40 @@ public class MapCacheManager {
      */
     public static int getCacheFileCount() {
         try {
-            File cacheDir = getAMapCacheDir();
-            if (cacheDir != null && cacheDir.exists()) {
-                return countFiles(cacheDir);
+            int totalCount = 0;
+            
+            // 获取所有可能的缓存目录并计算总文件数
+            String[] possibleCachePaths = {
+                "amap", "map", "tiles", "offlinemap", "com.amap.api"
+            };
+            
+            // 检查应用缓存目录
+            for (String cachePath : possibleCachePaths) {
+                File cacheDir = new File(sContext.getCacheDir(), cachePath);
+                if (cacheDir.exists() && cacheDir.isDirectory()) {
+                    totalCount += countFiles(cacheDir);
+                }
             }
+            
+            // 检查应用文件目录
+            for (String cachePath : possibleCachePaths) {
+                File cacheDir = new File(sContext.getFilesDir(), cachePath);
+                if (cacheDir.exists() && cacheDir.isDirectory()) {
+                    totalCount += countFiles(cacheDir);
+                }
+            }
+            
+            // 检查外部缓存目录
+            if (sContext.getExternalCacheDir() != null) {
+                for (String cachePath : possibleCachePaths) {
+                    File cacheDir = new File(sContext.getExternalCacheDir(), cachePath);
+                    if (cacheDir.exists() && cacheDir.isDirectory()) {
+                        totalCount += countFiles(cacheDir);
+                    }
+                }
+            }
+            
+            return totalCount;
         } catch (Exception e) {
             Log.e(TAG, "获取缓存文件数量失败", e);
         }

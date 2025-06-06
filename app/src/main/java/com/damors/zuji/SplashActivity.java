@@ -92,6 +92,7 @@ public class SplashActivity extends AppCompatActivity {
     
     /**
      * 开始自动登录检查
+     * 修复重复登录问题：增强登录状态检查逻辑
      */
     private void startAutoLoginCheck() {
         Log.d(TAG, "开始自动登录检查");
@@ -99,29 +100,27 @@ public class SplashActivity extends AppCompatActivity {
         // 更新加载提示
         loadingTextView.setText("正在验证登录状态...");
         
-        // 检查用户是否已登录
-        if (userManager.isLoggedIn()) {
-            Log.d(TAG, "发现本地登录信息，开始验证token有效性");
+        // 先检查并同步登录状态，确保数据一致性
+        if (userManager.checkAndSyncLoginState()) {
+            Log.d(TAG, "发现有效的本地登录信息，开始验证token有效性");
             
             // 验证token有效性
-            userManager.validateTokenAndUpdateUserInfo(apiService, new UserManager.TokenValidationCallback() {
-                @Override
-                public void onValidationResult(boolean isValid, String message) {
-                    Log.d(TAG, "Token验证结果: " + (isValid ? "有效" : "无效") + ", 消息: " + message);
-                    
-                    if (isValid) {
-                        // Token有效，跳转到主页面
-                        navigateToMainActivity();
-                    } else {
-                        // Token无效，跳转到登录页面
-                        navigateToLoginActivity();
-                    }
+            userManager.validateTokenAndUpdateUserInfo(apiService, (isValid, message) -> {
+                Log.d(TAG, "Token验证结果: " + (isValid ? "有效" : "无效") + ", 消息: " + message);
+
+                if (isValid) {
+                    // Token有效，跳转到主页面
+                    navigateToMainActivity();
+                } else {
+                    // Token无效，跳转到登录页面
+                    Log.d(TAG, "Token验证失败，跳转到登录页面");
+                    navigateToLoginActivity();
                 }
             });
         } else {
-            Log.d(TAG, "未发现本地登录信息，延迟后跳转到登录页面");
+            Log.d(TAG, "未发现有效的本地登录信息，延迟后跳转到登录页面");
             
-            // 没有登录信息，延迟后跳转到登录页面
+            // 没有有效登录信息，延迟后跳转到登录页面
             mainHandler.postDelayed(this::navigateToLoginActivity, SPLASH_DELAY_MS);
         }
     }

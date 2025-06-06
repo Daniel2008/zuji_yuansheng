@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -88,8 +89,8 @@ public class ProfileFragment extends Fragment {
             startActivity(intent);
         });
         
-        // 设置地图缓存管理布局点击事件
-        layoutMapCache.setOnClickListener(v -> showMapCacheDialog());
+        // 设置地图缓存管理布局点击事件 - 直接打开离线地图管理
+        layoutMapCache.setOnClickListener(v -> openOfflineMapManager());
         
         return view;
     }
@@ -172,12 +173,26 @@ public class ProfileFragment extends Fragment {
                 new AlertDialog.Builder(requireContext())
                     .setTitle("地图缓存管理")
                     .setMessage(message)
-                    .setPositiveButton("清理缓存", (dialog, which) -> clearMapCache())
-                    .setNeutralButton("清理过期缓存", (dialog, which) -> clearExpiredCache())
+                    .setPositiveButton("离线地图管理", (dialog, which) -> openOfflineMapManager())
+                    .setNeutralButton("清理缓存", (dialog, which) -> clearMapCache())
                     .setNegativeButton("取消", null)
                     .show();
             });
         });
+    }
+    
+    /**
+     * 打开高德地图原生离线地图管理界面
+     */
+    private void openOfflineMapManager() {
+        try {
+            // 直接启动高德地图SDK提供的原生离线地图管理界面
+            Intent intent = new Intent(requireContext(), com.amap.api.maps.offlinemap.OfflineMapActivity.class);
+            startActivity(intent);
+        } catch (Exception e) {
+            Log.e("ProfileFragment", "启动高德地图离线地图管理界面失败", e);
+            Toast.makeText(requireContext(), "启动离线地图管理失败", Toast.LENGTH_SHORT).show();
+        }
     }
     
     /**

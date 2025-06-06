@@ -78,7 +78,7 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
-    private boolean validatePhone(String phone) {
+    boolean validatePhone(String phone) {
         if (TextUtils.isEmpty(phone)) {
             Toast.makeText(this, "请输入手机号", Toast.LENGTH_SHORT).show();
             return false;
@@ -90,7 +90,7 @@ public class LoginActivity extends AppCompatActivity {
         return true;
     }
 
-    private boolean validateInputs(String phone, String code) {
+    boolean validateInputs(String phone, String code) {
         if (!validatePhone(phone)) {
             return false;
         }
@@ -105,7 +105,7 @@ public class LoginActivity extends AppCompatActivity {
         return true;
     }
 
-    private void sendVerificationCode(String phone) {
+    void sendVerificationCode(String phone) {
         // 显示加载状态
         getVerificationCodeButton.setEnabled(false);
 
@@ -180,9 +180,17 @@ public class LoginActivity extends AppCompatActivity {
         }.start();
     }
 
-    private void performLogin(String phone, String code) {
+    /**
+     * 执行登录操作
+     * 修复重复登录问题：统一使用UserManager管理用户数据
+     * 
+     * @param phone 手机号
+     * @param code 验证码
+     */
+    void performLogin(String phone, String code) {
         // 显示加载状态
         loginButton.setEnabled(false);
+        Log.d("LoginActivity", "开始执行登录操作: phone=" + phone);
 
         // 获取设备ID
         String deviceId = DeviceUtils.getDeviceId(this);
@@ -195,50 +203,38 @@ public class LoginActivity extends AppCompatActivity {
                         if (response != null) {
                             // 登录成功，获取用户信息和token
                             String token = response.getToken();
+                            Log.d("LoginActivity", "登录成功，获取到token: " + (token != null ? "有效" : "无效"));
 
-                            // 保存token和用户信息到SharedPreferences
+                            // 统一使用UserManager保存用户信息和token（修复重复保存问题）
                             Gson gson = new Gson();
                             String userDataJson = gson.toJson(response.getUser());
-                            JSONObject userData = new JSONObject(userDataJson);
-                            saveUserSession(userData, token);
-                            
-                            // 将用户JSON数据和token保存到UserManager
                             UserManager.getInstance().saveUserAndToken(userDataJson, token);
+                            Log.d("LoginActivity", "用户信息已保存到UserManager");
 
                             // 跳转到主页面
                             Intent intent = new Intent(LoginActivity.this, MainActivity.class);
                             startActivity(intent);
                             finish();
                         } else {
+                            Log.e("LoginActivity", "登录响应为空");
                             Toast.makeText(LoginActivity.this, "登录失败，请稍后重试", Toast.LENGTH_SHORT).show();
                             loginButton.setEnabled(true);
                         }
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        Log.e("LoginActivity", "处理登录响应时发生异常", e);
                         Toast.makeText(LoginActivity.this, "请求失败，请稍后重试", Toast.LENGTH_SHORT).show();
                         loginButton.setEnabled(true);
                     }
                 },
                 errorMessage -> {
                     // 处理登录失败
-                    // 显示错误信息
+                    Log.e("LoginActivity", "登录失败: " + errorMessage);
                     Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
                     loginButton.setEnabled(true);
-
-                    // 记录错误日志
-                    Log.e("LoginActivity", "登录失败: " + errorMessage);
                 });
     }
 
-    private void saveUserSession(JSONObject userData, String token) {
-        // 保存用户信息和token到SharedPreferences
-        getSharedPreferences("user_prefs", MODE_PRIVATE)
-                .edit()
-                .putString("token", token)
-                .putString("user_data", userData.toString())
-                .putBoolean("is_logged_in", true)
-                .apply();
-    }
+    // 已移除saveUserSession方法，统一使用UserManager管理用户数据
 
     @Override
     protected void onDestroy() {

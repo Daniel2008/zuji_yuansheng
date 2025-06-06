@@ -93,11 +93,7 @@ public class HistoryFragment extends Fragment {
                 handleLikeClick(message, position);
             }
             
-            @Override
-            public void onFavoriteClick(FootprintMessage message, int position) {
-                // 处理收藏点击事件
-                handleFavoriteClick(message, position);
-            }
+            // 收藏功能已移除
             
             @Override
             public void onCommentClick(FootprintMessage message, int position) {
@@ -278,27 +274,7 @@ public class HistoryFragment extends Fragment {
         Toast.makeText(requireContext(), toastMessage, Toast.LENGTH_SHORT).show();
     }
     
-    /**
-     * 处理收藏点击事件
-     * @param message 足迹动态
-     * @param position 位置
-     */
-    private void handleFavoriteClick(FootprintMessage message, int position) {
-        // 切换收藏状态
-        boolean newFavoriteStatus = !message.isFavorited();
-        int newFavoriteCount = message.getFavoriteCount() + (newFavoriteStatus ? 1 : -1);
-        
-        // 更新适配器中的数据
-        adapter.updateItemFavoriteStatus(position, newFavoriteStatus, newFavoriteCount);
-        
-        // 这里可以添加网络请求，将收藏状态同步到服务器
-        // 例如：调用API更新收藏状态
-        // apiService.updateFavoriteStatus(message.getId(), newFavoriteStatus);
-        
-        // 显示提示信息
-        String toastMessage = newFavoriteStatus ? "已收藏" : "已取消收藏";
-        Toast.makeText(requireContext(), toastMessage, Toast.LENGTH_SHORT).show();
-    }
+    // 收藏功能已移除
     
     /**
      * 处理评论点击事件
