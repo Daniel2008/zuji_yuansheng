@@ -81,10 +81,14 @@ public class MapFragment extends Fragment {
 
     private static final String TAG = "MapFragment";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001; // 位置权限请求码
-    private static final long MIN_TIME_BETWEEN_UPDATES = 5000; // 5秒，提高响应性
+    private static final long MIN_TIME_BETWEEN_UPDATES = 3000; // 增加到3秒，减少频繁更新
     private static final float MIN_DISTANCE_CHANGE = 5; // 5米，提高精度
     private static final int MAX_RETRY_COUNT = 3; // 最大重试次数
     private static final long LOCATION_TIMEOUT = 30000; // 位置获取超时时间30秒
+    private static final long RETRY_DELAY_MS = 1000;
+    
+    // 缓存配置
+    private static final int MAX_MARKER_CACHE_SIZE = 100;
     
     // UI组件
     private MapView mapView;
@@ -103,15 +107,20 @@ public class MapFragment extends Fragment {
     private AMapLocation lastAMapLocation;
     private Marker currentLocationMarker;
     
-    // 状态管理
+    // 状态管理 - 优化版本
     private final AtomicBoolean isLocationUpdating = new AtomicBoolean(false);
     private final AtomicBoolean isLoadingFootprints = new AtomicBoolean(false);
     private final AtomicBoolean isLoadingMessages = new AtomicBoolean(false);
-    private boolean isMapInitialized = false;
+    private final AtomicBoolean isMapInitialized = new AtomicBoolean(false);
+    private final AtomicBoolean isFragmentDestroyed = new AtomicBoolean(false);
     
     // 线程处理
     private Handler mainHandler;
-    private int retryCount = 0;
+    private volatile int retryCount = 0;
+    
+    // 缓存管理 - 优化内存使用
+    private final java.util.concurrent.ConcurrentHashMap<String, Marker> markerCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.List<FootprintMessage> cachedMessages = new java.util.ArrayList<>();
 
     @Nullable
     @Override
@@ -119,6 +128,9 @@ public class MapFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_map, container, false);
         
         try {
+            // 重置销毁状态
+            isFragmentDestroyed.set(false);
+            
             // 初始化主线程Handler
             mainHandler = new Handler(Looper.getMainLooper());
             
@@ -130,23 +142,31 @@ public class MapFragment extends Fragment {
                 mapView.onCreate(savedInstanceState);
             }
             
-            // 初始化地图
-            initializeMap();
-            
-            // 设置UI事件监听器
-            setupUIListeners();
-            
-            // 初始化位置服务
-            initializeLocationService();
+            // 异步初始化地图，避免阻塞UI
+            mainHandler.post(this::initializeMapAsync);
             
             Log.d(TAG, "地图Fragment初始化完成");
             
         } catch (Exception e) {
             Log.e(TAG, "地图Fragment初始化失败: " + e.getMessage(), e);
-            showErrorToast("地图初始化失败，请重试");
+            showToast("地图初始化失败，请重试");
         }
         
         return view;
+    }
+    
+    /**
+     * 异步初始化地图
+     */
+    private void initializeMapAsync() {
+        try {
+            initializeMap();
+            setupUIListeners();
+            initializeLocationService();
+        } catch (Exception e) {
+            Log.e(TAG, "异步地图初始化失败: " + e.getMessage(), e);
+            showToast("地图初始化失败");
+        }
     }
     
     /**
@@ -169,58 +189,73 @@ public class MapFragment extends Fragment {
     }
     
     /**
-     * 初始化高德地图配置
+     * 初始化高德地图配置 - 优化版本
      */
     private void initializeMap() {
         if (mapView == null) {
             throw new IllegalStateException("MapView未正确初始化");
         }
         
+        if (isFragmentDestroyed.get()) {
+            Log.w(TAG, "Fragment已销毁，跳过地图初始化");
+            return;
+        }
+        
         try {
             // 获取高德地图实例
             aMap = mapView.getMap();
             
-            // 设置地图类型为普通地图
-            aMap.setMapType(AMap.MAP_TYPE_NORMAL);
+            configureMapSettings();
+            setupMapListeners();
             
-            // 设置缩放控件（禁用）
-            aMap.getUiSettings().setZoomControlsEnabled(false);
+            // 标记地图已初始化
+            isMapInitialized.set(true);
+            retryCount = 0; // 重置重试计数器
             
-            // 设置指南针
-            aMap.getUiSettings().setCompassEnabled(true);
-            
-            // 设置比例尺
-            aMap.getUiSettings().setScaleControlsEnabled(true);
-            
-            // 设置定位样式
-            MyLocationStyle myLocationStyle = new MyLocationStyle();
-            myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE);
-            myLocationStyle.interval(2000);
-            aMap.setMyLocationStyle(myLocationStyle);
-            
-            // 启用定位图层
-            aMap.setMyLocationEnabled(true);
-            
-            // 设置默认缩放级别
-            aMap.moveCamera(CameraUpdateFactory.zoomTo(17));
-            
-            // 设置标记点击监听器
-            aMap.setOnMarkerClickListener(marker -> {
-                Object footprintObj = marker.getObject();
-                if (footprintObj instanceof FootprintMessage) {
-                    showFootprintMessageInfoCard((FootprintMessage) footprintObj);
-                    return true;
-                }
-                return false;
-            });
-            
-            isMapInitialized = true;
             Log.d(TAG, "高德地图初始化完成");
             
         } catch (Exception e) {
             Log.e(TAG, "高德地图初始化失败: " + e.getMessage(), e);
             throw new RuntimeException("高德地图初始化失败", e);
         }
+    }
+    
+    /**
+     * 配置地图设置和样式
+     */
+    private void configureMapSettings() {
+        aMap.setMapType(AMap.MAP_TYPE_NORMAL);
+        aMap.getUiSettings().setZoomControlsEnabled(false);
+        aMap.getUiSettings().setCompassEnabled(true);
+        aMap.getUiSettings().setScaleControlsEnabled(true);
+        aMap.moveCamera(CameraUpdateFactory.zoomTo(17));
+        aMap.setMyLocationEnabled(true);
+        
+        MyLocationStyle myLocationStyle = new MyLocationStyle();
+        myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE);
+        myLocationStyle.interval(2000);
+        aMap.setMyLocationStyle(myLocationStyle);
+    }
+    
+    /**
+     * 设置地图事件监听器
+     */
+    private void setupMapListeners() {
+        // 设置标记点击监听器
+        aMap.setOnMarkerClickListener(marker -> {
+            Object footprintObj = marker.getObject();
+            if (footprintObj instanceof FootprintMessage) {
+                showFootprintMessageInfoCard((FootprintMessage) footprintObj);
+                return true;
+            }
+            return false;
+        });
+        
+        // 设置地图加载完成监听器
+        aMap.setOnMapLoadedListener(() -> {
+            Log.d(TAG, "地图加载完成");
+            retryCount = 0; // 重置重试计数器
+        });
     }
     
     /**
@@ -233,37 +268,38 @@ public class MapFragment extends Fragment {
     }
     
     /**
-     * 初始化位置服务
+     * 初始化位置服务 - 优化版本
      */
     private void initializeLocationService() {
-
+        // 检查Fragment状态
+        if (isFragmentDestroyed.get()) {
+            Log.w(TAG, "Fragment已销毁，跳过位置服务初始化");
+            return;
+        }
+        
+        // 检查是否已经初始化过位置服务，避免重复初始化
+        if (isLocationUpdating.get()) {
+            Log.d(TAG, "位置服务已初始化，跳过重复初始化");
+            return;
+        }
         
         // 延迟加载数据，避免阻塞UI
-        mainHandler.post(() -> {
-            enableMyLocation();
-            loadFootprintMessages();
-        });
-    }
-    
-    /**
-     * 显示错误提示
-     */
-    private void showErrorToast(String message) {
-        if (isAdded() && getContext() != null && mainHandler != null) {
+        if (mainHandler != null) {
             mainHandler.post(() -> {
-                Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+                if (!isFragmentDestroyed.get()) {
+                    enableMyLocation();
+                    loadFootprintMessages();
+                }
             });
         }
     }
     
     /**
-     * 显示信息提示
+     * 统一的Toast显示方法
      */
-    private void showInfoToast(String message) {
+    private void showToast(String message) {
         if (isAdded() && getContext() != null && mainHandler != null) {
-            mainHandler.post(() -> {
-                Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
-            });
+            mainHandler.post(() -> Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show());
         }
     }
 
@@ -272,10 +308,15 @@ public class MapFragment extends Fragment {
 
 
     /**
-     * 开始高德地图位置更新
-     * 使用高德地图定位服务
+     * 开始高德地图位置更新 - 优化版本
      */
     private void startLocationUpdates() {
+        // 检查Fragment状态
+        if (isFragmentDestroyed.get()) {
+            Log.w(TAG, "Fragment已销毁，跳过位置更新");
+            return;
+        }
+        
         // 检查是否已在更新中，避免重复请求
         if (isLocationUpdating.get()) {
             Log.d(TAG, "位置更新已在进行中，跳过重复请求");
@@ -292,39 +333,7 @@ public class MapFragment extends Fragment {
         try {
             // 初始化高德定位客户端
             if (locationClient == null) {
-                locationClient = new AMapLocationClient(requireContext());
-                
-                // 设置定位参数
-                locationOption = new AMapLocationClientOption();
-                locationOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy);
-                locationOption.setInterval(MIN_TIME_BETWEEN_UPDATES);
-                locationOption.setNeedAddress(true);
-                locationOption.setOnceLocation(false);
-                locationOption.setWifiActiveScan(true);
-                locationOption.setMockEnable(false);
-                
-                locationClient.setLocationOption(locationOption);
-                
-                // 设置定位监听
-                locationClient.setLocationListener(aMapLocation -> {
-                    if (aMapLocation != null) {
-                        if (aMapLocation.getErrorCode() == 0) {
-                            // 定位成功
-                            lastAMapLocation = aMapLocation;
-                            Log.d(TAG, "高德定位成功: " + aMapLocation.getLatitude() + ", " + aMapLocation.getLongitude());
-
-                            // 注释掉自动移动地图中心点的代码
-                            // if (aMap != null) {
-                            //     LatLng currentLatLng = new LatLng(aMapLocation.getLatitude(), aMapLocation.getLongitude());
-                            //     aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15));
-                            // }
-                        } else {
-                            // 定位失败
-                            Log.e(TAG, "高德定位失败: " + aMapLocation.getErrorCode() + ", " + aMapLocation.getErrorInfo());
-                            showErrorToast("定位失败: " + aMapLocation.getErrorInfo());
-                        }
-                    }
-                });
+                initializeLocationClient();
             }
             
             isLocationUpdating.set(true);
@@ -334,34 +343,120 @@ public class MapFragment extends Fragment {
         } catch (Exception e) {
             Log.e(TAG, "高德定位启动失败: " + e.getMessage(), e);
             isLocationUpdating.set(false);
-            showErrorToast("定位服务启动失败");
+            showToast("定位服务启动失败");
         }
+    }
+    
+    /**
+     * 初始化定位客户端
+     */
+    private void initializeLocationClient() {
+        try {
+            locationClient = new AMapLocationClient(requireContext());
+            
+            // 设置定位参数
+            locationOption = new AMapLocationClientOption();
+            locationOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy);
+            locationOption.setInterval(MIN_TIME_BETWEEN_UPDATES);
+            locationOption.setNeedAddress(true);
+            locationOption.setOnceLocation(false);
+            locationOption.setWifiActiveScan(true);
+            locationOption.setMockEnable(false);
+            
+            locationClient.setLocationOption(locationOption);
+            
+            // 设置定位监听
+            locationClient.setLocationListener(this::handleLocationResult);
+            
+            Log.d(TAG, "定位客户端初始化成功");
+        } catch (Exception e) {
+            Log.e(TAG, "初始化定位客户端失败: " + e.getMessage(), e);
+            locationClient = null;
+            locationOption = null;
+            showToast("定位服务初始化失败");
+        }
+    }
+    
+    /**
+     * 处理定位结果 - 优化版本
+     */
+    private void handleLocationResult(AMapLocation aMapLocation) {
+        if (aMapLocation == null || isFragmentDestroyed.get()) {
+            return;
+        }
+        
+        if (aMapLocation.getErrorCode() == 0) {
+            // 定位成功
+            lastAMapLocation = aMapLocation;
+            Log.d(TAG, "高德定位成功: " + aMapLocation.getLatitude() + ", " + aMapLocation.getLongitude());
+            
+            // 可选：更新当前位置标记（如果需要）
+            // updateCurrentLocationMarker(aMapLocation);
+            
+        } else {
+            // 定位失败
+            Log.e(TAG, "高德定位失败: " + aMapLocation.getErrorCode() + ", " + aMapLocation.getErrorInfo());
+            handleLocationError(aMapLocation.getErrorInfo());
+        }
+    }
+    
+    /**
+     * 处理定位错误
+     */
+    private void handleLocationError(String errorInfo) {
+        String userMessage;
+        if (errorInfo.contains("网络")) {
+            userMessage = "网络连接异常，请检查网络设置";
+        } else if (errorInfo.contains("权限")) {
+            userMessage = "缺少定位权限，请在设置中开启";
+        } else {
+            userMessage = "定位失败，请稍后重试";
+        }
+        showToast(userMessage);
     }
 
     /**
-     * 停止高德地图位置更新
+     * 停止高德地图位置更新 - 优化版本
      */
     private void stopLocationUpdates() {
+        if (!isLocationUpdating.get()) {
+            Log.d(TAG, "位置更新未在进行中，无需停止");
+            return;
+        }
+        
         try {
             if (locationClient != null) {
                 locationClient.stopLocation();
-                isLocationUpdating.set(false);
                 Log.d(TAG, "已停止高德地图位置更新");
             }
-            
         } catch (Exception e) {
-            Log.e(TAG, "停止高德地图位置更新时出错: " + e.getMessage(), e);
+            Log.e(TAG, "停止高德地图位置更新时发生错误: " + e.getMessage(), e);
+        } finally {
+            isLocationUpdating.set(false);
         }
     }
 
     /**
-     * 启用我的位置功能（优化版本）
-     * 改进了位置获取逻辑和错误处理
+     * 启用我的位置功能 - 优化版本
      */
     public void enableMyLocation() {
-        if (!isMapInitialized) {
-            Log.w(TAG, "地图未初始化，延迟启用位置功能");
-            mainHandler.postDelayed(this::enableMyLocation, 1000);
+        if (isFragmentDestroyed.get()) {
+            Log.w(TAG, "Fragment已销毁，跳过位置功能启用");
+            return;
+        }
+        
+        if (!isMapInitialized.get()) {
+            // 增加重试次数限制，避免无限递归调用
+            if (retryCount < MAX_RETRY_COUNT) {
+                retryCount++;
+                Log.w(TAG, "地图未初始化，延迟启用位置功能 (重试次数: " + retryCount + "/" + MAX_RETRY_COUNT + ")");
+                if (mainHandler != null) {
+                    mainHandler.postDelayed(this::enableMyLocation, RETRY_DELAY_MS);
+                }
+            } else {
+                Log.e(TAG, "地图初始化超时，停止重试启用位置功能");
+                showToast("地图初始化失败，请重启应用");
+            }
             return;
         }
         
@@ -372,15 +467,17 @@ public class MapFragment extends Fragment {
             return;
         }
         
-
-        
         try {
             // 启用地图的我的位置功能
-            aMap.setMyLocationEnabled(true);
+            if (aMap != null) {
+                aMap.setMyLocationEnabled(true);
+            }
+            
+            // 重置重试计数器
+            retryCount = 0;
             
             // 启动高德定位
             if (lastAMapLocation != null) {
-                retryCount = 0;
                 Log.d(TAG, "位置功能启用成功");
             } else {
                 Log.d(TAG, "无历史位置，启动位置更新");
@@ -389,31 +486,51 @@ public class MapFragment extends Fragment {
             
         } catch (SecurityException e) {
             Log.e(TAG, "位置权限异常: " + e.getMessage());
-            showErrorToast("位置权限被拒绝");
+            showToast("位置权限被拒绝");
         } catch (Exception e) {
             Log.e(TAG, "启用位置功能失败: " + e.getMessage(), e);
-            showErrorToast("位置服务异常");
+            showToast("位置服务异常");
         }
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        // 恢复地图视图
-        if (mapView != null) {
-            mapView.onResume();
+        
+        try {
+            if (mapView != null) {
+                mapView.onResume();
+            }
+            
+            // 只有在地图已初始化且位置更新未运行时才启动位置更新
+            if (isMapInitialized.get() && !isLocationUpdating.get() && !isFragmentDestroyed.get()) {
+                Log.d(TAG, "Fragment恢复，启动位置更新");
+                startLocationUpdates();
+            } else {
+                Log.d(TAG, "Fragment恢复，但跳过位置更新 - 地图初始化: " + isMapInitialized.get() + 
+                      ", 位置更新中: " + isLocationUpdating.get() + ", Fragment销毁: " + isFragmentDestroyed.get());
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Fragment恢复时出错: " + e.getMessage(), e);
         }
-        startLocationUpdates();
     }
-    
+
     @Override
     public void onPause() {
         super.onPause();
-        // 暂停地图视图
-        if (mapView != null) {
-            mapView.onPause();
+        
+        try {
+            if (mapView != null) {
+                mapView.onPause();
+            }
+            
+            // 暂停时停止位置更新以节省电量
+            stopLocationUpdates();
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Fragment暂停时出错: " + e.getMessage(), e);
         }
-        stopLocationUpdates();
     }
     
 
@@ -442,7 +559,7 @@ public class MapFragment extends Fragment {
                 // 检查位置精度
                 if (lastAMapLocation.getAccuracy() > 50) {
                     Log.w(TAG, "当前位置精度较低: " + lastAMapLocation.getAccuracy() + "m");
-                    showInfoToast("位置精度较低，建议等待GPS信号更好时再添加");
+                    showToast("位置精度较低，建议等待GPS信号更好时再添加");
                 }
                 
                 // 直接使用高德定位的坐标，无需转换
@@ -460,10 +577,10 @@ public class MapFragment extends Fragment {
             }
         } catch (SecurityException e) {
             Log.e(TAG, "位置权限错误: " + e.getMessage());
-            showErrorToast("位置权限被拒绝，请检查应用权限设置");
+            showToast("位置权限被拒绝，请检查应用权限设置");
         } catch (Exception e) {
             Log.e(TAG, "添加足迹时出错: " + e.getMessage(), e);
-            showErrorToast("添加足迹时出错: " + e.getMessage());
+            showToast("添加足迹时出错: " + e.getMessage());
         }
     }
     
@@ -474,7 +591,7 @@ public class MapFragment extends Fragment {
      */
     private void handleNoLocationAvailable() {
         if (!isLocationUpdating.get()) {
-            showInfoToast("正在获取位置信息，请稍候...");
+            showToast("正在获取位置信息，请稍候...");
             startLocationUpdates();
             
             // 延迟重试
@@ -482,11 +599,11 @@ public class MapFragment extends Fragment {
                 if (lastAMapLocation != null) {
                     addCurrentLocationFootprint();
                 } else {
-                    showErrorToast("无法获取位置信息，请检查定位设置或移动到信号更好的地方");
+                    showToast("无法获取位置信息，请检查定位设置");
                 }
             }, 5000);
         } else {
-            showErrorToast("无法获取位置信息，请检查定位设置或移动到信号更好的地方");
+            showToast("无法获取位置信息，请检查定位设置");
         }
     }
     
@@ -500,7 +617,7 @@ public class MapFragment extends Fragment {
             return;
         }
         
-        if (!isMapInitialized) {
+        if (!isMapInitialized.get()) {
             Log.w(TAG, "地图未初始化，延迟加载足迹动态");
             mainHandler.postDelayed(this::loadFootprintMessages, 1000);
             return;
@@ -531,13 +648,13 @@ public class MapFragment extends Fragment {
                                         Log.d(TAG, "足迹动态显示完成");
                                     } catch (Exception e) {
                                         Log.e(TAG, "显示足迹动态失败: " + e.getMessage(), e);
-                                        showErrorToast("显示足迹动态失败");
+                                        showToast("显示足迹动态失败");
                                     }
                                 });
                             }
                         } catch (Exception e) {
                             Log.e(TAG, "处理足迹动态响应失败: " + e.getMessage(), e);
-                            showErrorToast("处理数据失败");
+                            showToast("处理数据失败");
                         } finally {
                             isLoadingMessages.set(false);
                         }
@@ -545,36 +662,30 @@ public class MapFragment extends Fragment {
                     errorMessage -> {
                         Log.e(TAG, "获取足迹动态列表失败: " + errorMessage);
 
-                        String displayMessage;
-                        if (errorMessage.contains("timeout")) {
-                            displayMessage = "网络连接超时，请重试";
-                        } else if (errorMessage.contains("network")) {
-                            displayMessage = "网络连接失败，请检查网络设置";
-                        } else {
-                            displayMessage = "获取足迹动态失败: " + errorMessage;
-                        }
-
-                        showErrorToast(displayMessage);
+                        String displayMessage = errorMessage.contains("timeout") ? "网络连接超时，请重试" :
+                                               errorMessage.contains("network") ? "网络连接失败，请检查网络设置" :
+                                               "获取足迹动态失败: " + errorMessage;
+                        showToast(displayMessage);
                         isLoadingMessages.set(false);
                     }
             );
             
         } catch (Exception e) {
             Log.e(TAG, "启动足迹动态加载失败: " + e.getMessage(), e);
-            showErrorToast("启动数据加载失败");
+            showToast("启动数据加载失败");
             isLoadingMessages.set(false);
         }
     }
     
     /**
-     * 处理足迹动态数据
+     * 处理足迹动态数据 - 优化版本
      * 在地图上显示足迹动态位置标记
      * @param messages 足迹动态列表
      */
     private void handleFootprintMessages(List<FootprintMessage> messages) {
-        // 检查Fragment是否仍然附加到Activity，避免IllegalStateException
-        if (!isAdded() || getContext() == null) {
-            Log.w(TAG, "Fragment未附加到Activity，跳过处理足迹动态数据");
+        // 检查Fragment状态
+        if (!isAdded() || getContext() == null || isFragmentDestroyed.get()) {
+            Log.w(TAG, "Fragment未附加到Activity或已销毁，跳过处理足迹动态数据");
             return;
         }
         
@@ -585,22 +696,79 @@ public class MapFragment extends Fragment {
         
         Log.d(TAG, "开始处理足迹动态数据，共 " + messages.size() + " 条记录");
         
-        // 在地图上显示足迹动态标记
+        // 批量处理标记
+        processBatchMarkers(messages);
+        
+        Log.d(TAG, "足迹动态处理完成");
+    }
+    
+    /**
+     * 批量处理标记
+     */
+    private void processBatchMarkers(List<FootprintMessage> messages) {
+        // 清除现有标记
         if (aMap != null) {
-            for (FootprintMessage message : messages) {
-                // 创建足迹动态标记，使用旗帜图标
+            aMap.clear();
+        }
+        markerCache.clear();
+        
+        List<MarkerOptions> markerOptionsList = new ArrayList<>();
+        
+        for (FootprintMessage message : messages) {
+            if (message.getLat() != 0 && message.getLng() != 0) {
                 LatLng position = new LatLng(message.getLat(), message.getLng());
+                
+                // 创建足迹动态标记，使用旗帜图标
                 MarkerOptions markerOptions = new MarkerOptions()
                     .position(position)
                     .title(message.getCreateBy() + " - " + message.getTag())
                     .snippet(message.getTextContent())
                     .icon(BitmapDescriptorFactory.fromBitmap(ImageUtils.getBitmap(getContext(),R.drawable.ic_footprint_flag)));
-                Marker marker = aMap.addMarker(markerOptions);
-                // 将足迹消息对象存储到marker中，用于点击事件
-                marker.setObject(message);
                 
-                Log.d(TAG, "添加足迹动态标记: " + message.getCreateBy() + " - " + message.getTextContent());
+                markerOptionsList.add(markerOptions);
             }
+        }
+        
+        // 批量添加标记
+        addMarkersToMap(markerOptionsList, messages);
+    }
+    
+    /**
+     * 批量添加标记到地图
+     */
+    private void addMarkersToMap(List<MarkerOptions> markerOptionsList, List<FootprintMessage> messages) {
+        if (markerOptionsList.isEmpty() || aMap == null || messages == null) {
+            return;
+        }
+        
+        // 分批添加标记以避免UI阻塞
+        final int BATCH_SIZE = 20;
+        for (int i = 0; i < markerOptionsList.size(); i += BATCH_SIZE) {
+            final int start = i;
+            final int end = Math.min(i + BATCH_SIZE, markerOptionsList.size());
+            
+            mainHandler.post(() -> {
+                if (!isFragmentDestroyed.get() && aMap != null) {
+                    for (int j = start; j < end; j++) {
+                        if (j < messages.size()) {
+                            MarkerOptions options = markerOptionsList.get(j);
+                            FootprintMessage message = messages.get(j);
+                            
+                            Marker marker = aMap.addMarker(options);
+                            if (marker != null) {
+                                // 直接将消息对象存储到标记中
+                                marker.setObject(message);
+                                
+                                // 缓存标记对象用于快速访问
+                                String key = options.getPosition().latitude + "," + options.getPosition().longitude;
+                                markerCache.put(key, marker);
+                                
+                                Log.d(TAG, "添加足迹动态标记: " + options.getTitle());
+                            }
+                        }
+                    }
+                }
+            });
         }
     }
     
@@ -617,7 +785,7 @@ public class MapFragment extends Fragment {
      * 改进了刷新逻辑和状态管理
      */
     public void refreshMap() {
-        if (!isMapInitialized || aMap == null) {
+        if (!isMapInitialized.get() || aMap == null) {
             Log.w(TAG, "地图未初始化，无法刷新");
             return;
         }
@@ -646,57 +814,72 @@ public class MapFragment extends Fragment {
             
         } catch (Exception e) {
             Log.e(TAG, "刷新地图失败: " + e.getMessage(), e);
-            showErrorToast("地图刷新失败");
+            showToast("地图刷新失败");
         }
     }
     
     @Override
     public void onDestroy() {
+        Log.d(TAG, "MapFragment onDestroy - 开始清理资源");
+        
+        // 首先设置销毁标志，防止其他操作继续执行
+        isFragmentDestroyed.set(true);
+        
         try {
-            Log.d(TAG, "开始销毁MapFragment");
-            
-            // 停止位置更新
             stopLocationUpdates();
+            cleanupResources();
             
-            // 销毁高德定位客户端
+            Log.d(TAG, "MapFragment资源清理完成");
+            
+        } catch (Exception e) {
+            Log.e(TAG, "销毁MapFragment时发生错误: " + e.getMessage(), e);
+        } finally {
+            super.onDestroy();
+        }
+    }
+    
+    /**
+     * 清理所有资源
+     */
+    private void cleanupResources() {
+        try {
+            // 清理定位客户端
             if (locationClient != null) {
                 locationClient.onDestroy();
                 locationClient = null;
             }
+            locationOption = null;
+            lastAMapLocation = null;
             
-            // 清除所有Handler回调
+            // 清理Handler
             if (mainHandler != null) {
                 mainHandler.removeCallbacksAndMessages(null);
                 mainHandler = null;
             }
             
-            // 重置状态标志
+            // 重置状态
             isLocationUpdating.set(false);
             isLoadingFootprints.set(false);
             isLoadingMessages.set(false);
-            isMapInitialized = false;
+            isMapInitialized.set(false);
+            retryCount = 0;
             
-            // 清理高德地图资源
-            if (mapView != null) {
-                try {
-                    mapView.onDestroy();
-                } catch (Exception e) {
-                    Log.w(TAG, "清理高德地图资源时出现异常: " + e.getMessage());
-                }
+            // 清理地图资源
+            if (aMap != null) {
+                aMap.clear();
+                aMap = null;
             }
-            
-            // 清理标记引用
+            if (mapView != null) {
+                mapView.onDestroy();
+                mapView = null;
+            }
             currentLocationMarker = null;
-            lastAMapLocation = null;
-            aMap = null;
-            locationOption = null;
             
-            Log.d(TAG, "MapFragment资源清理完成");
-            
+            // 清理缓存
+            if (markerCache != null) markerCache.clear();
+            if (cachedMessages != null) cachedMessages.clear();
         } catch (Exception e) {
-            Log.e(TAG, "销毁MapFragment时出现异常: " + e.getMessage(), e);
-        } finally {
-            super.onDestroy();
+            Log.e(TAG, "清理资源时发生错误: " + e.getMessage(), e);
         }
     }
 
@@ -817,11 +1000,8 @@ public class MapFragment extends Fragment {
     
     /**
      * 设置网格图片布局
-     * @param gridImageLayout 网格布局
-     * @param imageFiles 图片文件列表
      */
     private void setupGridImageLayout(View gridImageLayout, java.util.List<GuluFile> imageFiles) {
-        // 获取网格布局中的控件
         ImageView singleImage = gridImageLayout.findViewById(R.id.single_image);
         LinearLayout twoImagesLayout = gridImageLayout.findViewById(R.id.two_images_layout);
         LinearLayout threeImagesLayout = gridImageLayout.findViewById(R.id.three_images_layout);
@@ -836,7 +1016,6 @@ public class MapFragment extends Fragment {
         int imageCount = imageFiles.size();
         
         if (imageCount == 2 && twoImagesLayout != null) {
-            // 显示两张图片
             twoImagesLayout.setVisibility(View.VISIBLE);
             ImageView image1 = twoImagesLayout.findViewById(R.id.image_1_of_2);
             ImageView image2 = twoImagesLayout.findViewById(R.id.image_2_of_2);
@@ -844,13 +1023,10 @@ public class MapFragment extends Fragment {
             if (image1 != null && image2 != null) {
                 loadImageIntoView(image1, imageFiles.get(0));
                 loadImageIntoView(image2, imageFiles.get(1));
-                
                 image1.setOnClickListener(v -> openImagePreview(imageFiles, 0));
                 image2.setOnClickListener(v -> openImagePreview(imageFiles, 1));
             }
-            
         } else if (imageCount == 3 && threeImagesLayout != null) {
-            // 显示三张图片
             threeImagesLayout.setVisibility(View.VISIBLE);
             ImageView image1 = threeImagesLayout.findViewById(R.id.image_1_of_3);
             ImageView image2 = threeImagesLayout.findViewById(R.id.image_2_of_3);
@@ -860,38 +1036,27 @@ public class MapFragment extends Fragment {
                 loadImageIntoView(image1, imageFiles.get(0));
                 loadImageIntoView(image2, imageFiles.get(1));
                 loadImageIntoView(image3, imageFiles.get(2));
-                
                 image1.setOnClickListener(v -> openImagePreview(imageFiles, 0));
                 image2.setOnClickListener(v -> openImagePreview(imageFiles, 1));
                 image3.setOnClickListener(v -> openImagePreview(imageFiles, 2));
             }
-            
         } else if (imageCount >= 4 && gridRecyclerView != null) {
-            // 使用RecyclerView显示九宫格
             gridRecyclerView.setVisibility(View.VISIBLE);
-            
-            // 设置网格布局管理器
             androidx.recyclerview.widget.GridLayoutManager gridLayoutManager = 
                 new androidx.recyclerview.widget.GridLayoutManager(getContext(), 3);
             gridRecyclerView.setLayoutManager(gridLayoutManager);
             
-            // 设置适配器
             GridImageAdapter adapter = new GridImageAdapter(getContext(), imageFiles);
-            adapter.setOnImageClickListener((position, files) -> {
-                openImagePreview(files, position);
-            });
+            adapter.setOnImageClickListener((position, files) -> openImagePreview(files, position));
             gridRecyclerView.setAdapter(adapter);
         }
     }
     
     /**
      * 加载图片到ImageView
-     * @param imageView 图片视图
-     * @param imageFile 图片文件
      */
     private void loadImageIntoView(ImageView imageView, GuluFile imageFile) {
         String imageUrl = getFullImageUrl(imageFile.getFilePath());
-        android.util.Log.d("MapFragment", "加载图片: " + imageUrl);
         
         com.bumptech.glide.Glide.with(this)
             .load(imageUrl)
@@ -899,72 +1064,41 @@ public class MapFragment extends Fragment {
             .placeholder(R.drawable.ic_placeholder_image)
             .error(R.drawable.ic_error_image)
             .centerCrop()
-            .listener(new com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable>() {
-                @Override
-                public boolean onLoadFailed(@androidx.annotation.Nullable com.bumptech.glide.load.engine.GlideException e, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, boolean isFirstResource) {
-                    android.util.Log.e("MapFragment", "图片加载失败: " + model, e);
-                    return false;
-                }
-
-                @Override
-                public boolean onResourceReady(android.graphics.drawable.Drawable resource, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, com.bumptech.glide.load.DataSource dataSource, boolean isFirstResource) {
-                    android.util.Log.d("MapFragment", "图片加载成功: " + model);
-                    return false;
-                }
-            })
             .into(imageView);
     }
     
     /**
      * 获取完整的图片URL
-     * @param imagePath 图片路径
-     * @return 完整的图片URL
      */
     private String getFullImageUrl(String imagePath) {
         if (imagePath == null || imagePath.isEmpty()) {
-            android.util.Log.w("MapFragment", "图片路径为空");
             return "";
         }
         
-        // 如果已经是完整URL，直接返回
         if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
-            android.util.Log.d("MapFragment", "使用完整URL: " + imagePath);
             return imagePath;
         }
         
-        // 使用ApiConfig中的图片基础URL构建完整的图片URL
         String imageBaseUrl = ApiConfig.getImageBaseUrl();
-        // 确保路径正确拼接
         if (!imagePath.startsWith("/")) {
             imagePath = "/" + imagePath;
         }
-        String fullImageUrl = imageBaseUrl + imagePath;
-        
-        android.util.Log.d("MapFragment", "构建图片URL: " + imagePath + " -> " + fullImageUrl);
-        return fullImageUrl;
+        return imageBaseUrl + imagePath;
     }
     
     /**
      * 判断是否为图片文件
-     * @param fileType 文件类型
-     * @return 是否为图片
      */
     private boolean isImageFile(String fileType) {
         if (fileType == null) return false;
         String type = fileType.toLowerCase();
-        return type.equals("jpg")
-            || type.equals("jpeg")
-            || type.equals("png")
-            || type.equals("gif")
-            || type.equals("bmp")
-            || type.equals("webp")
-            || type.equals("image/jpeg");
+        return type.equals("jpg") || type.equals("jpeg") || type.equals("png") || 
+               type.equals("gif") || type.equals("bmp") || type.equals("webp") || 
+               type.equals("image/jpeg");
     }
     
     /**
      * 打开图片预览
-     * @param imageFiles 图片文件列表
-     * @param currentIndex 当前图片索引
      */
     private void openImagePreview(java.util.List<GuluFile> imageFiles, int currentIndex) {
         if (getContext() == null || imageFiles == null || imageFiles.isEmpty()) {
@@ -974,7 +1108,6 @@ public class MapFragment extends Fragment {
         try {
             Intent intent = new Intent(getContext(), ImagePreviewActivity.class);
             
-            // 构建图片URL列表
             java.util.ArrayList<String> imageUrls = new java.util.ArrayList<>();
             for (GuluFile file : imageFiles) {
                 imageUrls.add(getFullImageUrl(file.getFilePath()));
@@ -985,8 +1118,8 @@ public class MapFragment extends Fragment {
             startActivity(intent);
             
         } catch (Exception e) {
-            android.util.Log.e("MapFragment", "打开图片预览失败", e);
-            android.widget.Toast.makeText(getContext(), "无法预览图片", android.widget.Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "打开图片预览失败", e);
+            showToast("无法预览图片");
         }
     }
 }

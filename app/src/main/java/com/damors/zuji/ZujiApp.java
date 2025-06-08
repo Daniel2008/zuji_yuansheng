@@ -63,7 +63,8 @@ public class ZujiApp extends Application {
             MapsInitializer.updatePrivacyShow(this, true, true);
             // 设置是否已经取得用户同意，如果未取得用户同意，请设置为false
             MapsInitializer.updatePrivacyAgree(this, true);
-            
+            // 设置3d地图模式
+            MapsInitializer.setTerrainEnable(true);
             Log.d(TAG, "高德地图SDK初始化成功");
         } catch (Exception e) {
             Log.e(TAG, "高德地图SDK初始化失败: " + e.getMessage(), e);
