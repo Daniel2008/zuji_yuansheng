@@ -10,6 +10,14 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.target.Target;
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.GlideException;
+import android.util.Log;
 import com.damors.zuji.R;
 
 import java.util.ArrayList;
@@ -76,22 +84,43 @@ public class ImagePreviewAdapter extends RecyclerView.Adapter<ImagePreviewAdapte
 
     @Override
     public void onBindViewHolder(@NonNull ImageViewHolder holder, int position) {
-        String imageUri = imageUris.get(position);
+        String imageUrl = imageUris.get(position);
         
-        // 设置图片
-        holder.imageView.setImageURI(Uri.parse(imageUri));
+        Log.d("ImagePreviewAdapter", "Loading image at position " + position + ": " + imageUrl);
         
-        // 设置点击事件
+        // 使用Glide加载图片
+        Glide.with(context)
+            .load(imageUrl)
+            .diskCacheStrategy(DiskCacheStrategy.ALL)
+            .placeholder(R.drawable.ic_placeholder_image)
+            .error(R.drawable.ic_error_image)
+            .transition(DrawableTransitionOptions.withCrossFade())
+            .listener(new RequestListener<android.graphics.drawable.Drawable>() {
+                @Override
+                public boolean onLoadFailed(@androidx.annotation.Nullable GlideException e, Object model, Target<android.graphics.drawable.Drawable> target, boolean isFirstResource) {
+                    Log.e("ImagePreviewAdapter", "Failed to load image at position " + position + ": " + imageUrl, e);
+                    return false;
+                }
+                
+                @Override
+                public boolean onResourceReady(android.graphics.drawable.Drawable resource, Object model, Target<android.graphics.drawable.Drawable> target, DataSource dataSource, boolean isFirstResource) {
+                    Log.d("ImagePreviewAdapter", "Image loaded successfully at position " + position + ": " + imageUrl);
+                    return false;
+                }
+            })
+            .into(holder.imageView);
+        
+        // 设置点击事件（点击切换UI控件可见性）
         holder.imageView.setOnClickListener(v -> {
             if (listener != null) {
-                listener.onImageClick(position, imageUri);
+                listener.onImageClick(position, imageUrl);
             }
         });
         
-        // 设置长按事件（用于删除）
+        // 设置长按事件（用于其他操作）
         holder.imageView.setOnLongClickListener(v -> {
             if (listener != null) {
-                listener.onImageLongClick(position, imageUri);
+                listener.onImageLongClick(position, imageUrl);
                 return true;
             }
             return false;

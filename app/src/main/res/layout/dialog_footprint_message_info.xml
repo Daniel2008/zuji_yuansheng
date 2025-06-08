@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+
+    <!-- 用户头像占位 -->
+    <ImageView
+        android:id="@+id/image_view_avatar"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="12dp"
+        android:background="@drawable/circle_background"
+        android:scaleType="centerCrop"
+        android:src="@drawable/ic_person"
+        app:layout_constraintStart_toEndOf="@+id/view_timeline_dot"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- 创建者和时间 -->
+    <TextView
+        android:id="@+id/text_view_creator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:textColor="@android:color/black"
+        app:layout_constraintStart_toEndOf="@+id/image_view_avatar"
+        app:layout_constraintTop_toTopOf="@+id/image_view_avatar"
+        tools:text="用户名" />
+
+    <TextView
+        android:id="@+id/text_view_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textSize="12sp"
+        android:textColor="@android:color/darker_gray"
+        app:layout_constraintStart_toStartOf="@+id/text_view_creator"
+        app:layout_constraintTop_toBottomOf="@+id/text_view_creator"
+        tools:text="2023-05-20 14:30" />
+
+    <!-- 标签 -->
+    <TextView
+        android:id="@+id/text_view_tag"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:background="@drawable/category_tag_background"
+        android:paddingStart="6dp"
+        android:paddingTop="2dp"
+        android:paddingEnd="6dp"
+        android:paddingBottom="2dp"
+        android:textColor="@android:color/white"
+        android:textSize="10sp"
+        app:layout_constraintStart_toEndOf="@+id/text_view_creator"
+        app:layout_constraintTop_toTopOf="@+id/text_view_creator"
+        tools:text="动态" />
+
+    <!-- 足迹消息内容卡片 -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/card_view_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="2dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/text_view_date">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <!-- 消息内容 -->
+            <TextView
+                android:id="@+id/text_view_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:textColor="@android:color/black"
+                android:lineSpacingExtra="2dp"
+                tools:text="这是一条足迹动态消息的内容，记录了用户在某个地点的感受和体验。" />
+
+            <!-- 位置信息 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_location"
+                    android:tint="@android:color/darker_gray" />
+
+                <TextView
+                    android:id="@+id/text_view_location"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/darker_gray"
+                    tools:text="北京市朝阳区" />
+
+            </LinearLayout>
+
+            <!-- 坐标信息 -->
+            <TextView
+                android:id="@+id/text_view_coordinates"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="12sp"
+                android:textColor="@android:color/darker_gray"
+                tools:text="坐标: 39.9042, 116.4074" />
+
+            <!-- 图片消息内容区域 -->
+            <FrameLayout
+                android:id="@+id/frame_layout_images"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <!-- 单张图片显示 -->
+                <ImageView
+                    android:id="@+id/image_view_single"
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:scaleType="centerCrop"
+                    android:background="@color/colorLightGray"
+                    android:visibility="gone"
+                    android:contentDescription="足迹图片"
+                    tools:src="@drawable/ic_placeholder_image"
+                    tools:visibility="visible" />
+
+                <!-- 多张图片网格布局 -->
+                <include
+                    android:id="@+id/grid_image_layout"
+                    layout="@layout/grid_image_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone" />
+
+                <!-- 图片数量标识（用于多图时显示总数） -->
+                <TextView
+                    android:id="@+id/text_view_image_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|end"
+                    android:layout_margin="8dp"
+                    android:background="@drawable/bg_image_count"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/white"
+                    android:padding="6dp"
+                    android:visibility="gone"
+                    tools:text="1/3"
+                    tools:visibility="visible" />
+
+            </FrameLayout>
+
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

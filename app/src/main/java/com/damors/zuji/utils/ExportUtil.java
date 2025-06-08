@@ -30,11 +30,13 @@ public class ExportUtil {
 
     /**
      * 将足迹列表导出为JSON文件
+     * 注释：已移除本地足迹导出功能
      * @param context 上下文
      * @param footprints 足迹列表
      * @return 导出的文件URI，如果导出失败则返回null
      */
-public static Uri exportFootprintsToJson(Context context, List<FootprintEntity> footprints) {
+    /*
+    public static Uri exportFootprintsToJson(Context context, List<FootprintEntity> footprints) {
         if (footprints == null || footprints.isEmpty()) {
             Log.e(TAG, "足迹列表为空，无法导出");
             return null;
@@ -50,28 +52,38 @@ public static Uri exportFootprintsToJson(Context context, List<FootprintEntity> 
                 jsonArray.put(jsonObject);
             }
 
-            // 创建导出文件
-            String fileName = "footprints_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date()) + ".json";
-            File exportDir = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "exports");
-            if (!exportDir.exists()) {
-                exportDir.mkdirs();
+            // 生成文件名
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault());
+            String timestamp = sdf.format(new Date());
+            String fileName = "footprints_" + timestamp + ".json";
+
+            // 获取外部存储目录
+            File externalDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
+            if (!externalDir.exists()) {
+                externalDir.mkdirs();
             }
 
-            File exportFile = new File(exportDir, fileName);
-            OutputStream outputStream = new FileOutputStream(exportFile);
-            outputStream.write(jsonArray.toString(4).getBytes());
-            outputStream.close();
+            // 创建文件
+            File file = new File(externalDir, fileName);
+            FileOutputStream fos = new FileOutputStream(file);
+            fos.write(jsonArray.toString().getBytes());
+            fos.close();
 
-            Log.d(TAG, "足迹数据导出成功: " + exportFile.getAbsolutePath());
-            return Uri.fromFile(exportFile);
+            Log.d(TAG, "足迹数据导出成功: " + file.getAbsolutePath());
+            return Uri.fromFile(file);
 
-        } catch (JSONException | IOException e) {
+        } catch (IOException | JSONException e) {
             Log.e(TAG, "足迹数据导出失败: " + e.getMessage());
             e.printStackTrace();
             return null;
         }
     }
-
+    */
+    
+    public static Uri exportFootprintsToJson(Context context, List<FootprintEntity> footprints) {
+        Log.d(TAG, "本地存储功能已移除，无法导出足迹数据");
+        return null;
+    }
     /**
      * 将单个足迹转换为JSON对象
      * @param footprint 足迹实体

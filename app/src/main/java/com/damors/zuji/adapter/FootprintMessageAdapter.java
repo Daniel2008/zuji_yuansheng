@@ -325,7 +325,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         GridImageAdapter adapter = new GridImageAdapter(context, imageFiles);
         
         // 设置图片点击事件
-        adapter.setOnImageClickListener((imageFile, position) -> {
+        adapter.setOnImageClickListener((position, files) -> {
             if (onItemClickListener != null) {
                 FootprintMessage message = messageList.get(holder.getAdapterPosition());
                 onItemClickListener.onImageClick(message, holder.getAdapterPosition(), position, imageFiles);
@@ -546,6 +546,10 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         
         // 使用ApiConfig中的图片基础URL构建完整的图片URL
         String imageBaseUrl = ApiConfig.getImageBaseUrl();
+        // 确保路径正确拼接
+        if (!imagePath.startsWith("/")) {
+            imagePath = "/" + imagePath;
+        }
         String fullImageUrl = imageBaseUrl + imagePath;
         
         android.util.Log.d("FootprintMessageAdapter", "构建图片URL: " + imagePath + " -> " + fullImageUrl);

@@ -65,13 +65,30 @@ public class StatisticsFragment extends Fragment {
     
     /**
      * 加载统计数据
+     * 注释：已移除本地足迹统计功能
      */
+    /*
     private void loadStatistics() {
         viewModel.getAllFootprints().observe(getViewLifecycleOwner(), footprints -> {
             if (footprints != null) {
                 updateStatistics(footprints);
             }
         });
+    }
+    */
+    
+    private void loadStatistics() {
+        // 显示空的统计数据，因为本地存储功能已移除
+        updateStatisticsWithEmptyData();
+    }
+    
+    /**
+     * 显示空的统计数据
+     */
+    private void updateStatisticsWithEmptyData() {
+        // 设置所有统计数据为0
+        totalFootprintsTextView.setText("总足迹数: 0");
+        // 其他统计项也设置为空或0
     }
     
     /**

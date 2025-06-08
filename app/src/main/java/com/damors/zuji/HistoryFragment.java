@@ -348,8 +348,14 @@ public class HistoryFragment extends Fragment {
             Log.d("HistoryFragment", "Image click - Original path: " + originalPath);
             Log.d("HistoryFragment", "Image click - Full URL: " + imageUrl);
             
+            // 构建图片URL列表
+            java.util.ArrayList<String> imageUrls = new java.util.ArrayList<>();
+            for (GuluFile file : imageFiles) {
+                imageUrls.add(getFullImageUrl(file.getFilePath()));
+            }
+            
             // 启动图片预览Activity
-            Intent intent = ImagePreviewActivity.newIntent(requireContext(), imageUrl, imageIndex);
+            Intent intent = ImagePreviewActivity.newIntent(requireContext(), imageUrls, imageIndex);
             startActivity(intent);
         } else {
             Log.w("HistoryFragment", "Invalid image click - imageFiles: " + imageFiles + ", imageIndex: " + imageIndex);
@@ -375,6 +381,10 @@ public class HistoryFragment extends Fragment {
         
         // 使用ApiConfig中的图片基础URL构建完整的图片URL
         String imageBaseUrl = ApiConfig.getImageBaseUrl();
+        // 确保路径正确拼接
+        if (!imagePath.startsWith("/")) {
+            imagePath = "/" + imagePath;
+        }
         String fullUrl = imageBaseUrl + imagePath;
         
         Log.d("HistoryFragment", "Building full URL - Image base: " + imageBaseUrl + ", Full URL: " + fullUrl);

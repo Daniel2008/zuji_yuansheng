@@ -391,8 +391,9 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
             new HutoolApiService.SuccessCallback<String>() {
                 @Override
                 public void onSuccess(String response) {
-                    // 发布成功，同时保存到本地数据库
-                    saveToLocalDatabase(content, location);
+                    // 发布成功
+                    // 注释：已移除本地数据库保存功能
+                    // saveToLocalDatabase(content, location);
                     
                     // 重置UI状态
                     runOnUiThread(() -> {
@@ -518,9 +519,11 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
     
     /**
      * 保存足迹到本地数据库
+     * 注释：此功能已被移除，不再支持本地存储
      * @param content 足迹内容
      * @param location 位置信息
      */
+    /*
     private void saveToLocalDatabase(String content, String location) {
         // 创建足迹对象
         FootprintEntity footprint = new FootprintEntity();
@@ -535,6 +538,7 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
         FootprintViewModel viewModel = new ViewModelProvider(this).get(FootprintViewModel.class);
         viewModel.insert(footprint);
     }
+    */
     
     /**
      * 从URI获取文件路径

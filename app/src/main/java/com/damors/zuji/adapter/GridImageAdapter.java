@@ -6,15 +6,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.damors.zuji.R;
 import com.damors.zuji.model.GuluFile;
-
+import com.damors.zuji.network.ApiConfig;
 import java.util.List;
 
 /**
@@ -34,10 +32,10 @@ public class GridImageAdapter extends RecyclerView.Adapter<GridImageAdapter.Imag
     public interface OnImageClickListener {
         /**
          * 图片被点击时调用
-         * @param imageFile 被点击的图片文件
          * @param position 点击的图片位置
+         * @param imageFiles 图片文件列表
          */
-        void onImageClick(GuluFile imageFile, int position);
+        void onImageClick(int position, List<GuluFile> imageFiles);
     }
 
     /**
@@ -71,18 +69,33 @@ public class GridImageAdapter extends RecyclerView.Adapter<GridImageAdapter.Imag
         
         // 加载图片
         String imageUrl = getFullImageUrl(imageFile.getFilePath());
+        android.util.Log.d("GridImageAdapter", "加载图片: " + imageUrl);
+        
         Glide.with(context)
-                .load(imageUrl)
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                .placeholder(R.drawable.ic_placeholder_image)
-                .error(R.drawable.ic_placeholder_image)
-                .centerCrop()
-                .into(holder.imageView);
+            .load(imageUrl)
+            .diskCacheStrategy(DiskCacheStrategy.ALL)
+            .placeholder(R.drawable.ic_placeholder_image)
+            .error(R.drawable.ic_error_image)
+            .centerCrop()
+            .listener(new com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable>() {
+                @Override
+                public boolean onLoadFailed(@androidx.annotation.Nullable com.bumptech.glide.load.engine.GlideException e, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, boolean isFirstResource) {
+                    android.util.Log.e("GridImageAdapter", "图片加载失败: " + model, e);
+                    return false;
+                }
+
+                @Override
+                public boolean onResourceReady(android.graphics.drawable.Drawable resource, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, com.bumptech.glide.load.DataSource dataSource, boolean isFirstResource) {
+                    android.util.Log.d("GridImageAdapter", "图片加载成功: " + model);
+                    return false;
+                }
+            })
+            .into(holder.imageView);
 
         // 设置点击事件
         holder.imageView.setOnClickListener(v -> {
             if (onImageClickListener != null) {
-                onImageClickListener.onImageClick(imageFile, position);
+                onImageClickListener.onImageClick(position, imageFiles);
             }
         });
 
@@ -111,20 +124,27 @@ public class GridImageAdapter extends RecyclerView.Adapter<GridImageAdapter.Imag
      */
     private String getFullImageUrl(String filePath) {
         if (filePath == null || filePath.isEmpty()) {
+            android.util.Log.w("GridImageAdapter", "图片路径为空");
             return "";
         }
         
         // 如果已经是完整URL，直接返回
         if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+            android.util.Log.d("GridImageAdapter", "使用完整URL: " + filePath);
             return filePath;
         }
         
-        // 否则拼接基础URL
-        String baseUrl = "https://api.damors.com";
+        // 使用ApiConfig中的图片基础URL构建完整的图片URL
+        String imageBaseUrl = ApiConfig.getImageBaseUrl();
+        // 确保路径正确拼接
         if (!filePath.startsWith("/")) {
             filePath = "/" + filePath;
         }
-        return baseUrl + filePath;
+        String fullImageUrl = imageBaseUrl + filePath;
+        
+        android.util.Log.d("GridImageAdapter", "构建图片URL: " + filePath + " -> " + fullImageUrl);
+        android.util.Log.d("GridImageAdapter", "图片基础URL: " + imageBaseUrl);
+        return fullImageUrl;
     }
 
     /**

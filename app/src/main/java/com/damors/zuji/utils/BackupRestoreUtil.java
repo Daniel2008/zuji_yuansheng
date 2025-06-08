@@ -39,10 +39,60 @@ public class BackupRestoreUtil {
 
     /**
      * 备份足迹数据到JSON文件
+     * 注释：已移除本地足迹备份功能
      * @param context 上下文
      * @param footprints 足迹列表
      * @return 备份文件的URI，如果备份失败则返回null
      */
+    /*
+    public static Uri backupFootprints(Context context, List<FootprintEntity> footprints) {
+        if (footprints == null || footprints.isEmpty()) {
+            Toast.makeText(context, "没有足迹数据可备份", Toast.LENGTH_SHORT).show();
+            return null;
+        }
+
+        try {
+            // 创建备份目录
+            File backupDir = getBackupDirectory(context);
+            if (backupDir == null) {
+                Toast.makeText(context, "无法创建备份目录", Toast.LENGTH_SHORT).show();
+                return null;
+            }
+
+            // 生成备份文件名
+            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+            String fileName = BACKUP_FILE_PREFIX + timestamp + BACKUP_FILE_EXTENSION;
+            File backupFile = new File(backupDir, fileName);
+
+            // 使用Gson将足迹列表转换为JSON
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            String jsonString = gson.toJson(footprints);
+
+            // 写入文件
+            FileWriter writer = new FileWriter(backupFile);
+            writer.write(jsonString);
+            writer.close();
+
+            Log.d(TAG, "足迹数据备份成功: " + backupFile.getAbsolutePath());
+            Toast.makeText(context, "备份成功: " + fileName, Toast.LENGTH_SHORT).show();
+            return Uri.fromFile(backupFile);
+
+        } catch (IOException e) {
+            Log.e(TAG, "足迹数据备份失败: " + e.getMessage(), e);
+            Toast.makeText(context, "备份失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            return null;
+        }
+    }
+    */
+    
+    public static Uri backupFootprints(Context context, List<FootprintEntity> footprints) {
+        Log.d(TAG, "本地存储功能已移除，无法备份足迹数据");
+        Toast.makeText(context, "本地存储功能已移除", Toast.LENGTH_SHORT).show();
+        return null;
+    }
+    
+    /*
+    // 原始备份方法已注释
     public static Uri backupFootprints(Context context, List<FootprintEntity> footprints) {
         if (footprints == null || footprints.isEmpty()) {
             Toast.makeText(context, "没有足迹数据可备份", Toast.LENGTH_SHORT).show();
@@ -86,10 +136,12 @@ public class BackupRestoreUtil {
 
     /**
      * 从JSON文件恢复足迹数据
+     * 注释：已移除本地足迹恢复功能
      * @param context 上下文
      * @param uri 备份文件的URI
      * @return 恢复的足迹列表，如果恢复失败则返回null
      */
+    /*
     public static List<FootprintEntity> restoreFootprints(Context context, Uri uri) {
         if (uri == null) {
             return null;
@@ -130,6 +182,13 @@ public class BackupRestoreUtil {
             e.printStackTrace();
             return null;
         }
+    }
+    */
+    
+    public static List<FootprintEntity> restoreFootprints(Context context, Uri uri) {
+        Log.d(TAG, "本地存储功能已移除，无法恢复足迹数据");
+        Toast.makeText(context, "本地存储功能已移除", Toast.LENGTH_SHORT).show();
+        return new ArrayList<>();
     }
 
     /**

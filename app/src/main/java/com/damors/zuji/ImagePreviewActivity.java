@@ -8,9 +8,11 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
@@ -20,6 +22,9 @@ import com.bumptech.glide.request.target.Target;
 import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.GlideException;
 import android.util.Log;
+import java.util.ArrayList;
+import java.util.List;
+import com.damors.zuji.adapter.ImagePreviewAdapter;
 
 /**
  * 图片全屏预览Activity
@@ -27,23 +32,27 @@ import android.util.Log;
  */
 public class ImagePreviewActivity extends AppCompatActivity {
 
-    private static final String EXTRA_IMAGE_URI = "image_uri";
-    private static final String EXTRA_POSITION = "position";
+    private static final String EXTRA_IMAGE_URLS = "image_urls";
+    private static final String EXTRA_CURRENT_INDEX = "current_index";
     
-    private ImageView fullImageView;
+    private ViewPager2 viewPager;
     private ImageButton closeButton;
+    private TextView pageIndicator;
+    private ImagePreviewAdapter adapter;
+    private ArrayList<String> imageUrls;
+    private int currentIndex;
     
     /**
      * 创建启动此Activity的Intent
      * @param context 上下文
-     * @param imageUri 图片URI
-     * @param position 图片在列表中的位置
+     * @param imageUrls 图片URL列表
+     * @param currentIndex 当前图片索引
      * @return Intent对象
      */
-    public static Intent newIntent(Context context, String imageUri, int position) {
+    public static Intent newIntent(Context context, ArrayList<String> imageUrls, int currentIndex) {
         Intent intent = new Intent(context, ImagePreviewActivity.class);
-        intent.putExtra(EXTRA_IMAGE_URI, imageUri);
-        intent.putExtra(EXTRA_POSITION, position);
+        intent.putStringArrayListExtra(EXTRA_IMAGE_URLS, imageUrls);
+        intent.putExtra(EXTRA_CURRENT_INDEX, currentIndex);
         return intent;
     }
     
@@ -56,53 +65,59 @@ public class ImagePreviewActivity extends AppCompatActivity {
         setContentView(R.layout.activity_image_preview);
         
         // 初始化视图
-        fullImageView = findViewById(R.id.image_view_full);
+        viewPager = findViewById(R.id.view_pager_images);
         closeButton = findViewById(R.id.button_close);
+        pageIndicator = findViewById(R.id.page_indicator);
         
-        // 获取传入的图片URI
-        String imageUri = getIntent().getStringExtra(EXTRA_IMAGE_URI);
-        int position = getIntent().getIntExtra(EXTRA_POSITION, 0);
+        // 获取传入的数据
+        imageUrls = getIntent().getStringArrayListExtra(EXTRA_IMAGE_URLS);
+        currentIndex = getIntent().getIntExtra(EXTRA_CURRENT_INDEX, 0);
         
-        // 使用Glide加载网络图片
-        if (imageUri != null && !imageUri.isEmpty()) {
-            Log.d("ImagePreview", "Loading image: " + imageUri);
+        if (imageUrls != null && !imageUrls.isEmpty()) {
+            // 设置适配器
+            adapter = new ImagePreviewAdapter(this, imageUrls);
+            viewPager.setAdapter(adapter);
             
-            Glide.with(this)
-                .load(imageUri)
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                .placeholder(R.drawable.ic_placeholder_image)
-                .error(R.drawable.ic_error_image)
-                .transition(DrawableTransitionOptions.withCrossFade())
-                .listener(new RequestListener<android.graphics.drawable.Drawable>() {
-                    @Override
-                    public boolean onLoadFailed(@androidx.annotation.Nullable GlideException e, Object model, Target<android.graphics.drawable.Drawable> target, boolean isFirstResource) {
-                        Log.e("ImagePreview", "Failed to load image: " + imageUri, e);
-                        return false; // 让Glide显示错误图片
-                    }
-                    
-                    @Override
-                    public boolean onResourceReady(android.graphics.drawable.Drawable resource, Object model, Target<android.graphics.drawable.Drawable> target, DataSource dataSource, boolean isFirstResource) {
-                        Log.d("ImagePreview", "Image loaded successfully: " + imageUri);
-                        return false; // 让Glide正常显示图片
-                    }
-                })
-                .into(fullImageView);
+            // 设置当前页面
+            viewPager.setCurrentItem(currentIndex, false);
+            
+            // 更新页面指示器
+            updatePageIndicator(currentIndex);
+            
+            // 设置页面变化监听器
+            viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+                @Override
+                public void onPageSelected(int position) {
+                    super.onPageSelected(position);
+                    currentIndex = position;
+                    updatePageIndicator(position);
+                }
+            });
+            
+            Log.d("ImagePreview", "Loading " + imageUrls.size() + " images, starting at index " + currentIndex);
         } else {
-            Log.w("ImagePreview", "Image URI is null or empty");
+            Log.w("ImagePreview", "Image URLs list is null or empty");
+            finish();
+            return;
         }
         
         // 设置关闭按钮点击事件
         closeButton.setOnClickListener(v -> finish());
-        
-        // 设置图片点击事件（点击图片也可以关闭预览）
-        fullImageView.setOnClickListener(v -> {
-            // 切换顶部关闭按钮的可见性
-            if (closeButton.getVisibility() == View.VISIBLE) {
-                closeButton.setVisibility(View.GONE);
+    }
+    
+    /**
+     * 更新页面指示器
+     * @param position 当前页面位置
+     */
+    private void updatePageIndicator(int position) {
+        if (pageIndicator != null && imageUrls != null) {
+            if (imageUrls.size() > 1) {
+                pageIndicator.setVisibility(View.VISIBLE);
+                pageIndicator.setText(String.format("%d / %d", position + 1, imageUrls.size()));
             } else {
-                closeButton.setVisibility(View.VISIBLE);
+                pageIndicator.setVisibility(View.GONE);
             }
-        });
+        }
     }
     
     /**
@@ -113,14 +128,17 @@ public class ImagePreviewActivity extends AppCompatActivity {
     public boolean testImagePreview() {
         try {
             // 测试Intent创建
-            Intent intent = newIntent(this, "content://test/image.jpg", 0);
+            ArrayList<String> testUrls = new ArrayList<>();
+            testUrls.add("content://test/image1.jpg");
+            testUrls.add("content://test/image2.jpg");
+            Intent intent = newIntent(this, testUrls, 0);
             if (intent == null) return false;
             
             // 验证Intent中的数据
-            String uri = intent.getStringExtra(EXTRA_IMAGE_URI);
-            int position = intent.getIntExtra(EXTRA_POSITION, -1);
+            ArrayList<String> urls = intent.getStringArrayListExtra(EXTRA_IMAGE_URLS);
+            int index = intent.getIntExtra(EXTRA_CURRENT_INDEX, -1);
             
-            return uri.equals("content://test/image.jpg") && position == 0;
+            return urls != null && urls.size() == 2 && index == 0;
         } catch (Exception e) {
             e.printStackTrace();
             return false;

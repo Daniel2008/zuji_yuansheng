@@ -28,11 +28,13 @@ public class ImportUtil {
 
     /**
      * 从JSON文件导入足迹数据
+     * 注释：已移除本地足迹导入功能
      * @param context 上下文
      * @param uri 文件URI
      * @param viewModel 足迹ViewModel，用于保存导入的数据
      * @return 导入的足迹数量，如果导入失败则返回-1
      */
+    /*
     public static int importFootprintsFromJson(Context context, Uri uri, FootprintViewModel viewModel) {
         if (uri == null || viewModel == null) {
             Log.e(TAG, "参数无效，无法导入数据");
@@ -78,11 +80,16 @@ public class ImportUtil {
             Log.d(TAG, "成功导入 " + importedFootprints.size() + " 条足迹数据");
             return importedFootprints.size();
 
-        } catch (IOException | JSONException e) {
-            Log.e(TAG, "足迹数据导入失败: " + e.getMessage());
-            e.printStackTrace();
+        } catch (Exception e) {
+            Log.e(TAG, "导入足迹数据失败: " + e.getMessage(), e);
             return -1;
         }
+    }
+    */
+    
+    public static int importFootprintsFromJson(Context context, Uri uri, FootprintViewModel viewModel) {
+        Log.d(TAG, "本地存储功能已移除，无法导入足迹数据");
+        return -1;
     }
 
     /**

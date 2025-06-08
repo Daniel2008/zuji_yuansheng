@@ -55,6 +55,9 @@ public class DataManagementActivity extends AppCompatActivity {
         
         // 设置按钮点击事件
         setupClickListeners();
+        
+        // 初始化数据观察器
+        initDataObserver();
     }
     
     /**
@@ -196,5 +199,37 @@ public class DataManagementActivity extends AppCompatActivity {
             e.printStackTrace();
             return false;
         }
+    }
+    
+    /**
+     * 更新足迹数量显示
+     * 注释：已移除本地足迹数据管理功能，此方法仅用于兼容性
+     * @param count 足迹数量
+     */
+    private void updateFootprintCount(int count) {
+        // 注释：原本用于更新UI中的足迹数量显示
+        // 由于已移除本地存储功能，此方法现在为空实现
+        // 保留此方法以避免编译错误
+    }
+    
+    /**
+     * 初始化数据观察
+     * 注释：已移除本地足迹数据管理功能
+     */
+    private void initDataObserver() {
+        // 观察足迹数据变化
+        // 注释：已移除本地足迹数据管理功能
+        /*
+        viewModel.getAllFootprints().observe(this, footprints -> {
+            if (footprints != null) {
+                updateFootprintCount(footprints.size());
+                // 可以在这里更新其他统计信息
+            }
+        });
+        */
+        
+        // 显示本地存储功能已移除的提示
+        updateFootprintCount(0);
+        Toast.makeText(this, "本地存储功能已移除", Toast.LENGTH_SHORT).show();
     }
 }

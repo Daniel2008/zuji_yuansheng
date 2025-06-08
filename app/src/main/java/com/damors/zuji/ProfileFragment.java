@@ -39,6 +39,7 @@ public class ProfileFragment extends Fragment {
     private LinearLayout layoutDataManagement;
     private LinearLayout layoutSearch;
     private LinearLayout layoutMapCache;
+
     private ExecutorService executorService;
     private Handler mainHandler;
 
@@ -55,6 +56,7 @@ public class ProfileFragment extends Fragment {
         layoutDataManagement = view.findViewById(R.id.layout_data_management);
         layoutSearch = view.findViewById(R.id.layout_search);
         layoutMapCache = view.findViewById(R.id.layout_map_cache);
+
         
         // 初始化线程池和Handler
         executorService = Executors.newSingleThreadExecutor();
@@ -102,7 +104,26 @@ public class ProfileFragment extends Fragment {
         // 初始化ViewModel
         viewModel = new ViewModelProvider(requireActivity()).get(FootprintViewModel.class);
         
+        // 注释：已移除清除所有足迹布局点击事件，因为对应的布局元素不存在
+        
+        // 设置数据管理布局点击事件
+        layoutDataManagement.setOnClickListener(v -> {
+            Intent intent = new Intent(requireContext(), DataManagementActivity.class);
+            startActivity(intent);
+        });
+        
+        // 设置搜索布局点击事件
+        layoutSearch.setOnClickListener(v -> {
+            Intent intent = new Intent(requireContext(), SearchActivity.class);
+            startActivity(intent);
+        });
+        
+        // 设置地图缓存管理布局点击事件 - 直接打开离线地图管理
+        layoutMapCache.setOnClickListener(v -> openOfflineMapManager());
+        
         // 观察足迹数据变化，更新统计信息
+        // 注释：已移除本地足迹统计功能
+        /*
         viewModel.getAllFootprints().observe(getViewLifecycleOwner(), footprints -> {
             if (footprints != null) {
                 textViewFootprintCount.setText(String.format("%d", footprints.size()));
@@ -110,6 +131,10 @@ public class ProfileFragment extends Fragment {
                 textViewFootprintCount.setText("0");
             }
         });
+        */
+        
+        // 设置固定的足迹数量显示
+        textViewFootprintCount.setText("0");
         
         // 观察城市数量变化，更新统计信息
         viewModel.getCityCount().observe(getViewLifecycleOwner(), cityCount -> {

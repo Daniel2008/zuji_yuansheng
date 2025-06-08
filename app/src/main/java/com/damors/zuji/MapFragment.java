@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -12,8 +13,23 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
+import com.amap.api.maps.model.BitmapDescriptor;
+import com.damors.zuji.adapter.GridImageAdapter;
+import com.damors.zuji.model.GuluFile;
+import com.damors.zuji.network.ApiConfig;
+import com.damors.zuji.utils.ImageUtils;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
+import java.util.Date;
+import java.text.SimpleDateFormat;
+import java.util.Locale;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -188,6 +204,16 @@ public class MapFragment extends Fragment {
             // 设置默认缩放级别
             aMap.moveCamera(CameraUpdateFactory.zoomTo(17));
             
+            // 设置标记点击监听器
+            aMap.setOnMarkerClickListener(marker -> {
+                Object footprintObj = marker.getObject();
+                if (footprintObj instanceof FootprintMessage) {
+                    showFootprintMessageInfoCard((FootprintMessage) footprintObj);
+                    return true;
+                }
+                return false;
+            });
+            
             isMapInitialized = true;
             Log.d(TAG, "高德地图初始化完成");
             
@@ -215,7 +241,6 @@ public class MapFragment extends Fragment {
         // 延迟加载数据，避免阻塞UI
         mainHandler.post(() -> {
             enableMyLocation();
-            loadFootprints();
             loadFootprintMessages();
         });
     }
@@ -281,20 +306,22 @@ public class MapFragment extends Fragment {
                 locationClient.setLocationOption(locationOption);
                 
                 // 设置定位监听
-                locationClient.setLocationListener(new AMapLocationListener() {
-                    @Override
-                    public void onLocationChanged(AMapLocation aMapLocation) {
-                        if (aMapLocation != null) {
-                            if (aMapLocation.getErrorCode() == 0) {
-                                // 定位成功
-                                lastAMapLocation = aMapLocation;
-                                updateLocationOnMap(aMapLocation);
-                                Log.d(TAG, "高德定位成功: " + aMapLocation.getLatitude() + ", " + aMapLocation.getLongitude());
-                            } else {
-                                // 定位失败
-                                Log.e(TAG, "高德定位失败: " + aMapLocation.getErrorCode() + ", " + aMapLocation.getErrorInfo());
-                                showErrorToast("定位失败: " + aMapLocation.getErrorInfo());
-                            }
+                locationClient.setLocationListener(aMapLocation -> {
+                    if (aMapLocation != null) {
+                        if (aMapLocation.getErrorCode() == 0) {
+                            // 定位成功
+                            lastAMapLocation = aMapLocation;
+                            Log.d(TAG, "高德定位成功: " + aMapLocation.getLatitude() + ", " + aMapLocation.getLongitude());
+
+                            // 注释掉自动移动地图中心点的代码
+                            // if (aMap != null) {
+                            //     LatLng currentLatLng = new LatLng(aMapLocation.getLatitude(), aMapLocation.getLongitude());
+                            //     aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15));
+                            // }
+                        } else {
+                            // 定位失败
+                            Log.e(TAG, "高德定位失败: " + aMapLocation.getErrorCode() + ", " + aMapLocation.getErrorInfo());
+                            showErrorToast("定位失败: " + aMapLocation.getErrorInfo());
                         }
                     }
                 });
@@ -308,37 +335,6 @@ public class MapFragment extends Fragment {
             Log.e(TAG, "高德定位启动失败: " + e.getMessage(), e);
             isLocationUpdating.set(false);
             showErrorToast("定位服务启动失败");
-        }
-    }
-    
-    /**
-     * 检查位置获取超时
-     */
-    private void checkLocationTimeout() {
-        if (isLocationUpdating.get() && lastAMapLocation == null) {
-            Log.w(TAG, "位置获取超时");
-            if (retryCount < MAX_RETRY_COUNT) {
-                retryCount++;
-                Log.d(TAG, "重试位置更新，第 " + retryCount + " 次");
-                stopLocationUpdates();
-                mainHandler.postDelayed(this::startLocationUpdates, 2000); // 2秒后重试
-            } else {
-                showErrorToast("无法获取位置信息，请检查定位设置");
-                isLocationUpdating.set(false);
-            }
-        }
-    }
-    
-    /**
-     * 处理位置更新错误
-     */
-    private void handleLocationUpdateError() {
-        if (retryCount < MAX_RETRY_COUNT) {
-            retryCount++;
-            Log.d(TAG, "位置更新失败，准备重试第 " + retryCount + " 次");
-            mainHandler.postDelayed(this::startLocationUpdates, 3000); // 3秒后重试
-        } else {
-            showErrorToast("位置服务异常，请重启应用或检查设备设置");
         }
     }
 
@@ -357,46 +353,6 @@ public class MapFragment extends Fragment {
             Log.e(TAG, "停止高德地图位置更新时出错: " + e.getMessage(), e);
         }
     }
-    
-    /**
-     * 更新地图上的位置标记
-     */
-    private void updateLocationOnMap(AMapLocation aMapLocation) {
-        if (!isMapInitialized || aMap == null || aMapLocation == null) {
-            Log.w(TAG, "地图未初始化或位置信息无效，跳过位置更新");
-            return;
-        }
-        
-        try {
-            // 直接使用高德定位的坐标，无需转换
-            LatLng latLng = new LatLng(aMapLocation.getLatitude(), aMapLocation.getLongitude());
-            
-            // 移动地图到当前位置
-            aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17));
-            
-            // 更新当前位置标记
-            if (currentLocationMarker != null) {
-                currentLocationMarker.remove();
-            }
-            
-            MarkerOptions markerOptions = new MarkerOptions()
-                    .position(latLng)
-                    .title("当前位置")
-                    .snippet(aMapLocation.getAddress())
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
-            
-            currentLocationMarker = aMap.addMarker(markerOptions);
-            
-            Log.d(TAG, "地图位置已更新: " + aMapLocation.getLatitude() + ", " + aMapLocation.getLongitude());
-            
-        } catch (Exception e) {
-            Log.e(TAG, "更新地图位置失败: " + e.getMessage(), e);
-        }
-    }
-
-
-
-
 
     /**
      * 启用我的位置功能（优化版本）
@@ -424,7 +380,6 @@ public class MapFragment extends Fragment {
             
             // 启动高德定位
             if (lastAMapLocation != null) {
-                updateLocationOnMap(lastAMapLocation);
                 retryCount = 0;
                 Log.d(TAG, "位置功能启用成功");
             } else {
@@ -438,104 +393,6 @@ public class MapFragment extends Fragment {
         } catch (Exception e) {
             Log.e(TAG, "启用位置功能失败: " + e.getMessage(), e);
             showErrorToast("位置服务异常");
-        }
-    }
-    
-
-    
-
-
-    /**
-     * 加载并显示所有足迹点（优化版本）
-     * 改进了加载逻辑和状态管理
-     */
-    private void loadFootprints() {
-        if (isLoadingFootprints.get()) {
-            Log.d(TAG, "正在加载足迹点，跳过重复请求");
-            return;
-        }
-        
-        if (!isMapInitialized) {
-            Log.w(TAG, "地图未初始化，延迟加载足迹点");
-            mainHandler.postDelayed(this::loadFootprints, 1000);
-            return;
-        }
-        
-        isLoadingFootprints.set(true);
-        Log.d(TAG, "开始加载足迹点");
-        
-        try {
-            viewModel.getAllFootprints().observe(getViewLifecycleOwner(), footprints -> {
-                try {
-                    if (mapView != null && footprints != null && !footprints.isEmpty()) {
-                        displayFootprintsOnMap(footprints);
-                        Log.d(TAG, "足迹点加载完成，共 " + footprints.size() + " 个点");
-                    } else {
-                        Log.d(TAG, "无足迹点数据");
-                    }
-                } catch (Exception e) {
-                    Log.e(TAG, "显示足迹点失败: " + e.getMessage(), e);
-                    showErrorToast("显示足迹点失败");
-                } finally {
-                    isLoadingFootprints.set(false);
-                }
-            });
-        } catch (Exception e) {
-            Log.e(TAG, "加载足迹点失败: " + e.getMessage(), e);
-            showErrorToast("加载足迹点失败");
-            isLoadingFootprints.set(false);
-        }
-    }
-
-    /**
-     * 在地图上显示足迹点
-     */
-    private void displayFootprintsOnMap(List<FootprintEntity> footprints) {
-        if (aMap == null) {
-            return;
-        }
-        
-        // 清除地图上的所有标记和线条（除了当前位置标记）
-        aMap.clear();
-        
-        // 创建连线点列表
-        List<LatLng> points = new ArrayList<>();
-        
-        for (FootprintEntity footprint : footprints) {
-            LatLng position = new LatLng(footprint.getLatitude(), footprint.getLongitude());
-            
-            // 添加标记
-            MarkerOptions markerOptions = new MarkerOptions()
-                    .position(position)
-                    .title(footprint.getDescription())
-                    .snippet("时间: " + new Date(footprint.getTimestamp()).toString())
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
-            aMap.addMarker(markerOptions);
-            
-            // 添加到连线
-            points.add(position);
-        }
-        
-        // 绘制足迹路线
-        if (points.size() > 1) {
-            PolylineOptions polylineOptions = new PolylineOptions()
-                    .addAll(points)
-                    .color(ContextCompat.getColor(requireContext(), android.R.color.holo_blue_dark))
-                    .width(5f);
-            aMap.addPolyline(polylineOptions);
-        }
-        
-        // 重新添加当前位置标记
-        if (lastAMapLocation != null) {
-            updateLocationOnMap(lastAMapLocation);
-        }
-        
-        // 移动相机到最后一个足迹点
-        if (!footprints.isEmpty()) {
-            FootprintEntity lastFootprint = footprints.get(footprints.size() - 1);
-            LatLng lastPosition = new LatLng(lastFootprint.getLatitude(), lastFootprint.getLongitude());
-            CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(lastPosition, 15f);
-            aMap.animateCamera(cameraUpdate);
         }
     }
 
@@ -731,15 +588,16 @@ public class MapFragment extends Fragment {
         // 在地图上显示足迹动态标记
         if (aMap != null) {
             for (FootprintMessage message : messages) {
-                // 创建足迹动态标记
+                // 创建足迹动态标记，使用旗帜图标
                 LatLng position = new LatLng(message.getLat(), message.getLng());
                 MarkerOptions markerOptions = new MarkerOptions()
-                        .position(position)
-                        .title(message.getCreateBy() + " - " + message.getTag())
-                        .snippet(message.getTextContent())
-                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
-                
-                aMap.addMarker(markerOptions);
+                    .position(position)
+                    .title(message.getCreateBy() + " - " + message.getTag())
+                    .snippet(message.getTextContent())
+                    .icon(BitmapDescriptorFactory.fromBitmap(ImageUtils.getBitmap(getContext(),R.drawable.ic_footprint_flag)));
+                Marker marker = aMap.addMarker(markerOptions);
+                // 将足迹消息对象存储到marker中，用于点击事件
+                marker.setObject(message);
                 
                 Log.d(TAG, "添加足迹动态标记: " + message.getCreateBy() + " - " + message.getTextContent());
             }
@@ -775,8 +633,6 @@ public class MapFragment extends Fragment {
             
             // 在后台线程执行数据加载
             mainHandler.post(() -> {
-                // 重新加载足迹点
-                loadFootprints();
                 // 重新加载足迹动态
                 loadFootprintMessages();
                 
@@ -841,6 +697,296 @@ public class MapFragment extends Fragment {
             Log.e(TAG, "销毁MapFragment时出现异常: " + e.getMessage(), e);
         } finally {
             super.onDestroy();
+        }
+    }
+
+    
+    /**
+     * 显示足迹消息信息卡片
+     * @param message 足迹消息对象
+     */
+    private void showFootprintMessageInfoCard(FootprintMessage message) {
+        if (getContext() == null || !isAdded()) {
+            return;
+        }
+        
+        // 创建AlertDialog显示足迹消息信息
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        
+        // 创建时间轴样式的自定义布局
+        View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_footprint_message_info, null);
+        
+        // 获取布局中的控件
+        TextView creatorView = dialogView.findViewById(R.id.text_view_creator);
+        TextView dateView = dialogView.findViewById(R.id.text_view_date);
+        TextView tagView = dialogView.findViewById(R.id.text_view_tag);
+        TextView contentView = dialogView.findViewById(R.id.text_view_content);
+        TextView locationView = dialogView.findViewById(R.id.text_view_location);
+        TextView coordinatesView = dialogView.findViewById(R.id.text_view_coordinates);
+        
+        // 获取图片相关控件
+        FrameLayout frameLayoutImages = dialogView.findViewById(R.id.frame_layout_images);
+        ImageView imageViewSingle = dialogView.findViewById(R.id.image_view_single);
+        View gridImageLayout = dialogView.findViewById(R.id.grid_image_layout);
+        TextView textViewImageCount = dialogView.findViewById(R.id.text_view_image_count);
+        
+        // 设置基本数据
+        creatorView.setText(message.getCreateBy() != null ? message.getCreateBy() : "匿名用户");
+        dateView.setText(message.getCreateTime() != null ? message.getCreateTime() : "未知时间");
+        tagView.setText(message.getTag() != null ? message.getTag() : "动态");
+        contentView.setText(message.getTextContent() != null ? message.getTextContent() : "暂无内容");
+        locationView.setText("位置信息"); // 可以根据需要进行地理编码获取具体地址
+        coordinatesView.setText(String.format("坐标: %.6f, %.6f", message.getLat(), message.getLng()));
+        
+        // 渲染图片内容
+        renderImageContent(message, frameLayoutImages, imageViewSingle, gridImageLayout, textViewImageCount);
+        
+        // 创建并显示dialog
+        AlertDialog dialog = builder.setView(dialogView)
+               .setPositiveButton("确定", null)
+               .create();
+        
+        // 显示dialog
+        dialog.show();
+        
+        // 设置dialog窗口的圆角背景
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_background);
+        }
+    }
+    
+    /**
+     * 渲染图片内容
+     * @param message 足迹消息
+     * @param frameLayoutImages 图片容器
+     * @param imageViewSingle 单张图片视图
+     * @param gridImageLayout 网格图片布局
+     * @param textViewImageCount 图片数量文本
+     */
+    private void renderImageContent(FootprintMessage message, FrameLayout frameLayoutImages,
+                                    ImageView imageViewSingle, View gridImageLayout, TextView textViewImageCount) {
+        
+        // 首先隐藏所有图片相关控件
+        frameLayoutImages.setVisibility(View.GONE);
+        imageViewSingle.setVisibility(View.GONE);
+        if (gridImageLayout != null) {
+            gridImageLayout.setVisibility(View.GONE);
+        }
+        textViewImageCount.setVisibility(View.GONE);
+        
+        // 检查是否有图片文件
+        if (message.getGuluFiles() != null && !message.getGuluFiles().isEmpty()) {
+            // 筛选出图片文件
+            java.util.List<GuluFile> imageFiles = new java.util.ArrayList<>();
+            
+            for (GuluFile file : message.getGuluFiles()) {
+                if (isImageFile(file.getFileType())) {
+                    imageFiles.add(file);
+                }
+            }
+            
+            android.util.Log.d("MapFragment", "找到图片文件数量: " + imageFiles.size());
+            
+            if (!imageFiles.isEmpty()) {
+                frameLayoutImages.setVisibility(View.VISIBLE);
+                
+                if (imageFiles.size() == 1) {
+                    // 显示单张图片
+                    imageViewSingle.setVisibility(View.VISIBLE);
+                    loadImageIntoView(imageViewSingle, imageFiles.get(0));
+                    
+                    // 添加点击事件查看大图
+                    imageViewSingle.setOnClickListener(v -> {
+                        openImagePreview(imageFiles, 0);
+                    });
+                    
+                } else {
+                    // 多张图片使用网格布局
+                    if (gridImageLayout != null) {
+                        gridImageLayout.setVisibility(View.VISIBLE);
+                        setupGridImageLayout(gridImageLayout, imageFiles);
+                    }
+                    
+                    // 显示图片数量
+                    textViewImageCount.setVisibility(View.VISIBLE);
+                    textViewImageCount.setText(String.format("共%d张", imageFiles.size()));
+                }
+            }
+        }
+    }
+    
+    /**
+     * 设置网格图片布局
+     * @param gridImageLayout 网格布局
+     * @param imageFiles 图片文件列表
+     */
+    private void setupGridImageLayout(View gridImageLayout, java.util.List<GuluFile> imageFiles) {
+        // 获取网格布局中的控件
+        ImageView singleImage = gridImageLayout.findViewById(R.id.single_image);
+        LinearLayout twoImagesLayout = gridImageLayout.findViewById(R.id.two_images_layout);
+        LinearLayout threeImagesLayout = gridImageLayout.findViewById(R.id.three_images_layout);
+        androidx.recyclerview.widget.RecyclerView gridRecyclerView = gridImageLayout.findViewById(R.id.grid_recycler_view);
+        
+        // 隐藏所有布局
+        if (singleImage != null) singleImage.setVisibility(View.GONE);
+        if (twoImagesLayout != null) twoImagesLayout.setVisibility(View.GONE);
+        if (threeImagesLayout != null) threeImagesLayout.setVisibility(View.GONE);
+        if (gridRecyclerView != null) gridRecyclerView.setVisibility(View.GONE);
+        
+        int imageCount = imageFiles.size();
+        
+        if (imageCount == 2 && twoImagesLayout != null) {
+            // 显示两张图片
+            twoImagesLayout.setVisibility(View.VISIBLE);
+            ImageView image1 = twoImagesLayout.findViewById(R.id.image_1_of_2);
+            ImageView image2 = twoImagesLayout.findViewById(R.id.image_2_of_2);
+            
+            if (image1 != null && image2 != null) {
+                loadImageIntoView(image1, imageFiles.get(0));
+                loadImageIntoView(image2, imageFiles.get(1));
+                
+                image1.setOnClickListener(v -> openImagePreview(imageFiles, 0));
+                image2.setOnClickListener(v -> openImagePreview(imageFiles, 1));
+            }
+            
+        } else if (imageCount == 3 && threeImagesLayout != null) {
+            // 显示三张图片
+            threeImagesLayout.setVisibility(View.VISIBLE);
+            ImageView image1 = threeImagesLayout.findViewById(R.id.image_1_of_3);
+            ImageView image2 = threeImagesLayout.findViewById(R.id.image_2_of_3);
+            ImageView image3 = threeImagesLayout.findViewById(R.id.image_3_of_3);
+            
+            if (image1 != null && image2 != null && image3 != null) {
+                loadImageIntoView(image1, imageFiles.get(0));
+                loadImageIntoView(image2, imageFiles.get(1));
+                loadImageIntoView(image3, imageFiles.get(2));
+                
+                image1.setOnClickListener(v -> openImagePreview(imageFiles, 0));
+                image2.setOnClickListener(v -> openImagePreview(imageFiles, 1));
+                image3.setOnClickListener(v -> openImagePreview(imageFiles, 2));
+            }
+            
+        } else if (imageCount >= 4 && gridRecyclerView != null) {
+            // 使用RecyclerView显示九宫格
+            gridRecyclerView.setVisibility(View.VISIBLE);
+            
+            // 设置网格布局管理器
+            androidx.recyclerview.widget.GridLayoutManager gridLayoutManager = 
+                new androidx.recyclerview.widget.GridLayoutManager(getContext(), 3);
+            gridRecyclerView.setLayoutManager(gridLayoutManager);
+            
+            // 设置适配器
+            GridImageAdapter adapter = new GridImageAdapter(getContext(), imageFiles);
+            adapter.setOnImageClickListener((position, files) -> {
+                openImagePreview(files, position);
+            });
+            gridRecyclerView.setAdapter(adapter);
+        }
+    }
+    
+    /**
+     * 加载图片到ImageView
+     * @param imageView 图片视图
+     * @param imageFile 图片文件
+     */
+    private void loadImageIntoView(ImageView imageView, GuluFile imageFile) {
+        String imageUrl = getFullImageUrl(imageFile.getFilePath());
+        android.util.Log.d("MapFragment", "加载图片: " + imageUrl);
+        
+        com.bumptech.glide.Glide.with(this)
+            .load(imageUrl)
+            .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
+            .placeholder(R.drawable.ic_placeholder_image)
+            .error(R.drawable.ic_error_image)
+            .centerCrop()
+            .listener(new com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable>() {
+                @Override
+                public boolean onLoadFailed(@androidx.annotation.Nullable com.bumptech.glide.load.engine.GlideException e, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, boolean isFirstResource) {
+                    android.util.Log.e("MapFragment", "图片加载失败: " + model, e);
+                    return false;
+                }
+
+                @Override
+                public boolean onResourceReady(android.graphics.drawable.Drawable resource, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, com.bumptech.glide.load.DataSource dataSource, boolean isFirstResource) {
+                    android.util.Log.d("MapFragment", "图片加载成功: " + model);
+                    return false;
+                }
+            })
+            .into(imageView);
+    }
+    
+    /**
+     * 获取完整的图片URL
+     * @param imagePath 图片路径
+     * @return 完整的图片URL
+     */
+    private String getFullImageUrl(String imagePath) {
+        if (imagePath == null || imagePath.isEmpty()) {
+            android.util.Log.w("MapFragment", "图片路径为空");
+            return "";
+        }
+        
+        // 如果已经是完整URL，直接返回
+        if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+            android.util.Log.d("MapFragment", "使用完整URL: " + imagePath);
+            return imagePath;
+        }
+        
+        // 使用ApiConfig中的图片基础URL构建完整的图片URL
+        String imageBaseUrl = ApiConfig.getImageBaseUrl();
+        // 确保路径正确拼接
+        if (!imagePath.startsWith("/")) {
+            imagePath = "/" + imagePath;
+        }
+        String fullImageUrl = imageBaseUrl + imagePath;
+        
+        android.util.Log.d("MapFragment", "构建图片URL: " + imagePath + " -> " + fullImageUrl);
+        return fullImageUrl;
+    }
+    
+    /**
+     * 判断是否为图片文件
+     * @param fileType 文件类型
+     * @return 是否为图片
+     */
+    private boolean isImageFile(String fileType) {
+        if (fileType == null) return false;
+        String type = fileType.toLowerCase();
+        return type.equals("jpg")
+            || type.equals("jpeg")
+            || type.equals("png")
+            || type.equals("gif")
+            || type.equals("bmp")
+            || type.equals("webp")
+            || type.equals("image/jpeg");
+    }
+    
+    /**
+     * 打开图片预览
+     * @param imageFiles 图片文件列表
+     * @param currentIndex 当前图片索引
+     */
+    private void openImagePreview(java.util.List<GuluFile> imageFiles, int currentIndex) {
+        if (getContext() == null || imageFiles == null || imageFiles.isEmpty()) {
+            return;
+        }
+        
+        try {
+            Intent intent = new Intent(getContext(), ImagePreviewActivity.class);
+            
+            // 构建图片URL列表
+            java.util.ArrayList<String> imageUrls = new java.util.ArrayList<>();
+            for (GuluFile file : imageFiles) {
+                imageUrls.add(getFullImageUrl(file.getFilePath()));
+            }
+            
+            intent.putStringArrayListExtra("image_urls", imageUrls);
+            intent.putExtra("current_index", currentIndex);
+            startActivity(intent);
+            
+        } catch (Exception e) {
+            android.util.Log.e("MapFragment", "打开图片预览失败", e);
+            android.widget.Toast.makeText(getContext(), "无法预览图片", android.widget.Toast.LENGTH_SHORT).show();
         }
     }
 }

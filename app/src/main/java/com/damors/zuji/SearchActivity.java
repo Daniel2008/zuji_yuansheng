@@ -132,7 +132,9 @@ public class SearchActivity extends AppCompatActivity {
     
     /**
      * 加载所有足迹数据
+     * 注释：已移除本地足迹搜索功能
      */
+    /*
     private void loadAllFootprints() {
         viewModel.getAllFootprints().observe(this, footprints -> {
             if (footprints != null) {
@@ -141,6 +143,13 @@ public class SearchActivity extends AppCompatActivity {
                 filterFootprints(searchEditText.getText().toString());
             }
         });
+    }
+    */
+    
+    private void loadAllFootprints() {
+        // 本地存储功能已移除，设置空的足迹列表
+        allFootprints = new ArrayList<>();
+        filterFootprints(searchEditText.getText().toString());
     }
     
     /**

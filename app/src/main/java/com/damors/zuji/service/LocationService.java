@@ -70,7 +70,9 @@ public class LocationService extends Service implements LocationListener {
 
     /**
      * 保存足迹点到数据库
+     * 注释：已移除本地足迹保存功能
      */
+    /*
     private void saveFootprint(Location location) {
         if (location != null) {
             FootprintEntity footprint = new FootprintEntity();
@@ -85,6 +87,12 @@ public class LocationService extends Service implements LocationListener {
             
             Log.d(TAG, "已保存足迹点 - 纬度: " + location.getLatitude() + ", 经度: " + location.getLongitude());
         }
+    }
+    */
+    
+    private void saveFootprint(Location location) {
+        // 本地存储功能已移除，不再保存足迹点到本地数据库
+        Log.d(TAG, "本地存储功能已移除，跳过足迹点保存");
     }
 
     /**

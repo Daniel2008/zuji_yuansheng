@@ -215,8 +215,14 @@ public class FootprintMessageListActivity extends AppCompatActivity {
             Log.d("FootprintMessageList", "Image click - Original path: " + originalPath);
             Log.d("FootprintMessageList", "Image click - Full URL: " + imageUrl);
             
+            // 构建图片URL列表
+            java.util.ArrayList<String> imageUrls = new java.util.ArrayList<>();
+            for (GuluFile file : imageFiles) {
+                imageUrls.add(getFullImageUrl(file.getFilePath()));
+            }
+            
             // 启动图片预览Activity
-            Intent intent = ImagePreviewActivity.newIntent(this, imageUrl, imageIndex);
+            Intent intent = ImagePreviewActivity.newIntent(this, imageUrls, imageIndex);
             startActivity(intent);
         } else {
             Log.w("FootprintMessageList", "Invalid image click - imageFiles: " + imageFiles + ", imageIndex: " + imageIndex);
