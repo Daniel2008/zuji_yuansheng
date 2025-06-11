@@ -35,9 +35,8 @@ public class ProfileFragment extends Fragment {
     private TextView textViewFootprintCount;
     private TextView textViewCityCount;
     private TextView textViewCacheSize;
-    private Button buttonClearAll;
-    private LinearLayout layoutDataManagement;
-    private LinearLayout layoutSearch;
+    private LinearLayout layoutLikeManagement;
+    private LinearLayout layoutCommentManagement;
     private LinearLayout layoutMapCache;
 
     private ExecutorService executorService;
@@ -51,10 +50,8 @@ public class ProfileFragment extends Fragment {
         // 初始化视图组件
         textViewFootprintCount = view.findViewById(R.id.text_view_footprint_count);
         textViewCityCount = view.findViewById(R.id.text_view_city_count);
-        textViewCacheSize = view.findViewById(R.id.text_view_cache_size);
-        buttonClearAll = view.findViewById(R.id.button_clear_all);
-        layoutDataManagement = view.findViewById(R.id.layout_data_management);
-        layoutSearch = view.findViewById(R.id.layout_search);
+        layoutLikeManagement = view.findViewById(R.id.layout_like_management);
+        layoutCommentManagement = view.findViewById(R.id.layout_comment_management);
         layoutMapCache = view.findViewById(R.id.layout_map_cache);
 
         
@@ -62,33 +59,16 @@ public class ProfileFragment extends Fragment {
         executorService = Executors.newSingleThreadExecutor();
         mainHandler = new Handler(Looper.getMainLooper());
         
-        // 设置清除所有足迹的按钮点击事件
-        buttonClearAll.setOnClickListener(v -> {
-            // 显示确认对话框
-            new AlertDialog.Builder(requireContext())
-                .setTitle("清除所有足迹")
-                .setMessage(getString(R.string.clear_all_footprints))
-                .setPositiveButton(getString(R.string.yes), (dialog, which) -> {
-                    viewModel.deleteAllFootprints();
-                    // 检查Fragment是否仍然附加到Activity，避免IllegalStateException
-                    if (isAdded() && getContext() != null) {
-                        Toast.makeText(getContext(), "已清除所有足迹记录", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton(getString(R.string.no), null)
-                .show();
+        // 设置点赞管理布局点击事件
+        layoutLikeManagement.setOnClickListener(v -> {
+            // TODO: 实现点赞管理功能
+            Toast.makeText(getContext(), "点赞管理功能开发中", Toast.LENGTH_SHORT).show();
         });
         
-        // 设置数据管理布局点击事件
-        layoutDataManagement.setOnClickListener(v -> {
-            Intent intent = new Intent(requireContext(), DataManagementActivity.class);
-            startActivity(intent);
-        });
-        
-        // 设置搜索布局点击事件
-        layoutSearch.setOnClickListener(v -> {
-            Intent intent = new Intent(requireContext(), SearchActivity.class);
-            startActivity(intent);
+        // 设置评论管理布局点击事件
+        layoutCommentManagement.setOnClickListener(v -> {
+            // TODO: 实现评论管理功能
+            Toast.makeText(getContext(), "评论管理功能开发中", Toast.LENGTH_SHORT).show();
         });
         
         // 设置地图缓存管理布局点击事件 - 直接打开离线地图管理
@@ -104,18 +84,16 @@ public class ProfileFragment extends Fragment {
         // 初始化ViewModel
         viewModel = new ViewModelProvider(requireActivity()).get(FootprintViewModel.class);
         
-        // 注释：已移除清除所有足迹布局点击事件，因为对应的布局元素不存在
-        
-        // 设置数据管理布局点击事件
-        layoutDataManagement.setOnClickListener(v -> {
-            Intent intent = new Intent(requireContext(), DataManagementActivity.class);
-            startActivity(intent);
+        // 设置点赞管理布局点击事件
+        layoutLikeManagement.setOnClickListener(v -> {
+            // TODO: 实现点赞管理功能
+            Toast.makeText(getContext(), "点赞管理功能开发中", Toast.LENGTH_SHORT).show();
         });
         
-        // 设置搜索布局点击事件
-        layoutSearch.setOnClickListener(v -> {
-            Intent intent = new Intent(requireContext(), SearchActivity.class);
-            startActivity(intent);
+        // 设置评论管理布局点击事件
+        layoutCommentManagement.setOnClickListener(v -> {
+            // TODO: 实现评论管理功能
+            Toast.makeText(getContext(), "评论管理功能开发中", Toast.LENGTH_SHORT).show();
         });
         
         // 设置地图缓存管理布局点击事件 - 直接打开离线地图管理

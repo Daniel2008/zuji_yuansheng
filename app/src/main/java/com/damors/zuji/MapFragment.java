@@ -113,6 +113,7 @@ public class MapFragment extends Fragment {
     private final AtomicBoolean isLoadingMessages = new AtomicBoolean(false);
     private final AtomicBoolean isMapInitialized = new AtomicBoolean(false);
     private final AtomicBoolean isFragmentDestroyed = new AtomicBoolean(false);
+    private boolean pendingAddFootprint = false; // 标记是否有待处理的添加足迹请求
     
     // 线程处理
     private Handler mainHandler;
@@ -302,6 +303,28 @@ public class MapFragment extends Fragment {
             mainHandler.post(() -> Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show());
         }
     }
+    
+    /**
+     * 更新点赞状态UI
+     * @param ivLike 点赞图标
+     * @param tvLikeCount 点赞数量文本
+     * @param isLiked 是否已点赞
+     * @param likeCount 点赞数量
+     */
+    private void updateLikeStatus(ImageView ivLike, TextView tvLikeCount, boolean isLiked, int likeCount) {
+        if (getContext() == null) return;
+        
+        if (isLiked) {
+            ivLike.setImageResource(R.drawable.ic_like_filled);
+            ivLike.setColorFilter(getContext().getResources().getColor(R.color.action_icon_active_color));
+            tvLikeCount.setTextColor(getContext().getResources().getColor(R.color.action_text_active_color));
+        } else {
+            ivLike.setImageResource(R.drawable.ic_like_outline);
+            ivLike.setColorFilter(getContext().getResources().getColor(R.color.action_icon_color));
+            tvLikeCount.setTextColor(getContext().getResources().getColor(R.color.action_text_color));
+        }
+        tvLikeCount.setText(String.valueOf(likeCount));
+    }
 
 
 
@@ -463,7 +486,10 @@ public class MapFragment extends Fragment {
         // 检查权限
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
-            Log.w(TAG, "缺少位置权限，无法启用位置功能");
+            Log.w(TAG, "缺少位置权限，请求权限");
+            ActivityCompat.requestPermissions(requireActivity(),
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    LOCATION_PERMISSION_REQUEST_CODE);
             return;
         }
         
@@ -477,12 +503,7 @@ public class MapFragment extends Fragment {
             retryCount = 0;
             
             // 启动高德定位
-            if (lastAMapLocation != null) {
-                Log.d(TAG, "位置功能启用成功");
-            } else {
-                Log.d(TAG, "无历史位置，启动位置更新");
-                startLocationUpdates();
-            }
+            startLocationUpdates();
             
         } catch (SecurityException e) {
             Log.e(TAG, "位置权限异常: " + e.getMessage());
@@ -541,6 +562,30 @@ public class MapFragment extends Fragment {
      * 在当前位置添加足迹点（优化版本）
      * 改进了位置获取和错误处理逻辑
      */
+    /**
+     * 处理权限请求结果
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "位置权限已授予，启用定位功能");
+                // 权限被授予，启用定位功能
+                enableMyLocation();
+                // 如果是从添加足迹触发的权限请求，重新尝试添加足迹
+                if (pendingAddFootprint) {
+                    pendingAddFootprint = false;
+                    addCurrentLocationFootprint();
+                }
+            } else {
+                Log.w(TAG, "位置权限被拒绝");
+                showToast("需要位置权限才能使用定位功能");
+                pendingAddFootprint = false;
+            }
+        }
+    }
+
     private void addCurrentLocationFootprint() {
         try {
             // 检查位置权限
@@ -549,6 +594,8 @@ public class MapFragment extends Fragment {
                 if (isAdded() && getContext() != null) {
                     Toast.makeText(getContext(), "需要位置权限来添加足迹", Toast.LENGTH_SHORT).show();
                 }
+                // 标记有待处理的添加足迹请求
+                pendingAddFootprint = true;
                 ActivityCompat.requestPermissions(requireActivity(),
                         new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                         LOCATION_PERMISSION_REQUEST_CODE);
@@ -772,52 +819,6 @@ public class MapFragment extends Fragment {
         }
     }
     
-    /**
-     * 刷新足迹动态列表
-     * 可以在需要时调用此方法重新加载数据
-     */
-    public void refreshFootprintMessages() {
-        loadFootprintMessages();
-    }
-    
-    /**
-     * 刷新地图（优化版本）
-     * 改进了刷新逻辑和状态管理
-     */
-    public void refreshMap() {
-        if (!isMapInitialized.get() || aMap == null) {
-            Log.w(TAG, "地图未初始化，无法刷新");
-            return;
-        }
-        
-        try {
-            Log.d(TAG, "开始刷新地图");
-            
-            // 防止重复刷新
-            if (isLoadingFootprints.get() || isLoadingMessages.get()) {
-                Log.d(TAG, "正在加载数据，跳过重复刷新");
-                return;
-            }
-            
-            // 在后台线程执行数据加载
-            mainHandler.post(() -> {
-                // 重新加载足迹动态
-                loadFootprintMessages();
-                
-                // 延迟刷新地图显示，确保数据加载完成
-                mainHandler.postDelayed(() -> {
-                    if (aMap != null) {
-                        Log.d(TAG, "地图刷新完成");
-                    }
-                }, 500);
-            });
-            
-        } catch (Exception e) {
-            Log.e(TAG, "刷新地图失败: " + e.getMessage(), e);
-            showToast("地图刷新失败");
-        }
-    }
-    
     @Override
     public void onDestroy() {
         Log.d(TAG, "MapFragment onDestroy - 开始清理资源");
@@ -913,13 +914,53 @@ public class MapFragment extends Fragment {
         View gridImageLayout = dialogView.findViewById(R.id.grid_image_layout);
         TextView textViewImageCount = dialogView.findViewById(R.id.text_view_image_count);
         
+        // 获取操作栏控件
+        LinearLayout layoutLike = dialogView.findViewById(R.id.layout_like);
+        LinearLayout layoutComment = dialogView.findViewById(R.id.layout_comment);
+        ImageView ivLike = dialogView.findViewById(R.id.iv_like);
+        TextView tvLikeCount = dialogView.findViewById(R.id.tv_like_count);
+        TextView tvCommentCount = dialogView.findViewById(R.id.tv_comment_count);
+        
         // 设置基本数据
         creatorView.setText(message.getCreateBy() != null ? message.getCreateBy() : "匿名用户");
         dateView.setText(message.getCreateTime() != null ? message.getCreateTime() : "未知时间");
         tagView.setText(message.getTag() != null ? message.getTag() : "动态");
         contentView.setText(message.getTextContent() != null ? message.getTextContent() : "暂无内容");
-        locationView.setText("位置信息"); // 可以根据需要进行地理编码获取具体地址
+        locationView.setText(message.getLocaltionTitle() != null ? message.getLocaltionTitle() : "暂无位置信息"); // 可以根据需要进行地理编码获取具体地址
         coordinatesView.setText(String.format("坐标: %.6f, %.6f", message.getLat(), message.getLng()));
+        
+        // 设置点赞和评论数据
+        updateLikeStatus(ivLike, tvLikeCount, message.isLiked(), message.getLikeCount());
+        tvCommentCount.setText(String.valueOf(message.getCommentCount()));
+        
+        // 设置点赞点击事件
+        layoutLike.setOnClickListener(v -> {
+            boolean newLikeStatus = !message.isLiked();
+            int newLikeCount = message.getLikeCount() + (newLikeStatus ? 1 : -1);
+            
+            // 更新消息对象
+            message.setLiked(newLikeStatus);
+            message.setLikeCount(newLikeCount);
+            
+            // 更新UI
+            updateLikeStatus(ivLike, tvLikeCount, newLikeStatus, newLikeCount);
+            
+            // 显示提示信息
+            String toastMessage = newLikeStatus ? "已点赞" : "已取消点赞";
+            showToast(toastMessage);
+            
+            // 这里可以添加网络请求，将点赞状态同步到服务器
+            // TODO: 调用API更新点赞状态
+        });
+        
+        // 设置评论点击事件
+        layoutComment.setOnClickListener(v -> {
+            // 显示提示信息
+            showToast("评论功能开发中");
+            
+            // 这里可以添加评论功能的实现
+            // TODO: 打开评论页面或评论对话框
+        });
         
         // 渲染图片内容
         renderImageContent(message, frameLayoutImages, imageViewSingle, gridImageLayout, textViewImageCount);

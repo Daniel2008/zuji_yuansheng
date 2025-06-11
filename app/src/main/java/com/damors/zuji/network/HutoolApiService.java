@@ -165,6 +165,14 @@ public class HutoolApiService {
                                        Class<T> responseClass,
                                        SuccessCallback<T> successCallback,
                                        ErrorCallback errorCallback) {
+        executePostRequest(url, params, responseClass, successCallback, errorCallback, null);
+    }
+    
+    private <T> void executePostRequest(String url, Map<String, Object> params,
+                                       Class<T> responseClass,
+                                       SuccessCallback<T> successCallback,
+                                       ErrorCallback errorCallback,
+                                       LoadingCallback loadingCallback) {
         
         // 检查网络状态
         if (!isNetworkAvailable()) {
@@ -172,6 +180,11 @@ public class HutoolApiService {
             addPendingRequest(url, params, responseClass, successCallback, errorCallback);
             showNetworkUnavailableMessage();
             return;
+        }
+        
+        // 在主线程调用加载开始回调
+        if (loadingCallback != null) {
+            mainHandler.post(loadingCallback::onLoadingStart);
         }
 
         // 在后台线程执行网络请求
@@ -192,15 +205,18 @@ public class HutoolApiService {
                 
                 // 处理响应
                 handleResponse(response, responseClass, successCallback, errorCallback, 
-                             url, params);
+                             url, params, loadingCallback);
                 
             } catch (Exception e) {
                 Log.e(TAG, "网络请求异常: " + url, e);
                 
-                // 在主线程回调错误
+                // 在主线程回调错误和加载结束
                 mainHandler.post(() -> {
                     if (errorCallback != null) {
                         errorCallback.onError("网络请求失败: " + e.getMessage());
+                    }
+                    if (loadingCallback != null) {
+                        loadingCallback.onLoadingEnd();
                     }
                 });
                 
@@ -389,6 +405,12 @@ public class HutoolApiService {
     private <T> void handleResponse(String responseBody, Class<T> responseClass,
                                    SuccessCallback<T> successCallback, ErrorCallback errorCallback,
                                    String url, Map<String, Object> params) {
+        handleResponse(responseBody, responseClass, successCallback, errorCallback, url, params, null);
+    }
+    
+    private <T> void handleResponse(String responseBody, Class<T> responseClass,
+                                   SuccessCallback<T> successCallback, ErrorCallback errorCallback,
+                                   String url, Map<String, Object> params, LoadingCallback loadingCallback) {
         try {
             Log.d(TAG, "响应内容: " + responseBody);
             
@@ -423,6 +445,9 @@ public class HutoolApiService {
                             if (successCallback != null) {
                                 successCallback.onSuccess(finalData);
                             }
+                            if (loadingCallback != null) {
+                                loadingCallback.onLoadingEnd();
+                            }
                         });
                     } else {
                         // 业务失败
@@ -434,6 +459,9 @@ public class HutoolApiService {
                             if (errorCallback != null) {
                                 errorCallback.onError(errorMsg);
                             }
+                            if (loadingCallback != null) {
+                                loadingCallback.onLoadingEnd();
+                            }
                         });
                     }
                 } catch (Exception parseException) {
@@ -444,6 +472,9 @@ public class HutoolApiService {
                         if (errorCallback != null) {
                             errorCallback.onError("数据解析失败: " + parseException.getMessage());
                         }
+                        if (loadingCallback != null) {
+                            loadingCallback.onLoadingEnd();
+                        }
                     });
                 }
             } else {
@@ -452,6 +483,9 @@ public class HutoolApiService {
                     if (errorCallback != null) {
                         errorCallback.onError("服务器响应为空");
                     }
+                    if (loadingCallback != null) {
+                        loadingCallback.onLoadingEnd();
+                    }
                 });
             }
         } catch (Exception e) {
@@ -459,6 +493,9 @@ public class HutoolApiService {
             mainHandler.post(() -> {
                 if (errorCallback != null) {
                     errorCallback.onError("数据解析失败: " + e.getMessage());
+                }
+                if (loadingCallback != null) {
+                    loadingCallback.onLoadingEnd();
                 }
             });
         }
@@ -544,6 +581,21 @@ public class HutoolApiService {
     public void sendVerificationCode(String phone,
                                    SuccessCallback<String> successCallback,
                                    ErrorCallback errorCallback) {
+        sendVerificationCode(phone, successCallback, errorCallback, null);
+    }
+    
+    /**
+     * 发送验证码接口（带加载回调）
+     * 
+     * @param phone 手机号
+     * @param successCallback 成功回调（返回原始响应字符串）
+     * @param errorCallback 错误回调
+     * @param loadingCallback 加载状态回调
+     */
+    public void sendVerificationCode(String phone,
+                                   SuccessCallback<String> successCallback,
+                                   ErrorCallback errorCallback,
+                                   LoadingCallback loadingCallback) {
         String url = BASE_URL + ApiConfig.Endpoints.SEND_VERIFICATION_CODE;
         
         // 准备请求参数
@@ -565,7 +617,7 @@ public class HutoolApiService {
         Log.d(TAG, "发送验证码请求: phone=" + phone);
         
         // 执行POST请求
-        executePostRequest(url, params, String.class, successCallback, errorCallback);
+        executePostRequest(url, params, String.class, successCallback, errorCallback, loadingCallback);
     }
     
     /**
@@ -580,6 +632,23 @@ public class HutoolApiService {
     public void smsLogin(String phone, String code, String deviceId,
                         SuccessCallback<LoginResponse.Data> successCallback,
                         ErrorCallback errorCallback) {
+        smsLogin(phone, code, deviceId, successCallback, errorCallback, null);
+    }
+    
+    /**
+     * 短信登录接口（带加载回调）
+     * 
+     * @param phone 手机号
+     * @param code 验证码
+     * @param deviceId 设备ID
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     * @param loadingCallback 加载状态回调
+     */
+    public void smsLogin(String phone, String code, String deviceId,
+                        SuccessCallback<LoginResponse.Data> successCallback,
+                        ErrorCallback errorCallback,
+                        LoadingCallback loadingCallback) {
         String url = BASE_URL + ApiConfig.Endpoints.SMS_LOGIN;
         
         // 准备请求参数
@@ -590,7 +659,7 @@ public class HutoolApiService {
         
         Log.d(TAG, "发起登录请求: phone=" + phone + ", code=" + code + ", deviceId=" + deviceId);
         
-        executePostRequest(url, params, LoginResponse.Data.class, successCallback, errorCallback);
+        executePostRequest(url, params, LoginResponse.Data.class, successCallback, errorCallback, loadingCallback);
     }
 
     /**
@@ -603,6 +672,21 @@ public class HutoolApiService {
     public void getUserInfo(String token,
                            SuccessCallback<UserInfoResponse> successCallback,
                            ErrorCallback errorCallback) {
+        getUserInfo(token, successCallback, errorCallback, null);
+    }
+    
+    /**
+     * 获取用户信息（带加载回调）
+     * 
+     * @param token 用户token
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     * @param loadingCallback 加载状态回调
+     */
+    public void getUserInfo(String token,
+                           SuccessCallback<UserInfoResponse> successCallback,
+                           ErrorCallback errorCallback,
+                           LoadingCallback loadingCallback) {
         String url = BASE_URL + ApiConfig.Endpoints.GET_USER_INFO;
         
         // 准备请求参数
@@ -611,7 +695,7 @@ public class HutoolApiService {
         
         Log.d(TAG, "发起获取用户信息请求: token=" + token);
         
-        executePostRequest(url, params, UserInfoResponse.class, successCallback, errorCallback);
+        executePostRequest(url, params, UserInfoResponse.class, successCallback, errorCallback, loadingCallback);
     }
 
     /**
@@ -625,6 +709,22 @@ public class HutoolApiService {
     public void getFootprintMessages(int page, int size,
                                    SuccessCallback<FootprintMessageResponse.Data> successCallback,
                                    ErrorCallback errorCallback) {
+        getFootprintMessages(page, size, successCallback, errorCallback, null);
+    }
+    
+    /**
+     * 获取足迹动态列表（带加载回调）
+     * 
+     * @param page 页码
+     * @param size 每页大小
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     * @param loadingCallback 加载状态回调
+     */
+    public void getFootprintMessages(int page, int size,
+                                   SuccessCallback<FootprintMessageResponse.Data> successCallback,
+                                   ErrorCallback errorCallback,
+                                   LoadingCallback loadingCallback) {
         String url = BASE_URL + ApiConfig.Endpoints.FOOTPRINT_MESSAGES;
         
         Map<String, Object> params = new HashMap<>();
@@ -634,7 +734,7 @@ public class HutoolApiService {
         Log.d(TAG, "获取足迹动态列表: page=" + page + ", size=" + size);
         
         executePostRequest(url, params, FootprintMessageResponse.Data.class, 
-                         successCallback, errorCallback);
+                         successCallback, errorCallback, loadingCallback);
     }
 
     /**
@@ -647,6 +747,21 @@ public class HutoolApiService {
     public void publishFootprint(PublishTrandsInfoPO publishInfo,
                                SuccessCallback<String> successCallback,
                                ErrorCallback errorCallback) {
+        publishFootprint(publishInfo, successCallback, errorCallback, null);
+    }
+    
+    /**
+     * 发布足迹动态（带加载回调）
+     * 
+     * @param publishInfo 发布信息
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     * @param loadingCallback 加载状态回调
+     */
+    public void publishFootprint(PublishTrandsInfoPO publishInfo,
+                               SuccessCallback<String> successCallback,
+                               ErrorCallback errorCallback,
+                               LoadingCallback loadingCallback) {
         String url = BASE_URL + ApiConfig.Endpoints.PUBLISH_FOOTPRINT;
         
         // 检查网络状态
@@ -654,6 +769,11 @@ public class HutoolApiService {
             Log.d(TAG, "网络不可用，无法发布足迹");
             showNetworkUnavailableMessage();
             return;
+        }
+        
+        // 调用加载开始回调
+        if (loadingCallback != null) {
+            mainHandler.post(() -> loadingCallback.onLoadingStart());
         }
         
         // 在后台线程执行文件上传请求
@@ -694,7 +814,7 @@ public class HutoolApiService {
                 
                 // 处理响应
                 handleResponse(response, String.class, successCallback, errorCallback, 
-                             url, new HashMap<>());
+                             url, new HashMap<>(), loadingCallback);
                 
             } catch (Exception e) {
                 Log.e(TAG, "发布足迹请求异常: " + url, e);
@@ -703,6 +823,9 @@ public class HutoolApiService {
                 mainHandler.post(() -> {
                     if (errorCallback != null) {
                         errorCallback.onError("发布足迹失败: " + e.getMessage());
+                    }
+                    if (loadingCallback != null) {
+                        loadingCallback.onLoadingEnd();
                     }
                 });
             }
@@ -749,6 +872,21 @@ public class HutoolApiService {
          * @param errorMessage 错误消息
          */
         void onError(String errorMessage);
+    }
+    
+    /**
+     * 加载状态回调接口
+     */
+    public interface LoadingCallback {
+        /**
+         * 请求开始时调用
+         */
+        void onLoadingStart();
+        
+        /**
+         * 请求结束时调用（无论成功或失败）
+         */
+        void onLoadingEnd();
     }
 
     /**

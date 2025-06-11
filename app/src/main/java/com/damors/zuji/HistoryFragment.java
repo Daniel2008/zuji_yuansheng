@@ -24,6 +24,7 @@ import com.damors.zuji.model.GuluFile;
 import com.damors.zuji.model.response.FootprintMessageResponse;
 import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.network.HutoolApiService;
+import com.damors.zuji.utils.LoadingDialog;
 import com.damors.zuji.viewmodel.FootprintViewModel;
 
 import java.util.ArrayList;
@@ -43,6 +44,7 @@ public class HistoryFragment extends Fragment {
     private FootprintMessageAdapter adapter;
     private HutoolApiService apiService;
     private TextView emptyView;
+    private LoadingDialog loadingDialog;
     private int currentPage = 1;
     private boolean isLoading = false;
     private List<FootprintMessage> footprintMessages = new ArrayList<>();
@@ -54,6 +56,9 @@ public class HistoryFragment extends Fragment {
         
         // 初始化API服务
         apiService = HutoolApiService.getInstance(requireContext());
+        
+        // 初始化加载对话框
+        loadingDialog = new LoadingDialog(requireContext());
         
         // 初始化RecyclerView
         recyclerView = view.findViewById(R.id.recycler_view);
@@ -154,6 +159,23 @@ public class HistoryFragment extends Fragment {
 
                     isLoading = false;
                     handleFootprintMessagesError(errorMessage);
+                },
+                new HutoolApiService.LoadingCallback() {
+                    @Override
+                    public void onLoadingStart() {
+                        if (currentPage == 1) {
+                            // 首次加载显示加载对话框
+                            loadingDialog.show("正在加载足迹动态...");
+                        }
+                    }
+
+                    @Override
+                    public void onLoadingEnd() {
+                        if (currentPage == 1) {
+                            // 首次加载隐藏加载对话框
+                            loadingDialog.dismiss();
+                        }
+                    }
                 }
         );
     }

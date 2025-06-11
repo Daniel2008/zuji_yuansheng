@@ -26,6 +26,9 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.chip.Chip;
+
 import com.amap.api.services.geocoder.GeocodeSearch;
 import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
@@ -40,6 +43,7 @@ import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.PublishTrandsInfoPO;
 
 import com.damors.zuji.network.HutoolApiService;
+import com.damors.zuji.utils.LoadingDialog;
 
 import com.damors.zuji.adapter.ImageGridAdapter;
 
@@ -63,6 +67,10 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
     private RadioGroup rgMsgType;
     private RadioButton rbPublic;
     private RadioButton rbPrivate;
+    private ChipGroup chipGroupTags;
+    private Chip chipTagThoughts;
+    private Chip chipTagAttraction;
+    private Chip chipTagFood;
 
     private List<Uri> selectedImages = new ArrayList<>();
     private ImageGridAdapter imageAdapter;
@@ -73,6 +81,7 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
     
     // 网络服务实例
     private HutoolApiService apiService;
+    private LoadingDialog loadingDialog;
     
     // 位置管理器
     private LocationManager locationManager;
@@ -87,6 +96,8 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
 
         // 初始化网络服务
         apiService = HutoolApiService.getInstance(this);
+        // 初始化加载对话框
+        loadingDialog = new LoadingDialog(this);
         
         // 初始化位置管理器
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
@@ -225,6 +236,12 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
         rgMsgType = findViewById(R.id.rg_msg_type);
         rbPublic = findViewById(R.id.rb_public);
         rbPrivate = findViewById(R.id.rb_private);
+        
+        // 初始化标签选择组件
+        chipGroupTags = findViewById(R.id.chip_group_tags);
+        chipTagThoughts = findViewById(R.id.chip_tag_thoughts);
+        chipTagAttraction = findViewById(R.id.chip_tag_attraction);
+        chipTagFood = findViewById(R.id.chip_tag_food);
 
         // 如果从Intent获取到了位置信息，显示在UI上
         if (selectedLocation != null && !selectedLocation.isEmpty()) {
@@ -344,9 +361,7 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
             Log.d("AddFootprintActivity", "位置信息有效: 纬度=" + latitude + ", 经度=" + longitude);
         }
         
-        // 显示加载状态
-        btnPublish.setEnabled(false);
-        btnPublish.setText("发布中...");
+        // 准备发布参数
         
         // 创建发布参数对象
         PublishTrandsInfoPO publishInfo = new PublishTrandsInfoPO();
@@ -354,7 +369,7 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
         publishInfo.setContent(content); // 足迹内容
         publishInfo.setLocationInfo(location); // 位置信息
         publishInfo.setType(msgType+""); // 类型 (1: 公开, 2: 个人可见)
-        publishInfo.setTag(""); // 标签，可以根据需要设置
+        publishInfo.setTag(getSelectedTag()); // 获取选中的标签
         publishInfo.setLng(longitude); // 经度
         publishInfo.setLat(latitude); // 纬度
         publishInfo.setMsgType(msgType); // 消息类型 (1: 公开, 2: 个人可见)
@@ -386,7 +401,7 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
         }
         publishInfo.setImages(imageFiles);
         
-        // 调用网络接口发布足迹
+        // 调用网络接口发布足迹（带加载回调）
         apiService.publishFootprint(publishInfo,
             new HutoolApiService.SuccessCallback<String>() {
                 @Override
@@ -395,10 +410,7 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
                     // 注释：已移除本地数据库保存功能
                     // saveToLocalDatabase(content, location);
                     
-                    // 重置UI状态
                     runOnUiThread(() -> {
-                        btnPublish.setEnabled(true);
-                        btnPublish.setText("发布");
                         Toast.makeText(AddFootprintActivity.this, "发布成功", Toast.LENGTH_SHORT).show();
                         setResult(RESULT_OK);
                         finish();
@@ -408,18 +420,52 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
             new HutoolApiService.ErrorCallback() {
                 @Override
                 public void onError(String errorMessage) {
-                    // 发布失败，重置UI状态
+                    // 发布失败
                     runOnUiThread(() -> {
-                        btnPublish.setEnabled(true);
-                        btnPublish.setText("发布");
                         Toast.makeText(AddFootprintActivity.this, 
                             "发布失败: " + errorMessage, Toast.LENGTH_LONG).show();
                     });
+                }
+            },
+            new HutoolApiService.LoadingCallback() {
+                @Override
+                public void onLoadingStart() {
+                    // 显示加载对话框并禁用发布按钮
+                    loadingDialog.show("正在发布足迹...");
+                    btnPublish.setEnabled(false);
+                    btnPublish.setText("发布中...");
+                }
+
+                @Override
+                public void onLoadingEnd() {
+                    // 隐藏加载对话框并恢复按钮状态
+                    loadingDialog.dismiss();
+                    btnPublish.setEnabled(true);
+                    btnPublish.setText("发布");
                 }
             }
         );
     }
     
+    /**
+     * 获取选中的标签
+     * @return 选中的标签文本，如果没有选中则返回空字符串
+     */
+    private String getSelectedTag() {
+        int selectedChipId = chipGroupTags.getCheckedChipId();
+        if (selectedChipId == -1) {
+            // 没有选中任何标签
+            return "";
+        }
+        
+        Chip selectedChip = findViewById(selectedChipId);
+        if (selectedChip != null) {
+            return selectedChip.getText().toString();
+        }
+        
+        return "";
+     }
+
     /**
      * 更新位置显示UI
      */
