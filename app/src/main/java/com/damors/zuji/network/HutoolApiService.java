@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
@@ -369,6 +370,33 @@ public class HutoolApiService {
         }
         if (jsonObj.containsKey("createTime")) {
             message.setCreateTime(jsonObj.getStr("createTime"));
+        }
+        
+        // 解析点赞相关字段
+        Log.d(TAG, "解析足迹消息，检查点赞相关字段: " + jsonObj.toString());
+        
+        if (jsonObj.containsKey("likeCount")) {
+            int likeCount = jsonObj.getInt("likeCount");
+            message.setLikeCount(likeCount);
+            Log.d(TAG, "设置点赞数量: " + likeCount);
+        } else {
+            Log.d(TAG, "后端数据中没有likeCount字段");
+        }
+        
+        if (jsonObj.containsKey("commentCount")) {
+            int commentCount = jsonObj.getInt("commentCount");
+            message.setCommentCount(commentCount);
+            Log.d(TAG, "设置评论数量: " + commentCount);
+        } else {
+            Log.d(TAG, "后端数据中没有commentCount字段");
+        }
+        
+        if (jsonObj.containsKey("hasLiked")) {
+            boolean hasLiked = jsonObj.getBool("hasLiked");
+            message.setHasLiked(hasLiked);
+            Log.d(TAG, "设置点赞状态: " + hasLiked);
+        } else {
+            Log.d(TAG, "后端数据中没有hasLiked字段");
         }
         
         // 解析guluFiles字段
@@ -738,6 +766,47 @@ public class HutoolApiService {
     }
 
     /**
+     * 获取地图页mark数据（getMsgListAll接口）
+     * 调用参数与getMsgList一致
+     * 
+     * @param page 页码
+     * @param size 每页大小
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     */
+    public void getMsgListAll(int page, int size,
+                             SuccessCallback<FootprintMessageResponse.Data> successCallback,
+                             ErrorCallback errorCallback) {
+        getMsgListAll(page, size, successCallback, errorCallback, null);
+    }
+    
+    /**
+     * 获取地图页mark数据（getMsgListAll接口，带加载回调）
+     * 调用参数与getMsgList一致
+     * 
+     * @param page 页码
+     * @param size 每页大小
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     * @param loadingCallback 加载状态回调
+     */
+    public void getMsgListAll(int page, int size,
+                             SuccessCallback<FootprintMessageResponse.Data> successCallback,
+                             ErrorCallback errorCallback,
+                             LoadingCallback loadingCallback) {
+        String url = BASE_URL + ApiConfig.Endpoints.GET_MSG_LIST_ALL;
+        
+        Map<String, Object> params = new HashMap<>();
+        params.put("pageNum", page);
+        params.put("pageSize", size);
+        
+        Log.d(TAG, "获取地图页mark数据: page=" + page + ", size=" + size);
+        
+        executePostRequest(url, params, FootprintMessageResponse.Data.class, 
+                         successCallback, errorCallback, loadingCallback);
+    }
+
+    /**
      * 发布足迹动态
      * 
      * @param publishInfo 发布信息
@@ -1003,10 +1072,126 @@ public class HutoolApiService {
         return data;
     }
     
-
+    /**
+     * 点赞/取消点赞接口
+     * 
+     * @param msgId 消息ID
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     */
+    public void toggleLike(Integer msgId,
+                          SuccessCallback<String> successCallback,
+                          ErrorCallback errorCallback) {
+        toggleLike(msgId, successCallback, errorCallback, null);
+    }
     
+    /**
+     * 点赞/取消点赞接口（带加载回调）
+     * 
+     * @param msgId 消息ID
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     * @param loadingCallback 加载状态回调
+     */
+    public void toggleLike(Integer msgId,
+                          SuccessCallback<String> successCallback,
+                          ErrorCallback errorCallback,
+                          LoadingCallback loadingCallback) {
+        String url = BASE_URL + ApiConfig.Endpoints.TOGGLE_LIKE;
+        
+        // 准备请求参数
+        Map<String, Object> params = new HashMap<>();
+        params.put("msgId", msgId);
+        
+        // 检查网络状态
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "网络不可用，将点赞请求添加到待处理队列");
+            
+            // 保存请求信息到待处理队列
+            addPendingRequest(url, params, String.class, successCallback, errorCallback);
+            
+            // 显示网络不可用提示
+            showNetworkUnavailableMessage();
+            return;
+        }
+        
+        Log.d(TAG, "发送点赞请求: msgId=" + msgId);
+        
+        // 执行POST请求
+        executePostRequest(url, params, String.class, successCallback, errorCallback, loadingCallback);
+    }
 
+    /**
+     * 添加评论接口
+     * 
+     * @param msgId 消息ID
+     * @param content 评论内容
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     */
+    public void addComment(Integer msgId, String content,
+                          SuccessCallback<String> successCallback,
+                          ErrorCallback errorCallback) {
+        addComment(msgId, null, content, successCallback, errorCallback, null);
+    }
     
+    /**
+     * 添加评论接口（回复评论）
+     * 
+     * @param msgId 消息ID
+     * @param parentId 父评论ID（回复评论时使用）
+     * @param content 评论内容
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     */
+    public void addComment(Integer msgId, Long parentId, String content,
+                          SuccessCallback<String> successCallback,
+                          ErrorCallback errorCallback) {
+        addComment(msgId, parentId, content, successCallback, errorCallback, null);
+    }
+    
+    /**
+     * 添加评论接口（带加载回调）
+     * 
+     * @param msgId 消息ID
+     * @param parentId 父评论ID（回复评论时使用，可为null）
+     * @param content 评论内容
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     * @param loadingCallback 加载状态回调
+     */
+    public void addComment(Integer msgId, Long parentId, String content,
+                          SuccessCallback<String> successCallback,
+                          ErrorCallback errorCallback,
+                          LoadingCallback loadingCallback) {
+        String url = BASE_URL + ApiConfig.Endpoints.ADD_COMMENT;
+        
+        // 准备请求参数
+        Map<String, Object> params = new HashMap<>();
+        params.put("msgId", msgId);
+        params.put("content", content);
+        if(ObjectUtil.isNotEmpty(parentId)){
+            params.put("parentId", parentId);
+        }
+        // 检查网络状态
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "网络不可用，将评论请求添加到待处理队列");
+            
+            // 保存请求信息到待处理队列
+            addPendingRequest(url, params, String.class, successCallback, errorCallback);
+            
+            // 显示网络不可用提示
+            showNetworkUnavailableMessage();
+            return;
+        }
+        
+        Log.d(TAG, "发送评论请求: msgId=" + msgId + ", content=" + content + 
+                   (parentId != null ? ", parentId=" + parentId : ""));
+        
+        // 执行POST请求
+        executePostRequest(url, params, String.class, successCallback, errorCallback, loadingCallback);
+    }
+
     /**
      * 请求信息类，用于保存请求的详细信息
      */

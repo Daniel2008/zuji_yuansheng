@@ -1,16 +1,21 @@
 package com.damors.zuji;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -281,19 +286,36 @@ public class HistoryFragment extends Fragment {
      */
     private void handleLikeClick(FootprintMessage message, int position) {
         // 切换点赞状态
-        boolean newLikeStatus = !message.isLiked();
+        boolean newLikeStatus = !message.getHasLiked();
         int newLikeCount = message.getLikeCount() + (newLikeStatus ? 1 : -1);
         
-        // 更新适配器中的数据
+        // 先更新适配器中的数据，提供即时反馈
         adapter.updateItemLikeStatus(position, newLikeStatus, newLikeCount);
         
-        // 这里可以添加网络请求，将点赞状态同步到服务器
-        // 例如：调用API更新点赞状态
-        // apiService.updateLikeStatus(message.getId(), newLikeStatus);
-        
-        // 显示提示信息
-        String toastMessage = newLikeStatus ? "已点赞" : "已取消点赞";
-        Toast.makeText(requireContext(), toastMessage, Toast.LENGTH_SHORT).show();
+        // 调用API更新点赞状态
+        apiService.toggleLike(message.getId(),
+            new HutoolApiService.SuccessCallback<String>() {
+                @Override
+                public void onSuccess(String response) {
+                    // API调用成功，显示提示信息
+                    String toastMessage = newLikeStatus ? "已点赞" : "已取消点赞";
+                    Toast.makeText(requireContext(), toastMessage, Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "点赞状态更新成功: " + response);
+                }
+            },
+            new HutoolApiService.ErrorCallback() {
+                @Override
+                public void onError(String error) {
+                    // API调用失败，回滚UI状态
+                    boolean originalStatus = !newLikeStatus;
+                    int originalCount = message.getLikeCount() + (originalStatus ? 1 : -1);
+                    adapter.updateItemLikeStatus(position, originalStatus, originalCount);
+                    
+                    Toast.makeText(requireContext(), "点赞操作失败，请重试", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "点赞状态更新失败: " + error);
+                }
+            }
+        );
     }
     
     // 收藏功能已移除
@@ -304,14 +326,8 @@ public class HistoryFragment extends Fragment {
      * @param position 位置
      */
     private void handleCommentClick(FootprintMessage message, int position) {
-        // 这里可以打开评论页面或评论对话框
-        // 例如：跳转到评论详情页面
-        // Intent intent = new Intent(requireContext(), CommentActivity.class);
-        // intent.putExtra("footprint_message_id", message.getId());
-        // startActivity(intent);
-        
-        // 临时显示提示信息
-        Toast.makeText(requireContext(), "评论功能开发中", Toast.LENGTH_SHORT).show();
+        // 显示评论输入对话框
+        showCommentDialog(message);
     }
     
     /**
@@ -412,5 +428,79 @@ public class HistoryFragment extends Fragment {
         Log.d("HistoryFragment", "Building full URL - Image base: " + imageBaseUrl + ", Full URL: " + fullUrl);
         
         return fullUrl;
+    }
+    
+    /**
+     * 显示评论输入对话框
+     * @param message 足迹动态消息
+     */
+    private void showCommentDialog(FootprintMessage message) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setTitle("发表评论");
+        
+        // 创建输入框
+        EditText editText = new EditText(requireContext());
+        editText.setHint("请输入评论内容...");
+        editText.setMaxLines(5);
+        editText.setVerticalScrollBarEnabled(true);
+        
+        // 设置输入框的布局参数
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.setMargins(50, 20, 50, 20);
+        editText.setLayoutParams(params);
+        
+        builder.setView(editText);
+        
+        builder.setPositiveButton("发表", (dialog, which) -> {
+            String content = editText.getText().toString().trim();
+            if (content.isEmpty()) {
+                Toast.makeText(requireContext(), "评论内容不能为空", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            // 调用评论接口
+            addComment(message.getId(), content);
+        });
+        
+        builder.setNegativeButton("取消", null);
+        
+        AlertDialog dialog = builder.create();
+        dialog.show();
+        
+        // 自动弹出键盘
+        editText.requestFocus();
+        InputMethodManager imm = (InputMethodManager) requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
+        }
+    }
+    
+    /**
+     * 添加评论
+     * @param msgId 消息ID
+     * @param content 评论内容
+     */
+    private void addComment(Integer msgId, String content) {
+        apiService.addComment(msgId, content,
+                response -> {
+                    // 评论成功
+                    Toast.makeText(requireContext(), "评论发表成功", Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "评论发表成功: " + response);
+
+                    // 这里可以刷新评论列表或更新UI
+                    // TODO: 刷新当前页面的评论数据
+                },
+            new HutoolApiService.ErrorCallback() {
+                @Override
+                public void onError(String error) {
+                    // 评论失败
+                    Toast.makeText(requireContext(), "评论发表失败，请重试", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "评论发表失败: " + error);
+                }
+            }
+        );
     }
 }

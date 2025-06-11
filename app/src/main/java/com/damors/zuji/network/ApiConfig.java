@@ -55,7 +55,10 @@ public class ApiConfig {
         public static final String SMS_LOGIN = "smsLogin";
         public static final String PUBLISH_FOOTPRINT = "publishMsg";
         public static final String GET_MSG_LIST = "getMsgList";
+        public static final String GET_MSG_LIST_ALL = "getMsgListAll"; // 地图页mark数据接口
         public static final String FOOTPRINT_MESSAGES = "getMsgList"; // 足迹动态消息接口
         public static final String GET_USER_INFO = "getUserInfo"; // 获取用户信息接口
+        public static final String TOGGLE_LIKE = "toggleLike"; // 点赞/取消点赞接口
+        public static final String ADD_COMMENT = "addComment"; // 添加评论接口
     }
 }

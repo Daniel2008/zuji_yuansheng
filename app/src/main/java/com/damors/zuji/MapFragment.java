@@ -21,11 +21,13 @@ import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.utils.ImageUtils;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.view.inputmethod.InputMethodManager;
 import androidx.appcompat.app.AlertDialog;
 import java.util.Date;
 import java.text.SimpleDateFormat;
@@ -81,7 +83,7 @@ public class MapFragment extends Fragment {
 
     private static final String TAG = "MapFragment";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001; // 位置权限请求码
-    private static final long MIN_TIME_BETWEEN_UPDATES = 3000; // 增加到3秒，减少频繁更新
+    private static final long MIN_TIME_BETWEEN_UPDATES = 20000; // 增加到3秒，减少频繁更新
     private static final float MIN_DISTANCE_CHANGE = 5; // 5米，提高精度
     private static final int MAX_RETRY_COUNT = 3; // 最大重试次数
     private static final long LOCATION_TIMEOUT = 30000; // 位置获取超时时间30秒
@@ -660,42 +662,42 @@ public class MapFragment extends Fragment {
      */
     private void loadFootprintMessages() {
         if (isLoadingMessages.get()) {
-            Log.d(TAG, "正在加载足迹动态，跳过重复请求");
+            Log.d(TAG, "正在加载地图mark数据，跳过重复请求");
             return;
         }
         
         if (!isMapInitialized.get()) {
-            Log.w(TAG, "地图未初始化，延迟加载足迹动态");
+            Log.w(TAG, "地图未初始化，延迟加载地图mark数据");
             mainHandler.postDelayed(this::loadFootprintMessages, 1000);
             return;
         }
         
         if (getContext() == null) {
-            Log.w(TAG, "Context为空，无法加载足迹动态");
+            Log.w(TAG, "Context为空，无法加载地图mark数据");
             return;
         }
         
         isLoadingMessages.set(true);
-        Log.d(TAG, "开始获取足迹动态列表");
+        Log.d(TAG, "开始获取地图mark数据");
         
         try {
-            // 调用API获取足迹动态列表
-            apiService.getFootprintMessages(
+            // 调用API获取地图页mark数据（使用getMsgListAll接口）
+            apiService.getMsgListAll(
                 1, // 页码
-                10, // 每页大小
+                50, // 每页大小
                     response -> {
                         try {
-                            Log.d(TAG, "获取足迹动态列表成功，记录数: " + response.getRecords().size());
+                            Log.d(TAG, "获取地图mark数据成功，记录数: " + response.getRecords().size());
 
                             // 在主线程更新UI
                             if (mainHandler != null) {
                                 mainHandler.post(() -> {
                                     try {
                                         handleFootprintMessages(response.getRecords());
-                                        Log.d(TAG, "足迹动态显示完成");
+                                        Log.d(TAG, "地图mark数据显示完成");
                                     } catch (Exception e) {
-                                        Log.e(TAG, "显示足迹动态失败: " + e.getMessage(), e);
-                                        showToast("显示足迹动态失败");
+                                        Log.e(TAG, "显示地图mark数据失败: " + e.getMessage(), e);
+                                        showToast("显示地图mark数据失败");
                                     }
                                 });
                             }
@@ -707,11 +709,11 @@ public class MapFragment extends Fragment {
                         }
                     },
                     errorMessage -> {
-                        Log.e(TAG, "获取足迹动态列表失败: " + errorMessage);
+                        Log.e(TAG, "获取地图mark数据失败: " + errorMessage);
 
                         String displayMessage = errorMessage.contains("timeout") ? "网络连接超时，请重试" :
                                                errorMessage.contains("network") ? "网络连接失败，请检查网络设置" :
-                                               "获取足迹动态失败: " + errorMessage;
+                                               "获取地图mark数据失败: " + errorMessage;
                         showToast(displayMessage);
                         isLoadingMessages.set(false);
                     }
@@ -930,36 +932,52 @@ public class MapFragment extends Fragment {
         coordinatesView.setText(String.format("坐标: %.6f, %.6f", message.getLat(), message.getLng()));
         
         // 设置点赞和评论数据
-        updateLikeStatus(ivLike, tvLikeCount, message.isLiked(), message.getLikeCount());
+        Log.d(TAG, "地图信息卡绑定数据 - 消息ID: " + message.getId() + ", 点赞状态: " + message.getHasLiked() + ", 点赞数量: " + message.getLikeCount() + ", 评论数量: " + message.getCommentCount());
+        updateLikeStatus(ivLike, tvLikeCount, message.getHasLiked(), message.getLikeCount());
         tvCommentCount.setText(String.valueOf(message.getCommentCount()));
         
         // 设置点赞点击事件
         layoutLike.setOnClickListener(v -> {
-            boolean newLikeStatus = !message.isLiked();
+            boolean newLikeStatus = !message.getHasLiked();
             int newLikeCount = message.getLikeCount() + (newLikeStatus ? 1 : -1);
             
-            // 更新消息对象
-            message.setLiked(newLikeStatus);
+            // 先更新UI，提供即时反馈
+            updateLikeStatus(ivLike, tvLikeCount, newLikeStatus, newLikeCount);
+            message.setHasLiked(newLikeStatus);
             message.setLikeCount(newLikeCount);
             
-            // 更新UI
-            updateLikeStatus(ivLike, tvLikeCount, newLikeStatus, newLikeCount);
-            
-            // 显示提示信息
-            String toastMessage = newLikeStatus ? "已点赞" : "已取消点赞";
-            showToast(toastMessage);
-            
-            // 这里可以添加网络请求，将点赞状态同步到服务器
-            // TODO: 调用API更新点赞状态
+            // 调用API更新点赞状态
+            apiService.toggleLike(message.getId(),
+                new HutoolApiService.SuccessCallback<String>() {
+                    @Override
+                    public void onSuccess(String response) {
+                        // API调用成功，显示提示信息
+                        String toastMessage = newLikeStatus ? "已点赞" : "已取消点赞";
+                        Toast.makeText(requireContext(), toastMessage, Toast.LENGTH_SHORT).show();
+                        Log.d(TAG, "点赞状态更新成功: " + response);
+                    }
+                },
+                new HutoolApiService.ErrorCallback() {
+                    @Override
+                    public void onError(String error) {
+                        // API调用失败，回滚UI状态
+                        boolean originalStatus = !newLikeStatus;
+                        int originalCount = message.getLikeCount() + (originalStatus ? 1 : -1);
+                        updateLikeStatus(ivLike, tvLikeCount, originalStatus, originalCount);
+                        message.setHasLiked(originalStatus);
+                        message.setLikeCount(originalCount);
+                        
+                        Toast.makeText(requireContext(), "点赞操作失败，请重试", Toast.LENGTH_SHORT).show();
+                        Log.e(TAG, "点赞状态更新失败: " + error);
+                    }
+                }
+            );
         });
         
         // 设置评论点击事件
         layoutComment.setOnClickListener(v -> {
-            // 显示提示信息
-            showToast("评论功能开发中");
-            
-            // 这里可以添加评论功能的实现
-            // TODO: 打开评论页面或评论对话框
+            // 显示评论输入对话框
+            showCommentDialog(message);
         });
         
         // 渲染图片内容
@@ -1162,5 +1180,82 @@ public class MapFragment extends Fragment {
             Log.e(TAG, "打开图片预览失败", e);
             showToast("无法预览图片");
         }
+    }
+    
+    /**
+     * 显示评论输入对话框
+     * @param message 足迹动态消息
+     */
+    private void showCommentDialog(FootprintMessage message) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setTitle("发表评论");
+        
+        // 创建输入框
+        EditText editText = new EditText(requireContext());
+        editText.setHint("请输入评论内容...");
+        editText.setMaxLines(5);
+        editText.setVerticalScrollBarEnabled(true);
+        
+        // 设置输入框的布局参数
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.setMargins(50, 20, 50, 20);
+        editText.setLayoutParams(params);
+        
+        builder.setView(editText);
+        
+        builder.setPositiveButton("发表", (dialog, which) -> {
+            String content = editText.getText().toString().trim();
+            if (content.isEmpty()) {
+                Toast.makeText(requireContext(), "评论内容不能为空", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            // 调用评论接口
+            addComment(message.getId(), content);
+        });
+        
+        builder.setNegativeButton("取消", null);
+        
+        AlertDialog dialog = builder.create();
+        dialog.show();
+        
+        // 自动弹出键盘
+        editText.requestFocus();
+        InputMethodManager imm = (InputMethodManager) requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
+        }
+    }
+    
+    /**
+     * 添加评论
+     * @param msgId 消息ID
+     * @param content 评论内容
+     */
+    private void addComment(Integer msgId, String content) {
+        apiService.addComment(msgId, content,
+            new HutoolApiService.SuccessCallback<String>() {
+                @Override
+                public void onSuccess(String response) {
+                    // 评论成功
+                    Toast.makeText(requireContext(), "评论发表成功", Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "评论发表成功: " + response);
+                    
+                    // 这里可以刷新评论列表或更新UI
+                    // TODO: 刷新当前页面的评论数据
+                }
+            },
+            new HutoolApiService.ErrorCallback() {
+                @Override
+                public void onError(String error) {
+                    // 评论失败
+                    Toast.makeText(requireContext(), "评论发表失败，请重试", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "评论发表失败: " + error);
+                }
+            }
+        );
     }
 }

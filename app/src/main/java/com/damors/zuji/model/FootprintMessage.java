@@ -94,11 +94,6 @@ public class FootprintMessage {
     private int likeCount;
     
     /**
-     * 收藏数量
-     */
-    private int favoriteCount;
-    
-    /**
      * 评论数量
      */
     private int commentCount;
@@ -106,12 +101,7 @@ public class FootprintMessage {
     /**
      * 当前用户是否已点赞
      */
-    private boolean isLiked;
-    
-    /**
-     * 当前用户是否已收藏
-     */
-    private boolean isFavorited;
+    private boolean hasLiked;
     
     // 构造函数
     public FootprintMessage() {
@@ -254,14 +244,8 @@ public class FootprintMessage {
         this.likeCount = likeCount;
     }
     
-    public int getFavoriteCount() {
-        return favoriteCount;
-    }
-    
-    public void setFavoriteCount(int favoriteCount) {
-        this.favoriteCount = favoriteCount;
-    }
-    
+
+
     public int getCommentCount() {
         return commentCount;
     }
@@ -269,21 +253,13 @@ public class FootprintMessage {
     public void setCommentCount(int commentCount) {
         this.commentCount = commentCount;
     }
-    
-    public boolean isLiked() {
-        return isLiked;
+
+    public boolean getHasLiked() {
+        return hasLiked;
     }
-    
-    public void setLiked(boolean liked) {
-        isLiked = liked;
-    }
-    
-    public boolean isFavorited() {
-        return isFavorited;
-    }
-    
-    public void setFavorited(boolean favorited) {
-        isFavorited = favorited;
+
+    public void setHasLiked(boolean hasLiked) {
+        this.hasLiked = hasLiked;
     }
     
     @Override
@@ -306,10 +282,8 @@ public class FootprintMessage {
                 ", delFlag='" + delFlag + '\'' +
                 ", guluFiles=" + guluFiles +
                 ", likeCount=" + likeCount +
-                ", favoriteCount=" + favoriteCount +
                 ", commentCount=" + commentCount +
-                ", isLiked=" + isLiked +
-                ", isFavorited=" + isFavorited +
+                ", hasLiked=" + hasLiked +
                 '}';
     }
 }
