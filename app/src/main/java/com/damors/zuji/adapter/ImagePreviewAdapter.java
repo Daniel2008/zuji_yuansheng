@@ -6,6 +6,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import com.github.chrisbanes.photoview.PhotoView;
+import com.github.chrisbanes.photoview.OnScaleChangedListener;
+import com.github.chrisbanes.photoview.OnPhotoTapListener;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -88,9 +91,16 @@ public class ImagePreviewAdapter extends RecyclerView.Adapter<ImagePreviewAdapte
         
         Log.d("ImagePreviewAdapter", "Loading image at position " + position + ": " + imageUrl);
         
+        // 配置PhotoView的缩放参数
+        holder.imageView.setMaximumScale(5.0f); // 最大缩放倍数
+        holder.imageView.setMediumScale(2.5f);  // 中等缩放倍数
+        // 不设置最小缩放，让PhotoView自动计算合适的缩放比例以保持图片原始比例
+        // PhotoView会自动处理缩放类型，确保图片不被拉伸变形
+        
         // 使用Glide加载图片
         Glide.with(context)
             .load(imageUrl)
+            .fitCenter() // 保持图片原始比例，不拉伸变形
             .diskCacheStrategy(DiskCacheStrategy.ALL)
             .placeholder(R.drawable.ic_placeholder_image)
             .error(R.drawable.ic_error_image)
@@ -110,20 +120,36 @@ public class ImagePreviewAdapter extends RecyclerView.Adapter<ImagePreviewAdapte
             })
             .into(holder.imageView);
         
-        // 设置点击事件（点击切换UI控件可见性）
-        holder.imageView.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onImageClick(position, imageUrl);
+        // 设置PhotoView的缩放监听器
+        holder.imageView.setOnScaleChangeListener(new OnScaleChangedListener() {
+            @Override
+            public void onScaleChange(float scaleFactor, float focusX, float focusY) {
+                Log.d("ImagePreviewAdapter", "图片缩放倍数: " + scaleFactor);
             }
         });
         
-        // 设置长按事件（用于其他操作）
+        // 设置PhotoView的点击事件（点击切换UI控件可见性）
+        holder.imageView.setOnPhotoTapListener(new OnPhotoTapListener() {
+            @Override
+            public void onPhotoTap(ImageView view, float x, float y) {
+                if (listener != null) {
+                    int adapterPosition = holder.getAdapterPosition();
+                    if (adapterPosition != RecyclerView.NO_POSITION) {
+                        listener.onImageClick(adapterPosition, imageUris.get(adapterPosition));
+                    }
+                }
+            }
+        });
+        
+        // 设置长按事件（长按保存图片）
         holder.imageView.setOnLongClickListener(v -> {
             if (listener != null) {
-                listener.onImageLongClick(position, imageUrl);
-                return true;
+                int adapterPosition = holder.getAdapterPosition();
+                if (adapterPosition != RecyclerView.NO_POSITION) {
+                    listener.onImageLongClick(adapterPosition, imageUris.get(adapterPosition));
+                }
             }
-            return false;
+            return true;
         });
     }
 
@@ -163,7 +189,7 @@ public class ImagePreviewAdapter extends RecyclerView.Adapter<ImagePreviewAdapte
      * 图片视图持有者
      */
     static class ImageViewHolder extends RecyclerView.ViewHolder {
-        ImageView imageView;
+        PhotoView imageView;
 
         public ImageViewHolder(@NonNull View itemView) {
             super(itemView);

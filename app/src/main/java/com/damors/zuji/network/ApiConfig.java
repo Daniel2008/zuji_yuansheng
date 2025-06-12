@@ -11,13 +11,15 @@ public class ApiConfig {
     private static final String TEST_BASE_URL = "http://192.168.1.5:8080/zuji/api/";
 
     // 生产环境API地址
-    private static final String PROD_BASE_URL = "https://api.zuji.com/api/";
+    private static final String PROD_BASE_URL = "https://zuji.damors.com/zuji/api/";
 
     // 图片API地址
     private static final String IMAGE_BASE_URL = "http://192.168.1.5:8080";
+    // 线上环境地址
+    private static final String PROD_IMAGE_BASE_URL = "https://zuji.damors.com";
 
     // 当前环境，可以通过BuildConfig.DEBUG等条件来自动切换
-    private static final boolean IS_PRODUCTION = false;
+    private static final boolean IS_PRODUCTION = true;
 
     /**
      * 获取当前环境的API基础URL
@@ -37,7 +39,12 @@ public class ApiConfig {
      * @return 图片基础URL
      */
     public static String getImageBaseUrl() {
-        return IMAGE_BASE_URL;
+        if (IS_PRODUCTION) {
+            return PROD_IMAGE_BASE_URL;
+        } else {
+            // 默认使用测试环境
+            return IMAGE_BASE_URL;
+        }
     }
 
     // API超时设置（毫秒）

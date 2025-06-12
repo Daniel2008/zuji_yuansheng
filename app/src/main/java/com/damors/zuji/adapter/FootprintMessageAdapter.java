@@ -374,7 +374,6 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
             .diskCacheStrategy(DiskCacheStrategy.ALL)
             .placeholder(R.drawable.ic_placeholder_image)
             .error(R.drawable.ic_placeholder_image)
-            .centerCrop()
             .listener(new RequestListener<android.graphics.drawable.Drawable>() {
                 @Override
                 public boolean onLoadFailed(@androidx.annotation.Nullable com.bumptech.glide.load.engine.GlideException e, Object model, Target<android.graphics.drawable.Drawable> target, boolean isFirstResource) {

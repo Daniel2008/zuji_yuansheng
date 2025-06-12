@@ -4,11 +4,12 @@
     android:layout_height="match_parent"
     android:background="@android:color/black">
 
-    <ImageView
+    <com.github.chrisbanes.photoview.PhotoView
         android:id="@+id/image_view_item"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scaleType="fitCenter"
+        android:layout_gravity="center"
+        android:adjustViewBounds="true"
         android:contentDescription="图片预览" />
 
 </FrameLayout>

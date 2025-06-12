@@ -57,7 +57,9 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
 
     private static final int REQUEST_PICK_IMAGES = 1;
     private static final int REQUEST_SELECT_LOCATION = 2;
+    private static final int REQUEST_CAMERA = 3;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1003;
+    private static final int REQUEST_CAMERA_PERMISSION = 1004;
 
     private EditText etContent;
     private GeocodeSearch geocodeSearch;
@@ -78,6 +80,7 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
     private double latitude;
     private double longitude;
     private int msgType = 1; // 默认为公开类型
+    private Uri photoUri; // 拍照后的图片URI
     
     // 网络服务实例
     private HutoolApiService apiService;
@@ -225,6 +228,14 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
                  Log.w("AddFootprintActivity", "位置权限被拒绝");
                  Toast.makeText(this, "位置权限被拒绝，无法自动获取位置信息", Toast.LENGTH_SHORT).show();
              }
+         } else if (requestCode == REQUEST_CAMERA_PERMISSION) {
+             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                 Log.d("AddFootprintActivity", "相机权限已授予，打开相机");
+                 openCamera();
+             } else {
+                 Log.w("AddFootprintActivity", "相机权限被拒绝");
+                 Toast.makeText(this, "相机权限被拒绝，无法使用拍照功能", Toast.LENGTH_SHORT).show();
+             }
          }
      }
  
@@ -299,11 +310,77 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
         });
     }
 
+    /**
+     * 显示图片选择对话框
+     * 用户可以选择从相机拍照或从相册选择图片
+     */
     private void pickImages() {
+        // 创建选择对话框
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
+        builder.setTitle("选择图片");
+        builder.setItems(new String[]{"拍照", "从相册选择"}, (dialog, which) -> {
+            if (which == 0) {
+                // 拍照
+                openCamera();
+            } else {
+                // 从相册选择
+                openGallery();
+            }
+        });
+        builder.show();
+    }
+    
+    /**
+     * 打开相机拍照
+     */
+    private void openCamera() {
+        // 检查相机权限
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+            return;
+        }
+        
+        Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+        if (intent.resolveActivity(getPackageManager()) != null) {
+            // 创建临时文件保存拍照结果
+            try {
+                java.io.File photoFile = createImageFile();
+                if (photoFile != null) {
+                    photoUri = androidx.core.content.FileProvider.getUriForFile(this,
+                            getPackageName() + ".fileprovider", photoFile);
+                    intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, photoUri);
+                    startActivityForResult(intent, REQUEST_CAMERA);
+                }
+            } catch (java.io.IOException ex) {
+                Log.e("AddFootprintActivity", "创建图片文件失败", ex);
+                Toast.makeText(this, "创建图片文件失败", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            Toast.makeText(this, "没有可用的相机应用", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    /**
+     * 打开相册选择图片
+     */
+    private void openGallery() {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("image/*");
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         startActivityForResult(Intent.createChooser(intent, "选择图片"), REQUEST_PICK_IMAGES);
+    }
+    
+    /**
+     * 创建图片文件
+     * @return 创建的图片文件
+     * @throws java.io.IOException 文件创建异常
+     */
+    private java.io.File createImageFile() throws java.io.IOException {
+        // 创建图片文件名
+        String timeStamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault()).format(new java.util.Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        java.io.File storageDir = getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES);
+        return java.io.File.createTempFile(imageFileName, ".jpg", storageDir);
     }
 
     @Override
@@ -323,6 +400,13 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
                     selectedImages.add(data.getData());
                 }
                 imageAdapter.notifyDataSetChanged();
+            } else if (requestCode == REQUEST_CAMERA) {
+                // 处理相机拍照结果
+                if (photoUri != null && selectedImages.size() < 9) {
+                    selectedImages.add(photoUri);
+                    imageAdapter.notifyDataSetChanged();
+                    Log.d("AddFootprintActivity", "添加拍照图片: " + photoUri.toString());
+                }
             } else if (requestCode == REQUEST_SELECT_LOCATION) {
                 selectedLocation = data.getStringExtra("location");
                 latitude = data.getDoubleExtra("latitude", 0);
