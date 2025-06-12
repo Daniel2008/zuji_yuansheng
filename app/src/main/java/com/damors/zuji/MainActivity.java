@@ -27,6 +27,12 @@ import com.amap.api.location.AMapLocationClient;
 import com.amap.api.maps.MapsInitializer;
 import com.damors.zuji.utils.AMapHelper;
 
+// 应用更新相关导入
+import com.damors.zuji.dialog.AppUpdateDialog;
+import com.damors.zuji.manager.AppUpdateManager;
+import com.damors.zuji.model.AppUpdateInfo;
+import com.damors.zuji.network.HutoolApiService;
+
 /**
  * 主活动类，作为应用的入口点
  * 管理底部导航和不同的功能Fragment
@@ -76,6 +82,9 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
                     .replace(R.id.fragment_container, mapFragment)
                     .commit();
         }
+        
+        // 检查应用更新
+        checkAppUpdate();
     }
 
     /**
@@ -289,5 +298,76 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     public void onProviderDisabled(@NonNull String provider) {
         Log.d(TAG, "位置提供者已禁用: " + provider);
         Toast.makeText(this, "请开启" + (provider.equals(LocationManager.GPS_PROVIDER) ? "GPS" : "网络定位"), Toast.LENGTH_SHORT).show();
+    }
+    
+    /**
+     * 检查应用更新
+     */
+    private void checkAppUpdate() {
+        try {
+            // 获取当前版本号
+            int currentVersionCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
+            
+            // 调用API检查更新
+            HutoolApiService.getInstance(this).checkAppUpdate(
+                currentVersionCode,
+                new HutoolApiService.SuccessCallback<AppUpdateInfo>() {
+                    @Override
+                    public void onSuccess(AppUpdateInfo updateInfo) {
+                        runOnUiThread(() -> {
+                            if (updateInfo != null && updateInfo.getVersionCode() > currentVersionCode) {
+                                // 有新版本，显示更新对话框
+                                showUpdateDialog(updateInfo);
+                            } else {
+                                Log.d(TAG, "当前已是最新版本");
+                            }
+                        });
+                    }
+                },
+                new HutoolApiService.ErrorCallback() {
+                    @Override
+                    public void onError(String error) {
+                        Log.e(TAG, "检查更新失败: " + error);
+                        // 静默失败，不影响用户体验
+                    }
+                }
+            );
+        } catch (Exception e) {
+            Log.e(TAG, "检查更新异常: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 显示更新对话框
+     * 
+     * @param updateInfo 更新信息
+     */
+    private void showUpdateDialog(AppUpdateInfo updateInfo) {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        
+        AppUpdateDialog updateDialog = new AppUpdateDialog(this, updateInfo);
+        updateDialog.setOnUpdateActionListener(new AppUpdateDialog.OnUpdateActionListener() {
+            @Override
+            public void onUpdateClicked() {
+                Log.d(TAG, "用户选择立即更新");
+                // 对话框内部会处理下载逻辑
+            }
+            
+            @Override
+            public void onCancelClicked() {
+                Log.d(TAG, "用户选择稍后更新");
+                // 用户选择稍后更新，不做任何操作
+            }
+            
+            @Override
+            public void onDownloadCancelled() {
+                Log.d(TAG, "用户取消下载");
+                // 用户取消下载，不做任何操作
+            }
+        });
+        
+        updateDialog.show();
     }
 }

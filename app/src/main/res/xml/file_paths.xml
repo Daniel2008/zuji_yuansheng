@@ -6,4 +6,6 @@
     <cache-path name="cache_files" path="."/>
     <!-- 定义内部存储路径 -->
     <files-path name="internal_files" path="."/>
+    <!-- 定义下载目录路径，用于应用更新 -->
+    <external-path name="download_files" path="Download"/>
 </paths>

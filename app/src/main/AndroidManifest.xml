@@ -19,6 +19,10 @@
     <!-- 通知权限 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     
+    <!-- 应用更新相关权限 -->
+    <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    
     <!-- 高德地图相关权限 -->
     <uses-permission android:name="android.permission.ACCESS_LOCATION_EXTRA_COMMANDS" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
@@ -74,6 +78,12 @@
             android:name="com.damors.zuji.ImagePreviewActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
+            
+        <!-- 更新测试活动 (仅用于开发测试) -->
+        <activity
+            android:name="com.damors.zuji.activity.UpdateTestActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Zuji_yuansheng" />
         
         <!-- 位置服务 -->
         <service

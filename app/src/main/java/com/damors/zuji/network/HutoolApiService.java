@@ -23,6 +23,7 @@ import com.damors.zuji.model.GuluFile;
 import com.damors.zuji.model.PublishTrandsInfoPO;
 import com.damors.zuji.model.Comment;
 import com.damors.zuji.model.CommentResponse;
+import com.damors.zuji.model.AppUpdateInfo;
 import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.model.response.LoginResponse;
 import com.damors.zuji.model.response.FootprintMessageResponse;
@@ -291,6 +292,11 @@ public class HutoolApiService {
                 if (responseClass == UserInfoResponse.class) {
                     return (T) parseUserInfoResponse(jsonObj);
                 }
+                
+                // 处理 AppUpdateInfo
+                if (responseClass == AppUpdateInfo.class) {
+                    return (T) parseAppUpdateInfo(jsonObj);
+                }
             }
             
             // 对于其他类型，尝试简单转换
@@ -325,6 +331,40 @@ public class HutoolApiService {
     }
     
 
+    
+    /**
+     * 解析应用更新信息
+     */
+    private AppUpdateInfo parseAppUpdateInfo(JSONObject jsonObj) {
+        AppUpdateInfo updateInfo = new AppUpdateInfo();
+        
+        if (jsonObj.containsKey("versionCode")) {
+            updateInfo.setVersionCode(jsonObj.getInt("versionCode"));
+        }
+        if (jsonObj.containsKey("versionName")) {
+            updateInfo.setVersionName(jsonObj.getStr("versionName"));
+        }
+        if (jsonObj.containsKey("downloadUrl")) {
+            updateInfo.setDownloadUrl(jsonObj.getStr("downloadUrl"));
+        }
+        if (jsonObj.containsKey("updateContent")) {
+            updateInfo.setUpdateContent(jsonObj.getStr("updateContent"));
+        }
+        if (jsonObj.containsKey("forceUpdate")) {
+            updateInfo.setForceUpdate(jsonObj.getBool("forceUpdate", false));
+        }
+        if (jsonObj.containsKey("fileSize")) {
+            updateInfo.setFileSize(jsonObj.getLong("fileSize", 0L));
+        }
+        if (jsonObj.containsKey("md5")) {
+            updateInfo.setMd5(jsonObj.getStr("md5"));
+        }
+        if (jsonObj.containsKey("releaseTime")) {
+            updateInfo.setReleaseTime(jsonObj.getStr("releaseTime"));
+        }
+        
+        return updateInfo;
+    }
     
     /**
      * 解析足迹消息响应数据
@@ -930,6 +970,50 @@ public class HutoolApiService {
                 });
             }
         });
+    }
+
+    /**
+     * 检查应用更新
+     * 
+     * @param currentVersionCode 当前应用版本号
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     */
+    public void checkAppUpdate(int currentVersionCode,
+                              SuccessCallback<AppUpdateInfo> successCallback,
+                              ErrorCallback errorCallback) {
+        String url = BASE_URL + ApiConfig.Endpoints.CHECK_APP_UPDATE;
+        
+        Map<String, Object> params = new HashMap<>();
+        params.put("currentVersionCode", currentVersionCode);
+        params.put("platform", "android");
+        
+        Log.d(TAG, "检查应用更新: currentVersionCode=" + currentVersionCode);
+        
+        executePostRequest(url, params, AppUpdateInfo.class, successCallback, errorCallback);
+    }
+    
+    /**
+     * 检查应用更新（带加载回调）
+     * 
+     * @param currentVersionCode 当前应用版本号
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     * @param loadingCallback 加载状态回调
+     */
+    public void checkAppUpdate(int currentVersionCode,
+                              SuccessCallback<AppUpdateInfo> successCallback,
+                              ErrorCallback errorCallback,
+                              LoadingCallback loadingCallback) {
+        String url = BASE_URL + ApiConfig.Endpoints.CHECK_APP_UPDATE;
+        
+        Map<String, Object> params = new HashMap<>();
+        params.put("currentVersionCode", currentVersionCode);
+        params.put("platform", "android");
+        
+        Log.d(TAG, "检查应用更新: currentVersionCode=" + currentVersionCode);
+        
+        executePostRequest(url, params, AppUpdateInfo.class, successCallback, errorCallback, loadingCallback);
     }
 
     /**
