@@ -22,6 +22,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.damors.zuji.ImagePreviewActivity;
+import com.damors.zuji.CommentListActivity;
 import com.damors.zuji.adapter.FootprintMessageAdapter;
 import com.damors.zuji.data.FootprintEntity;
 import com.damors.zuji.model.FootprintMessage;
@@ -326,8 +327,9 @@ public class HistoryFragment extends Fragment {
      * @param position 位置
      */
     private void handleCommentClick(FootprintMessage message, int position) {
-        // 显示评论输入对话框
-        showCommentDialog(message);
+        // 跳转到评论详情页面
+        CommentListActivity.start(requireContext(), message.getId(), 
+            message.getTextContent() != null ? message.getTextContent() : "足迹详情");
     }
     
     /**

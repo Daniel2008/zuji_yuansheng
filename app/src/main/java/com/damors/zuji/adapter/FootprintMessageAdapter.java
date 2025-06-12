@@ -1,9 +1,6 @@
 package com.damors.zuji.adapter;
 
-import static android.content.ContentValues.TAG;
-
 import android.content.Context;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -402,7 +399,6 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      */
     private void setActionBar(ViewHolder holder, FootprintMessage message, int position) {
         // 设置点赞状态和数量
-        Log.d(TAG, "绑定数据 - 消息ID: " + message.getId() + ", 点赞状态: " + message.getHasLiked() + ", 点赞数量: " + message.getLikeCount() + ", 评论数量: " + message.getCommentCount());
         updateLikeStatus(holder, message.getHasLiked(), message.getLikeCount());
         
         // 收藏功能已移除
@@ -450,13 +446,13 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
     /**
      * 公开方法：更新指定位置的点赞状态
      * @param position 位置
-     * @param hasLiked 是否已点赞
+     * @param isLiked 是否已点赞
      * @param likeCount 点赞数量
      */
-    public void updateItemLikeStatus(int position, boolean hasLiked, int likeCount) {
+    public void updateItemLikeStatus(int position, boolean isLiked, int likeCount) {
         if (position >= 0 && position < messageList.size()) {
             FootprintMessage message = messageList.get(position);
-            message.setHasLiked(hasLiked);
+            message.setHasLiked(isLiked);
             message.setLikeCount(likeCount);
             notifyItemChanged(position);
         }

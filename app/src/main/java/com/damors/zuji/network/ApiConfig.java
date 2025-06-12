@@ -60,5 +60,6 @@ public class ApiConfig {
         public static final String GET_USER_INFO = "getUserInfo"; // 获取用户信息接口
         public static final String TOGGLE_LIKE = "toggleLike"; // 点赞/取消点赞接口
         public static final String ADD_COMMENT = "addComment"; // 添加评论接口
+        public static final String GET_COMMENT_LIST = "getCommentList"; // 获取评论列表接口
     }
 }

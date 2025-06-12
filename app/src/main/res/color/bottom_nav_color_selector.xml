@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 选中状态的颜色 - 使用colorPrimary -->
+    <item android:color="@color/colorPrimary" android:state_checked="true" />
+    <!-- 未选中状态的颜色 - 使用灰色 -->
+    <item android:color="@color/colorDarkGray" />
+</selector>

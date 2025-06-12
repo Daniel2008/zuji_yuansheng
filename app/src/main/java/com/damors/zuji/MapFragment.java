@@ -19,6 +19,7 @@ import com.damors.zuji.adapter.GridImageAdapter;
 import com.damors.zuji.model.GuluFile;
 import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.utils.ImageUtils;
+import com.damors.zuji.CommentListActivity;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import android.widget.EditText;
@@ -976,8 +977,9 @@ public class MapFragment extends Fragment {
         
         // 设置评论点击事件
         layoutComment.setOnClickListener(v -> {
-            // 显示评论输入对话框
-            showCommentDialog(message);
+            // 跳转到评论详情页面
+            CommentListActivity.start(requireContext(), message.getId(), 
+                message.getTextContent() != null ? message.getTextContent() : "足迹详情");
         });
         
         // 渲染图片内容

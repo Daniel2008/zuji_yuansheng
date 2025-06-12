@@ -97,6 +97,14 @@
             android:label="选择位置"
             android:theme="@style/Theme.Footprint" />
             
+        <!-- 评论列表活动 -->
+        <activity
+            android:name=".CommentListActivity"
+            android:exported="false"
+            android:label="评论详情"
+            android:theme="@style/Theme.Zuji_yuansheng"
+            android:windowSoftInputMode="adjustResize" />
+            
 
             
         <!-- 高德地图原生离线地图管理活动 -->

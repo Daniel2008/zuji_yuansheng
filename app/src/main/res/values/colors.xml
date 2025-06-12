@@ -41,4 +41,15 @@
     <color name="profile_accent">#3949AB</color>
     <color name="profile_button_background">@color/blue_500</color>
     <color name="profile_button_text">@color/white</color>
+    
+    <!-- 通用UI颜色 -->
+    <color name="primary_color">@color/indigo_500</color>
+    <color name="primary_color_dark">@color/indigo_700</color>
+    <color name="background_color">#F5F5F5</color>
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+    <color name="reply_background">#F8F9FA</color>
+    <color name="text_hint">#BDBDBD</color>
+    <color name="input_background">#F8F9FA</color>
+    <color name="input_border">#E1E5E9</color>
 </resources>

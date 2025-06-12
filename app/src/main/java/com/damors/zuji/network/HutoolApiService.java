@@ -21,6 +21,8 @@ import com.damors.zuji.model.UserInfoResponse;
 import com.damors.zuji.model.FootprintMessage;
 import com.damors.zuji.model.GuluFile;
 import com.damors.zuji.model.PublishTrandsInfoPO;
+import com.damors.zuji.model.Comment;
+import com.damors.zuji.model.CommentResponse;
 import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.model.response.LoginResponse;
 import com.damors.zuji.model.response.FootprintMessageResponse;
@@ -241,6 +243,35 @@ public class HutoolApiService {
         try {
             if (responseClass == String.class) {
                 return (T) dataObj.toString();
+            }
+            
+            // 处理CommentResponse.Data类型的特殊情况：后端可能直接返回JSONArray
+            if (responseClass.getName().contains("CommentResponse$Data")) {
+                if (dataObj instanceof JSONArray) {
+                    // 后端直接返回评论数组，需要包装成CommentResponse.Data格式
+                    Log.d(TAG, "后端直接返回评论数组，进行格式转换");
+                    JSONArray commentsArray = (JSONArray) dataObj;
+                    CommentResponse.Data data = new CommentResponse.Data();
+                    
+                    List<Comment> records = new ArrayList<>();
+                    for (Object item : commentsArray) {
+                        if (item instanceof JSONObject) {
+                            Comment comment = parseComment((JSONObject) item);
+                            records.add(comment);
+                        }
+                    }
+                    
+                    data.setRecords(records);
+                    data.setTotal(records.size());
+                    data.setSize(records.size());
+                    data.setCurrent(1);
+                    data.setPages(1);
+                    
+                    return (T) data;
+                } else if (dataObj instanceof JSONObject) {
+                    // 标准的分页响应格式
+                    return (T) parseCommentResponseData((JSONObject) dataObj);
+                }
             }
             
             if (dataObj instanceof JSONObject) {
@@ -1190,6 +1221,155 @@ public class HutoolApiService {
         
         // 执行POST请求
         executePostRequest(url, params, String.class, successCallback, errorCallback, loadingCallback);
+    }
+
+    /**
+     * 获取评论列表
+     * @param msgId 足迹消息ID
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     */
+    public void getCommentList(Integer msgId,
+                              SuccessCallback<CommentResponse.Data> successCallback,
+                              ErrorCallback errorCallback) {
+        getCommentList(msgId, successCallback, errorCallback, null);
+    }
+
+    /**
+     * 获取评论列表（带加载回调）
+     * @param msgId 足迹消息ID
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     * @param loadingCallback 加载回调
+     */
+    public void getCommentList(Integer msgId,
+                              SuccessCallback<CommentResponse.Data> successCallback,
+                              ErrorCallback errorCallback,
+                              LoadingCallback loadingCallback) {
+        String url = BASE_URL + ApiConfig.Endpoints.GET_COMMENT_LIST;
+        
+        // 准备请求参数
+        Map<String, Object> params = new HashMap<>();
+        params.put("msgId", msgId);
+        
+        // 检查网络状态
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "网络不可用，将评论列表请求添加到待处理队列");
+            
+            // 保存请求信息到待处理队列
+            addPendingRequest(url, params, CommentResponse.Data.class, successCallback, errorCallback);
+            
+            // 显示网络不可用提示
+            showNetworkUnavailableMessage();
+            return;
+        }
+        
+        Log.d(TAG, "获取评论列表，msgId: " + msgId);
+        
+        // 执行POST请求
+        executePostRequest(url, params, CommentResponse.Data.class, successCallback, errorCallback, loadingCallback);
+    }
+
+    /**
+     * 解析评论响应数据
+     */
+    private CommentResponse.Data parseCommentResponseData(JSONObject jsonObj) {
+        CommentResponse.Data data = new CommentResponse.Data();
+        
+        if (jsonObj.containsKey("total")) {
+            data.setTotal(jsonObj.getInt("total"));
+        }
+        if (jsonObj.containsKey("current")) {
+            data.setCurrent(jsonObj.getInt("current"));
+        }
+        if (jsonObj.containsKey("size")) {
+            data.setSize(jsonObj.getInt("size"));
+        }
+        if (jsonObj.containsKey("pages")) {
+            data.setPages(jsonObj.getInt("pages"));
+        }
+        
+        // 解析records列表
+        if (jsonObj.containsKey("records")) {
+            Object recordsObj = jsonObj.get("records");
+            if (recordsObj instanceof JSONArray) {
+                JSONArray recordsArray = (JSONArray) recordsObj;
+                List<Comment> records = new ArrayList<>();
+                
+                for (Object item : recordsArray) {
+                    if (item instanceof JSONObject) {
+                        Comment comment = parseComment((JSONObject) item);
+                        records.add(comment);
+                    }
+                }
+                
+                data.setRecords(records);
+            }
+        }
+        
+        return data;
+    }
+    
+    /**
+     * 解析评论数据
+     */
+    private Comment parseComment(JSONObject jsonObj) {
+        Comment comment = new Comment();
+        
+        // 解析基本字段，匹配数据库表结构
+        if (jsonObj.containsKey("id")) {
+            comment.setId(jsonObj.getInt("id"));
+        }
+        if (jsonObj.containsKey("msgId") || jsonObj.containsKey("msg_id")) {
+            String key = jsonObj.containsKey("msgId") ? "msgId" : "msg_id";
+            comment.setMsgId(jsonObj.getInt(key));
+        }
+        if (jsonObj.containsKey("content")) {
+            comment.setContent(jsonObj.getStr("content"));
+        }
+        if (jsonObj.containsKey("userId") || jsonObj.containsKey("user_id")) {
+            String key = jsonObj.containsKey("userId") ? "userId" : "user_id";
+            comment.setUserId(jsonObj.getInt(key));
+        }
+        if (jsonObj.containsKey("userName") || jsonObj.containsKey("user_name")) {
+            String key = jsonObj.containsKey("userName") ? "userName" : "user_name";
+            comment.setUserName(jsonObj.getStr(key));
+        }
+        if (jsonObj.containsKey("userAvatar") || jsonObj.containsKey("user_avatar")) {
+            String key = jsonObj.containsKey("userAvatar") ? "userAvatar" : "user_avatar";
+            comment.setUserAvatar(jsonObj.getStr(key));
+        }
+        if (jsonObj.containsKey("parentId") || jsonObj.containsKey("parent_id")) {
+            String key = jsonObj.containsKey("parentId") ? "parentId" : "parent_id";
+            comment.setParentId(jsonObj.getInt(key));
+        }
+        if (jsonObj.containsKey("createTime") || jsonObj.containsKey("create_time")) {
+            String key = jsonObj.containsKey("createTime") ? "createTime" : "create_time";
+            comment.setCreateTime(jsonObj.getStr(key));
+        }
+        
+        // 解析数据库表中的其他字段
+        if (jsonObj.containsKey("delFlag") || jsonObj.containsKey("del_flag")) {
+            String key = jsonObj.containsKey("delFlag") ? "delFlag" : "del_flag";
+            comment.setDelFlag(jsonObj.getStr(key));
+        }
+        if (jsonObj.containsKey("createBy") || jsonObj.containsKey("create_by")) {
+            String key = jsonObj.containsKey("createBy") ? "createBy" : "create_by";
+            comment.setCreateBy(jsonObj.getStr(key));
+        }
+        if (jsonObj.containsKey("updateBy") || jsonObj.containsKey("update_by")) {
+            String key = jsonObj.containsKey("updateBy") ? "updateBy" : "update_by";
+            comment.setUpdateBy(jsonObj.getStr(key));
+        }
+        if (jsonObj.containsKey("updateTime") || jsonObj.containsKey("update_time")) {
+            String key = jsonObj.containsKey("updateTime") ? "updateTime" : "update_time";
+            comment.setUpdateTime(jsonObj.getStr(key));
+        }
+        if (jsonObj.containsKey("remark")) {
+            comment.setRemark(jsonObj.getStr("remark"));
+        }
+        
+        return comment;
     }
 
     /**
