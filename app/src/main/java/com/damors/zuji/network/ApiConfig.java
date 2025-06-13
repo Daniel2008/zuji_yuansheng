@@ -19,7 +19,7 @@ public class ApiConfig {
     private static final String PROD_IMAGE_BASE_URL = "https://zuji.damors.com";
 
     // 当前环境，可以通过BuildConfig.DEBUG等条件来自动切换
-    private static final boolean IS_PRODUCTION = true;
+    private static final boolean IS_PRODUCTION = false;
 
     /**
      * 获取当前环境的API基础URL

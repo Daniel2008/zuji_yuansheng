@@ -414,7 +414,8 @@ public class MapFragment extends Fragment {
         if (aMapLocation.getErrorCode() == 0) {
             // 定位成功
             lastAMapLocation = aMapLocation;
-            Log.d(TAG, "高德定位成功: " + aMapLocation.getLatitude() + ", " + aMapLocation.getLongitude());
+            Log.d(TAG, "高德定位成功: " + aMapLocation.getLatitude() + ", " + aMapLocation.getLongitude() + 
+                  ", 城市: " + aMapLocation.getCity() + ", 地址: " + aMapLocation.getAddress());
             
             // 可选：更新当前位置标记（如果需要）
             // updateCurrentLocationMarker(aMapLocation);
@@ -618,6 +619,7 @@ public class MapFragment extends Fragment {
                 intent.putExtra("longitude", lastAMapLocation.getLongitude());
                 intent.putExtra("altitude", lastAMapLocation.getAltitude());
                 intent.putExtra("accuracy", lastAMapLocation.getAccuracy());
+                intent.putExtra("city",lastAMapLocation.getCity());
                 intent.putExtra("address", lastAMapLocation.getAddress());
                 startActivity(intent);
                 

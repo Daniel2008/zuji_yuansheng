@@ -921,7 +921,8 @@ public class HutoolApiService {
             try {
                 Log.d(TAG, "发布足迹动态: userId=" + publishInfo.getUserId() + 
                           ", content=" + publishInfo.getContent() + 
-                          ", location=" + publishInfo.getLocationInfo());
+                          ", location=" + publishInfo.getLocationInfo() + 
+                          ", city=" + publishInfo.getCity());
                 
                 // 构建multipart请求
                 HttpRequest request = HttpRequest.post(url)
@@ -930,6 +931,7 @@ public class HutoolApiService {
                 
                 // 添加普通表单字段
                 request.form("userId", publishInfo.getUserId());
+                request.form("city", publishInfo.getCity()); // 添加城市信息
                 request.form("locationInfo", publishInfo.getLocationInfo());
                 request.form("type", publishInfo.getType());
                 request.form("content", publishInfo.getContent());

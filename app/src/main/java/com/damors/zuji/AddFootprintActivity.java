@@ -79,6 +79,7 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
     private String selectedLocation;
     private double latitude;
     private double longitude;
+    private String city;
     private int msgType = 1; // 默认为公开类型
     private Uri photoUri; // 拍照后的图片URI
     
@@ -104,6 +105,9 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
         
         // 初始化位置管理器
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        
+        // 初始化城市信息
+        city = "未知城市";
         
         // 获取从Intent传递的位置信息
         getLocationFromIntent();
@@ -135,12 +139,20 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
 
             // 获取地址信息
             String address = intent.getStringExtra("address");
+            // 获取城市信息
+            city = intent.getStringExtra("city");
 
             // 如果有有效的经纬度信息，设置默认位置文本
             if (latitude != 0.0 && longitude != 0.0) {
-                selectedLocation =address;
+                selectedLocation = address;
                 Log.d("AddFootprintActivity", "从Intent获取位置信息: " + selectedLocation + 
-                      ", 海拔: " + altitude + "m, 精度: " + accuracy + "m");
+                      ", 海拔: " + altitude + "m, 精度: " + accuracy + "m, 城市: " + city);
+                
+                // 如果没有获取到城市信息，进行逆地理编码
+                if (city == null || city.isEmpty()) {
+                    Log.d("AddFootprintActivity", "Intent中没有城市信息，进行逆地理编码获取");
+                    performReverseGeocode(latitude, longitude);
+                }
             } else {
                 Log.d("AddFootprintActivity", "Intent中没有有效的位置信息");
             }
@@ -168,6 +180,11 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
                  latitude = location.getLatitude();
                  longitude = location.getLongitude();
                  
+                 // 初始化城市信息为未知
+                 if (city == null || city.isEmpty()) {
+                     city = "未知城市";
+                 }
+                 
                  // 临时显示经纬度
                  selectedLocation = String.format("正在获取位置信息... (%.6f, %.6f)", latitude, longitude);
                  updateLocationUI();
@@ -177,7 +194,9 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
                  
                  Log.d("AddFootprintActivity", "获取到当前位置坐标: " + latitude + ", " + longitude);
              } else {
-                 Log.w("AddFootprintActivity", "无法获取当前位置");
+                 // 设置默认城市信息
+                 city = "未知城市";
+                 Log.w("AddFootprintActivity", "无法获取当前位置，设置城市为未知城市");
              }
          } catch (SecurityException e) {
              Log.e("AddFootprintActivity", "获取位置时权限错误: " + e.getMessage());
@@ -411,6 +430,16 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
                 selectedLocation = data.getStringExtra("location");
                 latitude = data.getDoubleExtra("latitude", 0);
                 longitude = data.getDoubleExtra("longitude", 0);
+                city = data.getStringExtra("city");
+                
+                // 如果没有获取到城市信息，进行逆地理编码
+                if (city == null || city.isEmpty() || "未知城市".equals(city)) {
+                    Log.d("AddFootprintActivity", "从位置选择器未获取到有效城市信息，进行逆地理编码");
+                    performReverseGeocode(latitude, longitude);
+                } else {
+                    Log.d("AddFootprintActivity", "从位置选择器获取到城市信息: " + city);
+                }
+                
                 tvLocation.setText(selectedLocation);
             }
         }
@@ -450,6 +479,7 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
         // 创建发布参数对象
         PublishTrandsInfoPO publishInfo = new PublishTrandsInfoPO();
         publishInfo.setUserId(userId); // 当前用户ID
+        publishInfo.setCity(city);
         publishInfo.setContent(content); // 足迹内容
         publishInfo.setLocationInfo(location); // 位置信息
         publishInfo.setType(msgType+""); // 类型 (1: 公开, 2: 个人可见)
@@ -457,6 +487,9 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
         publishInfo.setLng(longitude); // 经度
         publishInfo.setLat(latitude); // 纬度
         publishInfo.setMsgType(msgType); // 消息类型 (1: 公开, 2: 个人可见)
+        
+        // 输出调试信息
+        Log.d("AddFootprintActivity", "准备发布足迹 - 城市: " + city + ", 位置: " + location + ", 经纬度: (" + latitude + ", " + longitude + ")");
         
         // 处理图片文件对象
         List<File> imageFiles = new ArrayList<>();
@@ -595,6 +628,19 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
                 RegeocodeAddress regeocodeAddress = regeocodeResult.getRegeocodeAddress();
                 String formatAddress = regeocodeAddress.getFormatAddress();
                 
+                // 提取城市信息
+                if (regeocodeAddress.getCity() != null && !regeocodeAddress.getCity().isEmpty()) {
+                    city = regeocodeAddress.getCity();
+                    Log.d("AddFootprintActivity", "获取到城市信息: " + city);
+                } else if (regeocodeAddress.getProvince() != null && !regeocodeAddress.getProvince().isEmpty()) {
+                    // 如果没有城市信息，使用省份信息
+                    city = regeocodeAddress.getProvince();
+                    Log.d("AddFootprintActivity", "使用省份作为城市信息: " + city);
+                } else {
+                    city = "未知城市";
+                    Log.w("AddFootprintActivity", "无法获取城市信息，设置为未知城市");
+                }
+                
                 if (formatAddress != null && !formatAddress.isEmpty()) {
                     selectedLocation = formatAddress;
                     Log.d("AddFootprintActivity", "获取到地址描述: " + formatAddress);
@@ -622,11 +668,13 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
                 }
             } else {
                 selectedLocation = String.format("当前位置 (%.6f, %.6f)", latitude, longitude);
-                Log.w("AddFootprintActivity", "逆地理编码结果为空");
+                city = "未知城市";
+                Log.w("AddFootprintActivity", "逆地理编码结果为空，设置城市为未知城市");
             }
         } else {
             selectedLocation = String.format("当前位置 (%.6f, %.6f)", latitude, longitude);
-            Log.w("AddFootprintActivity", "逆地理编码失败，错误码: " + rCode);
+            city = "未知城市";
+            Log.w("AddFootprintActivity", "逆地理编码失败，错误码: " + rCode + "，设置城市为未知城市");
         }
         
         // 更新UI

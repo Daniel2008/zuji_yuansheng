@@ -46,6 +46,8 @@ public class LocationPickerActivity extends AppCompatActivity implements AMapLoc
     private AMapLocation currentLocation;
     private Marker currentLocationMarker;
     private String selectedAddress = ""; // 选中位置的地址信息
+
+    private String city = ""; //选中位置的城市信息
     private GeocodeSearch geocodeSearch;
     
     @Override
@@ -128,6 +130,7 @@ public class LocationPickerActivity extends AppCompatActivity implements AMapLoc
                 result.putExtra("longitude", selectedPosition.longitude);
                 result.putExtra("location", selectedAddress);
                 result.putExtra("address", selectedAddress);
+                result.putExtra("city",city);
                 
                 Log.d(TAG, "确认选择位置: 纬度=" + selectedPosition.latitude + 
                           ", 经度=" + selectedPosition.longitude + ", 地址=" + selectedAddress);
@@ -265,7 +268,8 @@ public class LocationPickerActivity extends AppCompatActivity implements AMapLoc
                             // 定位成功
                             currentLocation = aMapLocation;
                             onLocationSuccess(aMapLocation);
-                            Log.d(TAG, "高德定位成功: " + aMapLocation.getLatitude() + ", " + aMapLocation.getLongitude());
+                            Log.d(TAG, "高德定位成功: " + aMapLocation.getLatitude() + ", " + aMapLocation.getLongitude() + 
+                                  ", 城市: " + aMapLocation.getCity() + ", 地址: " + aMapLocation.getAddress());
                         } else {
                             // 定位失败
                             Log.e(TAG, "高德定位失败: " + aMapLocation.getErrorCode() + ", " + aMapLocation.getErrorInfo());
@@ -317,6 +321,16 @@ public class LocationPickerActivity extends AppCompatActivity implements AMapLoc
             // 设置为选中位置
             selectedPosition = currentLatLng;
             selectedAddress = address;
+            city = aMapLocation.getCity();
+            
+            // 添加城市信息日志
+            Log.d(TAG, "定位成功获取城市信息: " + city + ", 地址: " + address);
+            
+            // 如果城市信息为空，设置默认值
+            if (city == null || city.isEmpty()) {
+                city = "未知城市";
+                Log.w(TAG, "定位返回的城市信息为空，设置为默认值: " + city);
+            }
             
             // 清除之前的标记
             if (selectedMarker != null) {
@@ -391,6 +405,19 @@ public class LocationPickerActivity extends AppCompatActivity implements AMapLoc
                 RegeocodeAddress regeocodeAddress = regeocodeResult.getRegeocodeAddress();
                 String formatAddress = regeocodeAddress.getFormatAddress();
                 
+                // 提取城市信息
+                if (regeocodeAddress.getCity() != null && !regeocodeAddress.getCity().isEmpty()) {
+                    city = regeocodeAddress.getCity();
+                    Log.d(TAG, "获取到城市信息: " + city);
+                } else if (regeocodeAddress.getProvince() != null && !regeocodeAddress.getProvince().isEmpty()) {
+                    // 如果没有城市信息，使用省份信息
+                    city = regeocodeAddress.getProvince();
+                    Log.d(TAG, "使用省份作为城市信息: " + city);
+                } else {
+                    city = "未知城市";
+                    Log.w(TAG, "无法获取城市信息，设置为未知城市");
+                }
+                
                 if (formatAddress != null && !formatAddress.isEmpty()) {
                     selectedAddress = formatAddress;
                     Log.d(TAG, "获取到地址描述: " + formatAddress);
@@ -418,11 +445,13 @@ public class LocationPickerActivity extends AppCompatActivity implements AMapLoc
                 }
             } else {
                 selectedAddress = String.format("位置 (%.6f, %.6f)", selectedPosition.latitude, selectedPosition.longitude);
-                Log.w(TAG, "逆地理编码结果为空");
+                city = "未知城市";
+                Log.w(TAG, "逆地理编码结果为空，设置城市为未知城市");
             }
         } else {
             selectedAddress = String.format("位置 (%.6f, %.6f)", selectedPosition.latitude, selectedPosition.longitude);
-            Log.w(TAG, "逆地理编码失败，错误码: " + rCode);
+            city = "未知城市";
+            Log.w(TAG, "逆地理编码失败，错误码: " + rCode + "，设置城市为未知城市");
         }
         
         // 更新UI显示

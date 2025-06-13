@@ -13,6 +13,10 @@ public class PublishTrandsInfoPO {
      * 用户ID
      */
     private String userId;
+    /**
+     * 城市
+     */
+    private String city;
     
     /**
      * 位置信息
@@ -71,7 +75,15 @@ public class PublishTrandsInfoPO {
         this.lat = lat;
         this.msgType = msgType;
     }
-    
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+
     // Getter和Setter方法
     public String getUserId() {
         return userId;
