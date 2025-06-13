@@ -374,6 +374,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
             .diskCacheStrategy(DiskCacheStrategy.ALL)
             .placeholder(R.drawable.ic_placeholder_image)
             .error(R.drawable.ic_placeholder_image)
+            .centerCrop()
             .listener(new RequestListener<android.graphics.drawable.Drawable>() {
                 @Override
                 public boolean onLoadFailed(@androidx.annotation.Nullable com.bumptech.glide.load.engine.GlideException e, Object model, Target<android.graphics.drawable.Drawable> target, boolean isFirstResource) {
@@ -398,7 +399,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      */
     private void setActionBar(ViewHolder holder, FootprintMessage message, int position) {
         // 设置点赞状态和数量
-        updateLikeStatus(holder, message.getHasLiked(), message.getLikeCount());
+        updateLikeStatus(holder, message.isLiked(), message.getLikeCount());
         
         // 收藏功能已移除
         
@@ -451,7 +452,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
     public void updateItemLikeStatus(int position, boolean isLiked, int likeCount) {
         if (position >= 0 && position < messageList.size()) {
             FootprintMessage message = messageList.get(position);
-            message.setHasLiked(isLiked);
+            message.setLiked(isLiked);
             message.setLikeCount(likeCount);
             notifyItemChanged(position);
         }
