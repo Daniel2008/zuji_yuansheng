@@ -10,6 +10,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -73,6 +74,10 @@ public class ProfileFragment extends Fragment {
         layoutCommentManagement = view.findViewById(R.id.layout_comment_management);
         layoutMapCache = view.findViewById(R.id.layout_map_cache);
         layoutSettings = view.findViewById(R.id.layout_settings);
+        
+        // 初始化编辑按钮
+        ImageButton buttonEditProfile = view.findViewById(R.id.button_edit_profile);
+        buttonEditProfile.setOnClickListener(v -> openEditProfileActivity());
 
         
         // 初始化线程池和Handler
@@ -304,11 +309,11 @@ public class ProfileFragment extends Fragment {
             }
             
             // 更新用户昵称
-            String nickname = getUserFieldSafely(userObj, "nickname");
+            String nickname = getUserFieldSafely(userObj, "nickName");
             if (!TextUtils.isEmpty(nickname) && textViewUsername != null) {
                 textViewUsername.setText(nickname);
             } else {
-                String username = getUserFieldSafely(userObj, "username");
+                String username = getUserFieldSafely(userObj, "userName");
                 if (!TextUtils.isEmpty(username) && textViewUsername != null) {
                     textViewUsername.setText(username);
                 }
@@ -388,6 +393,24 @@ public class ProfileFragment extends Fragment {
         }
     }
 
+    /**
+     * 打开编辑资料页面
+     */
+    private void openEditProfileActivity() {
+        Intent intent = new Intent(getActivity(), EditProfileActivity.class);
+        startActivityForResult(intent, 1001);
+    }
+    
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 1001 && resultCode == getActivity().RESULT_OK) {
+            // 编辑资料成功，重新加载用户数据
+            loadUserData();
+            Toast.makeText(getContext(), "资料更新成功", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
     /**
      * 打开设置页面
      */

@@ -130,7 +130,7 @@ public class HutoolApiService {
      */
     private Map<String, String> getCommonHeaders() {
         Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "multipart/form-data; charset=utf-8");
+        // 注意：不要手动设置Content-Type，让Hutool自动处理multipart/form-data的boundary
         headers.put("Accept", "application/json");
         headers.put("User-Agent", "ZujiApp/1.0 Android");
         
@@ -995,6 +995,98 @@ public class HutoolApiService {
         executePostRequest(url, params, AppUpdateInfo.class, successCallback, errorCallback);
     }
     
+    /**
+     * 保存用户信息
+     * 
+     * @param token 用户token
+     * @param nickName 用户昵称
+     * @param avatarFile 头像文件（可为null）
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     */
+    public void saveUserInfo(String token, String nickName, File avatarFile,
+                            SuccessCallback<String> successCallback,
+                            ErrorCallback errorCallback) {
+        saveUserInfo(token, nickName, avatarFile, successCallback, errorCallback, null);
+    }
+    
+    /**
+     * 保存用户信息（带加载回调）
+     * 
+     * @param token 用户token
+     * @param nickName 用户昵称
+     * @param avatarFile 头像文件（可为null）
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     * @param loadingCallback 加载状态回调
+     */
+    public void saveUserInfo(String token, String nickName, File avatarFile,
+                            SuccessCallback<String> successCallback,
+                            ErrorCallback errorCallback,
+                            LoadingCallback loadingCallback) {
+        String url = BASE_URL + ApiConfig.Endpoints.SAVE_USER_INFO;
+        
+        // 检查网络状态
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "网络不可用，无法保存用户信息");
+            showNetworkUnavailableMessage();
+            if (errorCallback != null) {
+                mainHandler.post(() -> errorCallback.onError("网络不可用，请检查网络连接"));
+            }
+            return;
+        }
+        
+        // 调用加载开始回调
+        if (loadingCallback != null) {
+            mainHandler.post(() -> loadingCallback.onLoadingStart());
+        }
+        
+        // 在后台线程执行用户信息保存请求
+        executorService.execute(() -> {
+            try {
+                Log.d(TAG, "保存用户信息: token=" + token + ", nickName=" + nickName + 
+                          ", hasAvatar=" + (avatarFile != null && avatarFile.exists()));
+                
+                // 构建multipart请求
+                HttpRequest request = HttpRequest.post(url)
+                        .headerMap(getCommonHeaders(), true)
+                        .timeout(TIMEOUT_MS);
+                
+                // 添加普通表单字段
+                request.form("token", token);
+                request.form("nickName", nickName);
+                
+                // 添加头像文件（如果存在）
+                if (avatarFile != null && avatarFile.exists()) {
+                    request.form("avatar", avatarFile);
+                    Log.d(TAG, "添加头像文件: " + avatarFile.getName() + ", 大小: " + avatarFile.length() + " bytes");
+                }
+                
+                // 执行请求
+                String response = request.execute().body();
+                
+                Log.d(TAG, "保存用户信息响应: " + response);
+                
+                // 处理响应
+                handleResponse(response, String.class, successCallback, errorCallback, 
+                             url, new HashMap<>(), loadingCallback);
+                
+            } catch (Exception e) {
+                Log.e(TAG, "保存用户信息请求异常: " + url, e);
+                
+                // 在主线程回调错误
+                mainHandler.post(() -> {
+                    if (errorCallback != null) {
+                        errorCallback.onError("保存用户信息失败: " + e.getMessage());
+                    }
+                    if (loadingCallback != null) {
+                        loadingCallback.onLoadingEnd();
+                    }
+                });
+            }
+        });
+    }
+
     /**
      * 检查应用更新（带加载回调）
      * 

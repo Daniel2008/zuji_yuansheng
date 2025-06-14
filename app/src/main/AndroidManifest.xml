@@ -127,6 +127,14 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Zuji_yuansheng" />
             
+        <!-- 编辑资料页面活动 -->
+        <activity
+            android:name=".EditProfileActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Zuji_yuansheng"
+            android:windowSoftInputMode="adjustResize" />
+            
         <!-- 高德地图原生离线地图管理活动 -->
         <activity
             android:name="com.amap.api.maps.offlinemap.OfflineMapActivity"
