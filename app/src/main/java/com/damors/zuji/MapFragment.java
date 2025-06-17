@@ -11,10 +11,12 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 
 import com.amap.api.maps.model.BitmapDescriptor;
+import com.amap.api.maps.model.CameraPosition;
 import com.damors.zuji.adapter.GridImageAdapter;
 import com.damors.zuji.model.GuluFile;
 import com.damors.zuji.network.ApiConfig;
@@ -47,6 +49,8 @@ import com.damors.zuji.viewmodel.FootprintViewModel;
 import com.damors.zuji.network.HutoolApiService;
 import com.damors.zuji.model.FootprintMessage;
 import com.damors.zuji.model.response.FootprintMessageResponse;
+// Glide图片加载库导入
+import com.bumptech.glide.Glide;
 // 高德地图相关导入
 import com.amap.api.maps.AMap;
 import com.amap.api.maps.CameraUpdate;
@@ -84,7 +88,7 @@ public class MapFragment extends Fragment {
 
     private static final String TAG = "MapFragment";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001; // 位置权限请求码
-    private static final long MIN_TIME_BETWEEN_UPDATES = 20000; // 增加到3秒，减少频繁更新
+    private static final long MIN_TIME_BETWEEN_UPDATES = 10000; // 增加到3秒，减少频繁更新
     private static final float MIN_DISTANCE_CHANGE = 5; // 5米，提高精度
     private static final int MAX_RETRY_COUNT = 3; // 最大重试次数
     private static final long LOCATION_TIMEOUT = 30000; // 位置获取超时时间30秒
@@ -101,7 +105,8 @@ public class MapFragment extends Fragment {
     private AMap aMap;
     private AMapLocationClient locationClient;
     private AMapLocationClientOption locationOption;
-    
+    private boolean isDragging = false;
+
     // 核心服务
     private FootprintViewModel viewModel;
     private HutoolApiService apiService;
@@ -232,13 +237,14 @@ public class MapFragment extends Fragment {
         aMap.getUiSettings().setZoomControlsEnabled(false);
         aMap.getUiSettings().setCompassEnabled(true);
         aMap.getUiSettings().setScaleControlsEnabled(true);
+        aMap.getUiSettings().setMyLocationButtonEnabled(true); //显示默认的定位按钮
         aMap.moveCamera(CameraUpdateFactory.zoomTo(17));
         aMap.setMyLocationEnabled(true);
-        
         MyLocationStyle myLocationStyle = new MyLocationStyle();
-        myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE);
+        myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER);
         myLocationStyle.interval(2000);
         aMap.setMyLocationStyle(myLocationStyle);
+        isDragging = true;
     }
     
     /**
@@ -254,7 +260,14 @@ public class MapFragment extends Fragment {
             }
             return false;
         });
-        
+
+        aMap.setOnMapTouchListener(new AMap.OnMapTouchListener() {
+            @Override
+            public void onTouch(MotionEvent motionEvent) {
+                isDragging = false;
+            }
+        });
+
         // 设置地图加载完成监听器
         aMap.setOnMapLoadedListener(() -> {
             Log.d(TAG, "地图加载完成");
@@ -386,7 +399,7 @@ public class MapFragment extends Fragment {
             locationOption.setInterval(MIN_TIME_BETWEEN_UPDATES);
             locationOption.setNeedAddress(true);
             locationOption.setOnceLocation(false);
-            locationOption.setWifiActiveScan(true);
+            locationOption.setWifiScan(true);
             locationOption.setMockEnable(false);
             
             locationClient.setLocationOption(locationOption);
@@ -416,10 +429,10 @@ public class MapFragment extends Fragment {
             lastAMapLocation = aMapLocation;
             Log.d(TAG, "高德定位成功: " + aMapLocation.getLatitude() + ", " + aMapLocation.getLongitude() + 
                   ", 城市: " + aMapLocation.getCity() + ", 地址: " + aMapLocation.getAddress());
-            
-            // 可选：更新当前位置标记（如果需要）
-            // updateCurrentLocationMarker(aMapLocation);
-            
+            if(isDragging){
+                aMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(aMapLocation.getLatitude(), aMapLocation.getLongitude()), 17));
+            }
+
         } else {
             // 定位失败
             Log.e(TAG, "高德定位失败: " + aMapLocation.getErrorCode() + ", " + aMapLocation.getErrorInfo());
@@ -559,36 +572,6 @@ public class MapFragment extends Fragment {
     }
     
 
-    
-
-    
-    /**
-     * 在当前位置添加足迹点（优化版本）
-     * 改进了位置获取和错误处理逻辑
-     */
-    /**
-     * 处理权限请求结果
-     */
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, "位置权限已授予，启用定位功能");
-                // 权限被授予，启用定位功能
-                enableMyLocation();
-                // 如果是从添加足迹触发的权限请求，重新尝试添加足迹
-                if (pendingAddFootprint) {
-                    pendingAddFootprint = false;
-                    addCurrentLocationFootprint();
-                }
-            } else {
-                Log.w(TAG, "位置权限被拒绝");
-                showToast("需要位置权限才能使用定位功能");
-                pendingAddFootprint = false;
-            }
-        }
-    }
 
     private void addCurrentLocationFootprint() {
         try {
@@ -906,6 +889,7 @@ public class MapFragment extends Fragment {
         View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_footprint_message_info, null);
         
         // 获取布局中的控件
+        ImageView avatarView = dialogView.findViewById(R.id.image_view_avatar); // 用户头像
         TextView creatorView = dialogView.findViewById(R.id.text_view_creator);
         TextView dateView = dialogView.findViewById(R.id.text_view_date);
         TextView tagView = dialogView.findViewById(R.id.text_view_tag);
@@ -927,6 +911,10 @@ public class MapFragment extends Fragment {
         TextView tvCommentCount = dialogView.findViewById(R.id.tv_comment_count);
         
         // 设置基本数据
+        // 设置用户头像
+        setUserAvatarInDialog(avatarView, message);
+        
+        // 设置用户昵称（createBy字段）
         creatorView.setText(message.getCreateBy() != null ? message.getCreateBy() : "匿名用户");
         dateView.setText(message.getCreateTime() != null ? message.getCreateTime() : "未知时间");
         tagView.setText(message.getTag() != null ? message.getTag() : "动态");
@@ -1261,5 +1249,31 @@ public class MapFragment extends Fragment {
                 }
             }
         );
+    }
+    
+    /**
+     * 在对话框中设置用户头像
+     * @param avatarView 头像ImageView控件
+     * @param message 足迹消息对象
+     */
+    private void setUserAvatarInDialog(ImageView avatarView, FootprintMessage message) {
+        if (avatarView != null) {
+            String userAvatar = message.getUserAvatar();
+            if (userAvatar != null && !userAvatar.isEmpty()) {
+                // 构建完整的头像URL
+                String avatarUrl = getFullImageUrl(userAvatar);
+                
+                // 使用Glide加载头像，设置圆形裁剪
+                Glide.with(this)
+                    .load(avatarUrl)
+                    .placeholder(R.drawable.ic_default_avatar) // 加载中显示的默认头像
+                    .error(R.drawable.ic_default_avatar) // 加载失败显示的默认头像
+                    .circleCrop() // 圆形裁剪
+                    .into(avatarView);
+            } else {
+                // 没有头像时显示默认头像
+                avatarView.setImageResource(R.drawable.ic_default_avatar);
+            }
+        }
     }
 }

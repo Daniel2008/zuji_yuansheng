@@ -66,6 +66,9 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         // 格式化时间显示
         formatDateTime(holder, message.getCreateTime());
         
+        // 设置用户头像
+        setUserAvatar(holder, message);
+        
         // 设置位置信息
         setLocationInfo(holder, message);
         
@@ -87,6 +90,40 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
                 onItemClickListener.onItemClick(message, position);
             }
         });
+    }
+    
+    /**
+     * 设置用户头像
+     * @param holder ViewHolder
+     * @param message 足迹消息
+     */
+    private void setUserAvatar(ViewHolder holder, FootprintMessage message) {
+        if (holder.imageViewAvatar != null) {
+            String userAvatar = message.getUserAvatar();
+            if (userAvatar != null && !userAvatar.isEmpty()) {
+                // 构建完整的头像URL
+                String avatarUrl = getFullImageUrl(userAvatar);
+                
+                // 使用Glide加载头像
+                Glide.with(context)
+                    .load(avatarUrl)
+                    .placeholder(R.drawable.ic_default_avatar)
+                    .error(R.drawable.ic_default_avatar)
+                    .circleCrop()
+                    .into(holder.imageViewAvatar);
+                    
+                // 设置头像点击事件
+                holder.imageViewAvatar.setOnClickListener(v -> {
+                    if (onItemClickListener != null) {
+                        onItemClickListener.onUserAvatarClick(message, holder.getAdapterPosition());
+                    }
+                });
+            } else {
+                // 没有头像时显示默认头像
+                holder.imageViewAvatar.setImageResource(R.drawable.ic_default_avatar);
+                holder.imageViewAvatar.setOnClickListener(null);
+            }
+        }
     }
     
     /**
@@ -565,6 +602,9 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         View bottomLineView;
         View timelineDot;
         
+        // 用户头像控件
+        ImageView imageViewAvatar;
+        
         // 内容相关控件
         TextView locationTextView;
         TextView categoryTextView;
@@ -599,6 +639,9 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
             topLineView = itemView.findViewById(R.id.view_timeline_top);
             bottomLineView = itemView.findViewById(R.id.view_timeline_bottom);
             timelineDot = itemView.findViewById(R.id.view_timeline_dot);
+            
+            // 初始化用户头像控件
+            imageViewAvatar = itemView.findViewById(R.id.image_view_avatar);
             
             // 初始化内容控件
             locationTextView = itemView.findViewById(R.id.text_view_location);

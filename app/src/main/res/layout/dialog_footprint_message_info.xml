@@ -60,22 +60,16 @@
         app:layout_constraintTop_toTopOf="@+id/text_view_creator"
         tools:text="动态" />
 
-    <!-- 足迹消息内容卡片 -->
-    <androidx.cardview.widget.CardView
-        android:id="@+id/card_view_content"
+    <!-- 足迹消息内容区域 -->
+    <LinearLayout
+        android:id="@+id/layout_content"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        app:cardCornerRadius="8dp"
-        app:cardElevation="2dp"
+        android:orientation="vertical"
+        android:padding="12dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/text_view_date">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="12dp">
 
             <!-- 消息内容 -->
             <TextView
@@ -242,7 +236,6 @@
 
             </LinearLayout>
 
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

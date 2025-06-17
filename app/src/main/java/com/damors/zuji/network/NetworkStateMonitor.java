@@ -25,7 +25,7 @@ import java.util.concurrent.Executors;
  */
 public class NetworkStateMonitor {
     private static final String TAG = "NetworkStateMonitor";
-    private static final String TEST_URL = "https://www.baidu.com"; // 用于测试网络连接的URL
+    private static final String TEST_URL = "https://zuji.damors.com"; // 用于测试网络连接的URL
     private static final int CONNECTION_TIMEOUT_MS = 3000; // 连接超时时间
     private static final long NETWORK_CHECK_DEBOUNCE_MS = 2000; // 网络检测防抖时间（2秒）
 

@@ -19,6 +19,7 @@ import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.response.LoginResponse;
 import com.damors.zuji.network.HutoolApiService;
 import com.damors.zuji.utils.DeviceUtils;
+import com.damors.zuji.utils.LoadingDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -33,6 +34,7 @@ public class LoginActivity extends AppCompatActivity {
     private MaterialButton loginButton;
     private CountDownTimer countDownTimer;
     private HutoolApiService apiService;
+    private LoadingDialog loadingDialog; // 加载弹窗
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +47,9 @@ public class LoginActivity extends AppCompatActivity {
         initViews();
         // 初始化API服务
         apiService = HutoolApiService.getInstance(this);
+        
+        // 初始化加载弹窗
+        loadingDialog = new LoadingDialog(this);
         // 设置点击事件
         setupClickListeners();
     }
@@ -125,24 +130,24 @@ public class LoginActivity extends AppCompatActivity {
                                 return;
                             }
                             
-                            // 尝试解析JSON
+                            // 尝试解析JSON响应
                             JSONObject jsonResponse = new JSONObject(response);
-                        
-                            // 获取状态码和消息
-                            int code = jsonResponse.optInt("code", 500);
-                            String msg = jsonResponse.optString("msg", "未知错误");
-                        
-                            if (code == 200) {
+                            // 检查是否包含成功消息
+                            String message = jsonResponse.optString("message", "");
+                            // 检查是否包含完整的响应结构（code, msg, data）
+                            Log.d("LoginActivity", "收到简化响应格式，默认为成功");
+                            if (message.contains("验证码发送成功")) {
                                 // 验证码发送成功，开始倒计时
                                 Toast.makeText(LoginActivity.this, "验证码已发送", Toast.LENGTH_SHORT).show();
                                 startCountdown();
                             } else {
-                                // 验证码发送失败
-                                Toast.makeText(LoginActivity.this, msg, Toast.LENGTH_SHORT).show();
-                                getVerificationCodeButton.setEnabled(true);
+                                // 根据响应内容判断
+                                Toast.makeText(LoginActivity.this, "验证码发送失败", Toast.LENGTH_SHORT).show();
                             }
+
                         } catch (Exception e) {
                             Log.e("LoginActivity", "解析验证码响应失败: " + e.getMessage(), e);
+                            Log.e("LoginActivity", "原始响应: " + response);
                             Toast.makeText(LoginActivity.this, "请求失败，请稍后重试", Toast.LENGTH_SHORT).show();
                             getVerificationCodeButton.setEnabled(true);
                         }
@@ -190,6 +195,7 @@ public class LoginActivity extends AppCompatActivity {
     void performLogin(String phone, String code) {
         // 显示加载状态
         loginButton.setEnabled(false);
+        loadingDialog.show("正在登录..."); // 显示登录等待弹窗
         Log.d("LoginActivity", "开始执行登录操作: phone=" + phone);
 
         // 获取设备ID
@@ -211,17 +217,22 @@ public class LoginActivity extends AppCompatActivity {
                             UserManager.getInstance().saveUserAndToken(userDataJson, token);
                             Log.d("LoginActivity", "用户信息已保存到UserManager");
 
+                            // 隐藏加载弹窗
+                            loadingDialog.dismiss();
+                            
                             // 跳转到主页面
                             Intent intent = new Intent(LoginActivity.this, MainActivity.class);
                             startActivity(intent);
                             finish();
                         } else {
                             Log.e("LoginActivity", "登录响应为空");
+                            loadingDialog.dismiss(); // 隐藏加载弹窗
                             Toast.makeText(LoginActivity.this, "登录失败，请稍后重试", Toast.LENGTH_SHORT).show();
                             loginButton.setEnabled(true);
                         }
                     } catch (Exception e) {
                         Log.e("LoginActivity", "处理登录响应时发生异常", e);
+                        loadingDialog.dismiss(); // 隐藏加载弹窗
                         Toast.makeText(LoginActivity.this, "请求失败，请稍后重试", Toast.LENGTH_SHORT).show();
                         loginButton.setEnabled(true);
                     }
@@ -229,6 +240,7 @@ public class LoginActivity extends AppCompatActivity {
                 errorMessage -> {
                     // 处理登录失败
                     Log.e("LoginActivity", "登录失败: " + errorMessage);
+                    loadingDialog.dismiss(); // 隐藏加载弹窗
                     Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
                     loginButton.setEnabled(true);
                 });
@@ -242,6 +254,10 @@ public class LoginActivity extends AppCompatActivity {
         // 取消倒计时
         if (countDownTimer != null) {
             countDownTimer.cancel();
+        }
+        // 确保加载弹窗被关闭，避免内存泄漏
+        if (loadingDialog != null) {
+            loadingDialog.dismiss();
         }
     }
 }

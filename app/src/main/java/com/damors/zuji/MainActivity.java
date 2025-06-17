@@ -199,10 +199,6 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // 权限被授予
-                if (mapFragment != null) {
-                    mapFragment.enableMyLocation();
-                }
                 // 开始获取位置更新
                 startLocationUpdates();
             } else {

@@ -25,6 +25,7 @@ import androidx.lifecycle.ViewModelProvider;
 import com.amap.api.maps.offlinemap.OfflineMapActivity;
 import com.bumptech.glide.Glide;
 import com.damors.zuji.manager.UserManager;
+import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.utils.MapCacheManager;
 import com.damors.zuji.viewmodel.FootprintViewModel;
 import com.google.gson.JsonObject;
@@ -301,10 +302,13 @@ public class ProfileFragment extends Fragment {
             // 更新用户头像
             String avatar = getUserFieldSafely(userObj, "avatar");
             if (!TextUtils.isEmpty(avatar) && imageViewAvatar != null) {
+                // 拼接完整的头像URL
+                String avatarUrl = ApiConfig.getImageBaseUrl() + avatar;
                 Glide.with(this)
-                    .load(avatar)
+                    .load(avatarUrl)
                     .placeholder(R.drawable.default_avatar)
                     .error(R.drawable.default_avatar)
+                    .circleCrop()
                     .into(imageViewAvatar);
             }
             
@@ -323,8 +327,7 @@ public class ProfileFragment extends Fragment {
             String footPrintCountStr = getUserFieldSafely(userObj, "footPrintCount");
             if (!TextUtils.isEmpty(footPrintCountStr) && textViewFootprintCount != null) {
                 try {
-                    int footPrintCount = Integer.parseInt(footPrintCountStr);
-                    textViewFootprintCount.setText(String.valueOf(footPrintCount));
+                    textViewFootprintCount.setText(footPrintCountStr);
                 } catch (NumberFormatException e) {
                     textViewFootprintCount.setText("0");
                 }
@@ -334,8 +337,7 @@ public class ProfileFragment extends Fragment {
             String cityCountStr = getUserFieldSafely(userObj, "cityCount");
             if (!TextUtils.isEmpty(cityCountStr) && textViewCityCount != null) {
                 try {
-                    int cityCount = Integer.parseInt(cityCountStr);
-                    textViewCityCount.setText(String.valueOf(cityCount));
+                    textViewCityCount.setText(cityCountStr);
                 } catch (NumberFormatException e) {
                     textViewCityCount.setText("0");
                 }
@@ -345,8 +347,7 @@ public class ProfileFragment extends Fragment {
             String dayCountStr = getUserFieldSafely(userObj, "dayCount");
             if (!TextUtils.isEmpty(dayCountStr) && textViewDaysCount != null) {
                 try {
-                    int dayCount = Integer.parseInt(dayCountStr);
-                    textViewDaysCount.setText(String.valueOf(dayCount));
+                    textViewDaysCount.setText(dayCountStr);
                 } catch (NumberFormatException e) {
                     textViewDaysCount.setText("0");
                 }

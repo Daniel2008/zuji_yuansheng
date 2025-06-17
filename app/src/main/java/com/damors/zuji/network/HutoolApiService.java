@@ -3,6 +3,7 @@ package com.damors.zuji.network;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.TextUtils;
 import android.util.Log;
 
 import cn.hutool.core.util.ObjectUtil;
@@ -442,6 +443,9 @@ public class HutoolApiService {
         if (jsonObj.containsKey("createTime")) {
             message.setCreateTime(jsonObj.getStr("createTime"));
         }
+        if (jsonObj.containsKey("createBy")) {
+            message.setCreateBy(jsonObj.getStr("createBy"));
+        }
         
         // 解析点赞相关字段
         Log.d(TAG, "解析足迹消息，检查点赞相关字段: " + jsonObj.toString());
@@ -787,12 +791,9 @@ public class HutoolApiService {
                            ErrorCallback errorCallback,
                            LoadingCallback loadingCallback) {
         String url = BASE_URL + ApiConfig.Endpoints.GET_USER_INFO;
-        
+
         // 准备请求参数
         Map<String, Object> params = new HashMap<>();
-        params.put("token", token);
-        
-        Log.d(TAG, "发起获取用户信息请求: token=" + token);
         
         executePostRequest(url, params, UserInfoResponse.class, successCallback, errorCallback, loadingCallback);
     }
@@ -995,43 +996,135 @@ public class HutoolApiService {
         executePostRequest(url, params, AppUpdateInfo.class, successCallback, errorCallback);
     }
     
+
+    
     /**
-     * 保存用户信息
+     * 上传头像文件
      * 
-     * @param token 用户token
-     * @param nickName 用户昵称
-     * @param avatarFile 头像文件（可为null）
-     * @param successCallback 成功回调
+     * @param avatarFile 头像文件
+     * @param successCallback 成功回调，返回fileName
      * @param errorCallback 错误回调
      */
-    public void saveUserInfo(String token, String nickName, File avatarFile,
+    public void uploadAvatar(File avatarFile,
                             SuccessCallback<String> successCallback,
                             ErrorCallback errorCallback) {
-        saveUserInfo(token, nickName, avatarFile, successCallback, errorCallback, null);
+        String url = BASE_URL + "upload"; // 使用指定的upload接口
+        
+        // 检查网络状态
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "网络不可用，无法上传头像");
+            showNetworkUnavailableMessage();
+            if (errorCallback != null) {
+                mainHandler.post(() -> errorCallback.onError("网络不可用，请检查网络连接"));
+            }
+            return;
+        }
+        
+        // 在后台线程执行头像上传请求
+        executorService.execute(() -> {
+            try {
+                Log.d(TAG, "上传头像文件: " + avatarFile.getName() + ", 大小: " + avatarFile.length() + " bytes");
+                
+                // 构建multipart请求
+                HttpRequest request = HttpRequest.post(url)
+                        .headerMap(getCommonHeaders(), true)
+                        .timeout(TIMEOUT_MS);
+                
+                // 添加文件参数，参数名为file
+                request.form("file", avatarFile);
+                
+                // 执行请求
+                String response = request.execute().body();
+                
+                Log.d(TAG, "头像上传响应: " + response);
+                
+                // 解析响应，提取fileName
+                try {
+                    JSONObject jsonResponse = new JSONObject(response);
+                    String fileName = null;
+                    
+                    // 检查响应格式，可能是直接返回fileName或在data中
+                    if (jsonResponse.containsKey("fileName")) {
+                        fileName = jsonResponse.getStr("fileName");
+                    } else if (jsonResponse.containsKey("data")) {
+                        Object dataObj = jsonResponse.get("data");
+                        if (dataObj instanceof JSONObject) {
+                            JSONObject dataJson = (JSONObject) dataObj;
+                            if (dataJson.containsKey("fileName")) {
+                                fileName = dataJson.getStr("fileName");
+                            }
+                        } else if (dataObj instanceof String) {
+                            fileName = (String) dataObj;
+                        }
+                    }
+                    
+                    final String finalFileName = fileName; // 创建final变量供lambda使用
+                    
+                    if (finalFileName != null && !finalFileName.isEmpty()) {
+                        Log.d(TAG, "头像上传成功，获取到fileName: " + finalFileName);
+                        // 在主线程回调成功，返回fileName
+                        mainHandler.post(() -> {
+                            if (successCallback != null) {
+                                successCallback.onSuccess(finalFileName);
+                            }
+                        });
+                    } else {
+                        Log.e(TAG, "头像上传响应中未找到fileName字段");
+                        mainHandler.post(() -> {
+                            if (errorCallback != null) {
+                                errorCallback.onError("头像上传失败：响应中未找到fileName");
+                            }
+                        });
+                    }
+                } catch (Exception parseException) {
+                    Log.e(TAG, "解析头像上传响应失败", parseException);
+                    mainHandler.post(() -> {
+                        if (errorCallback != null) {
+                            errorCallback.onError("头像上传失败：响应解析错误");
+                        }
+                    });
+                }
+                
+            } catch (Exception e) {
+                Log.e(TAG, "头像上传请求异常: " + url, e);
+                
+                // 在主线程回调错误
+                mainHandler.post(() -> {
+                    if (errorCallback != null) {
+                        errorCallback.onError("头像上传失败: " + e.getMessage());
+                    }
+                });
+            }
+        });
     }
-    
+
     /**
      * 保存用户信息（带加载回调）
      * 
-     * @param token 用户token
-     * @param nickName 用户昵称
+     * @param userInfoJson 完整的用户信息JSON字符串
      * @param avatarFile 头像文件（可为null）
      * @param successCallback 成功回调
      * @param errorCallback 错误回调
      * @param loadingCallback 加载状态回调
      */
-    public void saveUserInfo(String token, String nickName, File avatarFile,
+    public void saveUserInfo(String userInfoJson, File avatarFile,
                             SuccessCallback<String> successCallback,
                             ErrorCallback errorCallback,
                             LoadingCallback loadingCallback) {
-        String url = BASE_URL + ApiConfig.Endpoints.SAVE_USER_INFO;
         
-        // 检查网络状态
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法保存用户信息");
-            showNetworkUnavailableMessage();
+        // 从用户信息JSON中提取token和nickName
+        String nickName = null;
+        
+        try {
+            JSONObject userObj = new JSONObject(userInfoJson);
+
+            if (userObj.containsKey("nickName")) {
+                nickName = userObj.getStr("nickName");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "解析用户信息JSON失败", e);
             if (errorCallback != null) {
-                mainHandler.post(() -> errorCallback.onError("网络不可用，请检查网络连接"));
+                mainHandler.post(() -> errorCallback.onError("用户信息格式错误"));
             }
             return;
         }
@@ -1041,26 +1134,74 @@ public class HutoolApiService {
             mainHandler.post(() -> loadingCallback.onLoadingStart());
         }
         
+        // 如果有头像文件，先上传头像
+        if (avatarFile != null && avatarFile.exists()) {
+            uploadAvatar(avatarFile, 
+                // 头像上传成功回调
+                fileName -> {
+                    Log.d(TAG, "头像上传成功，获取到fileName: " + fileName + "，开始保存用户信息");
+                    // 头像上传成功后，保存用户信息（包含头像fileName）
+                    saveUserInfoWithAvatar(userInfoJson, fileName, successCallback, errorCallback, loadingCallback);
+                },
+                // 头像上传失败回调
+                avatarError -> {
+                    Log.e(TAG, "头像上传失败: " + avatarError);
+                    // 头像上传失败，但仍然尝试保存用户信息（不包含头像）
+                    saveUserInfoWithoutAvatar(userInfoJson, successCallback, errorCallback, loadingCallback);
+                }
+            );
+        } else {
+            // 没有头像文件，直接保存用户信息
+            saveUserInfoWithoutAvatar(userInfoJson, successCallback, errorCallback, loadingCallback);
+        }
+    }
+    
+    /**
+     * 保存用户信息（包含头像fileName）
+     * 
+     * @param userInfoJson 完整的用户信息JSON字符串
+     * @param avatarFileName 头像文件名
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     * @param loadingCallback 加载状态回调
+     */
+    private void saveUserInfoWithAvatar(String userInfoJson, String avatarFileName,
+                                       SuccessCallback<String> successCallback,
+                                       ErrorCallback errorCallback,
+                                       LoadingCallback loadingCallback) {
+        String url = BASE_URL + ApiConfig.Endpoints.SAVE_USER_INFO;
+        
+        // 检查网络状态
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "网络不可用，无法保存用户信息");
+            showNetworkUnavailableMessage();
+            if (errorCallback != null) {
+                mainHandler.post(() -> errorCallback.onError("网络不可用，请检查网络连接"));
+            }
+            if (loadingCallback != null) {
+                mainHandler.post(() -> loadingCallback.onLoadingEnd());
+            }
+            return;
+        }
+        
         // 在后台线程执行用户信息保存请求
         executorService.execute(() -> {
             try {
-                Log.d(TAG, "保存用户信息: token=" + token + ", nickName=" + nickName + 
-                          ", hasAvatar=" + (avatarFile != null && avatarFile.exists()));
+                Log.d(TAG, "保存用户信息，包含头像: " + avatarFileName);
                 
-                // 构建multipart请求
+                // 解析用户信息JSON并添加头像fileName
+                JSONObject jsonParams = new JSONObject(userInfoJson);
+                jsonParams.set("avatar", avatarFileName); // 更新头像fileName
+                jsonParams.remove("dept");
+                // 获取通用请求头并添加JSON Content-Type
+                Map<String, String> headers = getCommonHeaders();
+                headers.put("Content-Type", "application/json");
+                
+                // 构建请求
                 HttpRequest request = HttpRequest.post(url)
-                        .headerMap(getCommonHeaders(), true)
-                        .timeout(TIMEOUT_MS);
-                
-                // 添加普通表单字段
-                request.form("token", token);
-                request.form("nickName", nickName);
-                
-                // 添加头像文件（如果存在）
-                if (avatarFile != null && avatarFile.exists()) {
-                    request.form("avatar", avatarFile);
-                    Log.d(TAG, "添加头像文件: " + avatarFile.getName() + ", 大小: " + avatarFile.length() + " bytes");
-                }
+                        .headerMap(headers, true)
+                        .timeout(TIMEOUT_MS)
+                        .body(jsonParams.toString());
                 
                 // 执行请求
                 String response = request.execute().body();
@@ -1069,7 +1210,77 @@ public class HutoolApiService {
                 
                 // 处理响应
                 handleResponse(response, String.class, successCallback, errorCallback, 
-                             url, new HashMap<>(), loadingCallback);
+                             url, jsonParams, loadingCallback);
+                
+            } catch (Exception e) {
+                Log.e(TAG, "保存用户信息请求异常: " + url, e);
+                
+                // 在主线程回调错误
+                mainHandler.post(() -> {
+                    if (errorCallback != null) {
+                        errorCallback.onError("保存用户信息失败: " + e.getMessage());
+                    }
+                    if (loadingCallback != null) {
+                        loadingCallback.onLoadingEnd();
+                    }
+                });
+            }
+        });
+    }
+    
+    /**
+     * 保存用户信息（不包含头像文件）
+     * 
+     * @param userInfoJson 完整的用户信息JSON字符串
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     * @param loadingCallback 加载状态回调
+     */
+    private void saveUserInfoWithoutAvatar(String userInfoJson,
+                                          SuccessCallback<String> successCallback,
+                                          ErrorCallback errorCallback,
+                                          LoadingCallback loadingCallback) {
+        String url = BASE_URL + ApiConfig.Endpoints.SAVE_USER_INFO;
+        
+        // 检查网络状态
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "网络不可用，无法保存用户信息");
+            showNetworkUnavailableMessage();
+            if (errorCallback != null) {
+                mainHandler.post(() -> errorCallback.onError("网络不可用，请检查网络连接"));
+            }
+            if (loadingCallback != null) {
+                mainHandler.post(() -> loadingCallback.onLoadingEnd());
+            }
+            return;
+        }
+        
+        // 在后台线程执行用户信息保存请求
+        executorService.execute(() -> {
+            try {
+                Log.d(TAG, "保存用户信息（不包含头像）");
+                
+                // 解析用户信息JSON
+                JSONObject jsonParams = new JSONObject(userInfoJson);
+                jsonParams.remove("dept");
+                // 获取通用请求头并添加JSON Content-Type
+                Map<String, String> headers = getCommonHeaders();
+                headers.put("Content-Type", "application/json");
+                
+                // 构建请求
+                HttpRequest request = HttpRequest.post(url)
+                        .headerMap(headers, true)
+                        .timeout(TIMEOUT_MS)
+                        .body(jsonParams.toString());
+                
+                // 执行请求
+                String response = request.execute().body();
+                
+                Log.d(TAG, "保存用户信息响应: " + response);
+                
+                // 处理响应
+                handleResponse(response, String.class, successCallback, errorCallback, 
+                             url, jsonParams, loadingCallback);
                 
             } catch (Exception e) {
                 Log.e(TAG, "保存用户信息请求异常: " + url, e);
@@ -1108,22 +1319,6 @@ public class HutoolApiService {
         Log.d(TAG, "检查应用更新: currentVersionCode=" + currentVersionCode);
         
         executePostRequest(url, params, AppUpdateInfo.class, successCallback, errorCallback, loadingCallback);
-    }
-
-    /**
-     * 销毁服务，释放资源
-     */
-    public void destroy() {
-        if (networkStateMonitor != null) {
-            networkStateMonitor.removeNetworkStateListener(networkStateListener);
-        }
-        
-        if (executorService != null && !executorService.isShutdown()) {
-            executorService.shutdown();
-        }
-        
-        pendingRequests.clear();
-        instance = null;
     }
 
     /**

@@ -202,10 +202,13 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             
             // 设置用户头像
             if (!TextUtils.isEmpty(reply.getUserAvatar())) {
+                // 构建完整的头像URL
+                String replyAvatarUrl = ApiConfig.getImageBaseUrl() + reply.getUserAvatar();
                 Glide.with(context)
-                    .load(reply.getUserAvatar())
+                    .load(replyAvatarUrl)
                     .placeholder(R.drawable.ic_default_avatar)
                     .error(R.drawable.ic_default_avatar)
+                    .circleCrop() // 添加圆形裁剪，与主评论保持一致
                     .into(ivUserAvatar);
             } else {
                 ivUserAvatar.setImageResource(R.drawable.ic_default_avatar);
