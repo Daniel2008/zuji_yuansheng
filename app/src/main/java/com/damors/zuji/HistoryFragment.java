@@ -20,6 +20,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.damors.zuji.ImagePreviewActivity;
 import com.damors.zuji.CommentListActivity;
@@ -43,16 +44,18 @@ import java.util.List;
 public class HistoryFragment extends Fragment {
 
     private static final String TAG = "HistoryFragment";
-    private static final int PAGE_SIZE = 20; // 每页显示数量
+    private static final int PAGE_SIZE = 10; // 每页显示数量
     
     private FootprintViewModel viewModel;
     private RecyclerView recyclerView;
+    private SwipeRefreshLayout swipeRefreshLayout;
     private FootprintMessageAdapter adapter;
     private HutoolApiService apiService;
     private TextView emptyView;
     private LoadingDialog loadingDialog;
     private int currentPage = 1;
     private boolean isLoading = false;
+    private boolean hasMoreData = true; // 是否还有更多数据
     private List<FootprintMessage> footprintMessages = new ArrayList<>();
 
     @Nullable
@@ -66,9 +69,44 @@ public class HistoryFragment extends Fragment {
         // 初始化加载对话框
         loadingDialog = new LoadingDialog(requireContext());
         
+        // 初始化下拉刷新布局
+        swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_layout);
+        swipeRefreshLayout.setColorSchemeResources(
+            android.R.color.holo_blue_bright,
+            android.R.color.holo_green_light,
+            android.R.color.holo_orange_light,
+            android.R.color.holo_red_light
+        );
+        
+        // 设置下拉刷新监听器
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            refreshData();
+        });
+        
         // 初始化RecyclerView
         recyclerView = view.findViewById(R.id.recycler_view);
-        recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+        LinearLayoutManager layoutManager = new LinearLayoutManager(requireContext());
+        recyclerView.setLayoutManager(layoutManager);
+        
+        // 添加滚动监听器实现上拉加载更多
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                
+                // 检查是否滚动到底部
+                if (!isLoading && hasMoreData && dy > 0) {
+                    int visibleItemCount = layoutManager.getChildCount();
+                    int totalItemCount = layoutManager.getItemCount();
+                    int firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition();
+                    
+                    // 当滚动到倒数第3个item时开始加载下一页
+                    if ((visibleItemCount + firstVisibleItemPosition) >= totalItemCount - 3) {
+                        loadMoreData();
+                    }
+                }
+            }
+        });
         
         // 初始化适配器，使用足迹动态适配器
         adapter = new FootprintMessageAdapter(requireContext(), footprintMessages);
@@ -169,15 +207,20 @@ public class HistoryFragment extends Fragment {
                 new HutoolApiService.LoadingCallback() {
                     @Override
                     public void onLoadingStart() {
-                        if (currentPage == 1) {
-                            // 首次加载显示加载对话框
+                        if (currentPage == 1 && !swipeRefreshLayout.isRefreshing()) {
+                            // 首次加载且不是下拉刷新时显示加载对话框
                             loadingDialog.show("正在加载足迹动态...");
                         }
                     }
 
                     @Override
                     public void onLoadingEnd() {
-                        if (currentPage == 1) {
+                        // 停止下拉刷新动画
+                        if (swipeRefreshLayout.isRefreshing()) {
+                            swipeRefreshLayout.setRefreshing(false);
+                        }
+                        
+                        if (currentPage == 1 && !swipeRefreshLayout.isRefreshing()) {
                             // 首次加载隐藏加载对话框
                             loadingDialog.dismiss();
                         }
@@ -202,15 +245,19 @@ public class HistoryFragment extends Fragment {
             // 添加新数据
             footprintMessages.addAll(newMessages);
             
+            // 检查是否还有更多数据
+            hasMoreData = newMessages.size() >= PAGE_SIZE;
+            
             // 更新适配器
             adapter.notifyDataSetChanged();
             
             // 更新UI显示状态
             updateUIVisibility();
             
-            Log.d(TAG, "成功加载 " + newMessages.size() + " 条足迹动态数据");
+            Log.d(TAG, "成功加载 " + newMessages.size() + " 条足迹动态数据，当前页码: " + currentPage + "，是否有更多数据: " + hasMoreData);
         } else {
             Log.w(TAG, "获取到的足迹动态数据为空");
+            hasMoreData = false;
             updateUIVisibility();
         }
     }
@@ -251,6 +298,20 @@ public class HistoryFragment extends Fragment {
      */
     public void refreshData() {
         currentPage = 1;
+        hasMoreData = true;
+        loadFootprintMessages();
+    }
+    
+    /**
+     * 加载更多数据
+     */
+    private void loadMoreData() {
+        if (!hasMoreData || isLoading) {
+            return;
+        }
+        
+        currentPage++;
+        Log.d(TAG, "开始加载更多数据，页码: " + currentPage);
         loadFootprintMessages();
     }
 

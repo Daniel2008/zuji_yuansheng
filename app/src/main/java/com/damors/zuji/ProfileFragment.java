@@ -143,26 +143,24 @@ public class ProfileFragment extends Fragment {
         });
         */
         
-        // 设置固定的足迹数量显示
-        textViewFootprintCount.setText("0");
-        
-        // 观察城市数量变化，更新统计信息
-        viewModel.getCityCount().observe(getViewLifecycleOwner(), cityCount -> {
-            if (cityCount != null) {
-                textViewCityCount.setText(String.format("%d", cityCount));
-            } else {
-                textViewCityCount.setText("0");
-            }
-        });
-        
         // 刷新数据
         viewModel.refreshFootprints();
         
         // 加载用户数据
         loadUserData();
         
+        // 设置定时刷新机制，每30秒从缓存刷新一次数据
+        startPeriodicRefresh();
+        
         // 加载缓存大小信息
         loadCacheSize();
+    }
+    
+    @Override
+    public void onResume() {
+        super.onResume();
+        // 页面恢复时刷新统计数据，从缓存中读取最新数据
+        refreshUserDataFromCache();
     }
     
     @Override
@@ -170,6 +168,36 @@ public class ProfileFragment extends Fragment {
         super.onDestroy();
         if (executorService != null && !executorService.isShutdown()) {
             executorService.shutdown();
+        }
+    }
+    
+    /**
+     * 从缓存刷新用户数据
+     */
+    private void refreshUserDataFromCache() {
+        if (userManager != null && userManager.isLoggedIn()) {
+            // 直接从缓存读取用户数据，无需网络请求
+            loadUserData();
+            Log.d("ProfileFragment", "从缓存刷新用户数据");
+        }
+    }
+    
+    /**
+     * 启动定时刷新机制
+     */
+    private void startPeriodicRefresh() {
+        if (mainHandler != null) {
+            // 每30秒从缓存刷新一次数据
+            mainHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    if (isAdded() && getContext() != null) {
+                        refreshUserDataFromCache();
+                        // 继续下一次定时刷新
+                        mainHandler.postDelayed(this, 30000);
+                    }
+                }
+            }, 30000);
         }
     }
     
@@ -377,8 +405,9 @@ public class ProfileFragment extends Fragment {
      * 设置默认用户信息
      */
     private void setDefaultUserInfo() {
+        Log.d("ProfileFragment", "设置默认用户信息");
         if (textViewUsername != null) {
-            textViewUsername.setText("用户名");
+            textViewUsername.setText("未登录用户");
         }
         if (textViewFootprintCount != null) {
             textViewFootprintCount.setText("0");
@@ -406,8 +435,8 @@ public class ProfileFragment extends Fragment {
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 1001 && resultCode == getActivity().RESULT_OK) {
-            // 编辑资料成功，重新加载用户数据
-            loadUserData();
+            // 编辑资料成功，从缓存重新加载用户数据
+            refreshUserDataFromCache();
             Toast.makeText(getContext(), "资料更新成功", Toast.LENGTH_SHORT).show();
         }
     }
