@@ -16,7 +16,6 @@
         android:background="@drawable/circle_background"
         android:scaleType="centerCrop"
         android:src="@drawable/ic_person"
-        app:layout_constraintStart_toEndOf="@+id/view_timeline_dot"
         app:layout_constraintTop_toTopOf="parent" />
 
     <!-- 创建者和时间 -->
