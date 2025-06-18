@@ -312,14 +312,34 @@ public class ProfileFragment extends Fragment {
      * 加载用户数据并更新UI
      */
     private void loadUserData() {
-        if (userManager == null || !userManager.isLoggedIn()) {
-            // 用户未登录，显示默认信息
+        Log.d("ProfileFragment", "开始加载用户数据");
+        
+        if (userManager == null) {
+            Log.w("ProfileFragment", "UserManager为null，显示默认信息");
             setDefaultUserInfo();
             return;
         }
         
+        boolean isLoggedIn = userManager.isLoggedIn();
         String userJson = userManager.getCurrentUserJson();
+        String token = userManager.getToken();
+        
+        Log.d("ProfileFragment", "登录状态检查: isLoggedIn=" + isLoggedIn);
+        Log.d("ProfileFragment", "用户JSON是否为空: " + TextUtils.isEmpty(userJson));
+        Log.d("ProfileFragment", "Token是否为空: " + TextUtils.isEmpty(token));
+        
+        if (!TextUtils.isEmpty(userJson)) {
+            Log.d("ProfileFragment", "用户JSON内容: " + userJson);
+        }
+        
+        if (!isLoggedIn) {
+            Log.w("ProfileFragment", "用户未登录，显示默认信息");
+            setDefaultUserInfo();
+            return;
+        }
+        
         if (TextUtils.isEmpty(userJson)) {
+            Log.w("ProfileFragment", "用户JSON为空，显示默认信息");
             setDefaultUserInfo();
             return;
         }

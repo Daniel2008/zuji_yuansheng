@@ -51,7 +51,15 @@ public class ImageGridAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         if (holder instanceof ImageHolder) {
             Uri imageUri = images.get(position);
-            Glide.with(context).load(imageUri).into(((ImageHolder) holder).imageView);
+            ImageHolder imageHolder = (ImageHolder) holder;
+            Glide.with(context).load(imageUri).into(imageHolder.imageView);
+
+            // 设置删除按钮点击事件
+            imageHolder.btnRemove.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onImageRemove(position);
+                }
+            });
 
             holder.itemView.setOnClickListener(v -> {
                 // 点击查看大图

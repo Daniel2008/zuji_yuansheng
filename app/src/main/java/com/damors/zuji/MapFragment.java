@@ -752,13 +752,27 @@ public class MapFragment extends Fragment {
         for (FootprintMessage message : messages) {
             if (message.getLat() != 0 && message.getLng() != 0) {
                 LatLng position = new LatLng(message.getLat(), message.getLng());
-                
                 // 创建足迹动态标记，使用旗帜图标
                 MarkerOptions markerOptions = new MarkerOptions()
-                    .position(position)
-                    .title(message.getCreateBy() + " - " + message.getTag())
-                    .snippet(message.getTextContent())
-                    .icon(BitmapDescriptorFactory.fromBitmap(ImageUtils.getBitmap(getContext(),R.drawable.ic_footprint_flag)));
+                        .position(position)
+                        .title(message.getCreateBy() + " - " + message.getTag())
+                        .snippet(message.getTextContent());
+                switch (message.getTag()){
+                    case "美食":{
+                        markerOptions.icon(BitmapDescriptorFactory.fromBitmap(ImageUtils.getBitmap(getContext(),R.drawable.ic_footprint_food_flag)));
+                    }
+                    break;
+                    case "景点":{
+                        markerOptions.icon(BitmapDescriptorFactory.fromBitmap(ImageUtils.getBitmap(getContext(),R.drawable.ic_footprint_attraction_flag)));
+                    }
+                    break;
+                    default:{
+
+                        markerOptions.icon(BitmapDescriptorFactory.fromBitmap(ImageUtils.getBitmap(getContext(),R.drawable.ic_footprint_flag)));
+                    }
+                    break;
+                }
+
                 
                 markerOptionsList.add(markerOptions);
             }

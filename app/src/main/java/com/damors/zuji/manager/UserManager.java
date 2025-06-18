@@ -48,6 +48,17 @@ public class UserManager {
     private void loadUserData() {
         currentUserJson = preferences.getString(KEY_USER, null);
         token = preferences.getString(KEY_TOKEN, null);
+        
+        android.util.Log.d("UserManager", "从SharedPreferences加载用户数据:");
+        android.util.Log.d("UserManager", "currentUserJson是否为空: " + TextUtils.isEmpty(currentUserJson));
+        android.util.Log.d("UserManager", "token是否为空: " + TextUtils.isEmpty(token));
+        
+        if (!TextUtils.isEmpty(currentUserJson)) {
+            android.util.Log.d("UserManager", "用户JSON内容: " + currentUserJson);
+        }
+        if (!TextUtils.isEmpty(token)) {
+            android.util.Log.d("UserManager", "Token内容: " + token);
+        }
     }
 
     /**
@@ -167,7 +178,20 @@ public class UserManager {
      * @return 是否已登录
      */
     public boolean isLoggedIn() {
-        return !TextUtils.isEmpty(currentUserJson) && !TextUtils.isEmpty(token);
+        boolean hasUserJson = !TextUtils.isEmpty(currentUserJson);
+        boolean hasToken = !TextUtils.isEmpty(token);
+        boolean result = hasUserJson && hasToken;
+        
+        android.util.Log.d("UserManager", "登录状态检查: hasUserJson=" + hasUserJson + ", hasToken=" + hasToken + ", result=" + result);
+        
+        if (!hasUserJson) {
+            android.util.Log.w("UserManager", "currentUserJson为空或null");
+        }
+        if (!hasToken) {
+            android.util.Log.w("UserManager", "token为空或null");
+        }
+        
+        return result;
     }
 
     /**
