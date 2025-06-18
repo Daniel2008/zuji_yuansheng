@@ -60,6 +60,15 @@ public class UserManager {
             android.util.Log.d("UserManager", "Token内容: " + token);
         }
     }
+    
+    /**
+     * 强制重新加载用户数据
+     * 用于解决登录后数据不同步的问题
+     */
+    public void reloadUserData() {
+        loadUserData();
+        android.util.Log.d("UserManager", "强制重新加载用户数据完成");
+    }
 
     /**
      * 保存用户JSON数据和token
@@ -84,7 +93,9 @@ public class UserManager {
             editor.remove(KEY_TOKEN);
         }
 
-        editor.apply();
+        // 使用commit()确保数据立即写入磁盘，解决登录后数据同步问题
+        boolean success = editor.commit();
+        android.util.Log.d("UserManager", "保存用户数据结果: " + success);
     }
 
     /**
@@ -98,8 +109,8 @@ public class UserManager {
             SharedPreferences legacyPrefs = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE);
             if (legacyPrefs.contains("token") || legacyPrefs.contains("user_data") || legacyPrefs.contains("is_logged_in")) {
                 android.util.Log.d("UserManager", "发现旧的登录数据，正在清理...");
-                legacyPrefs.edit().clear().apply();
-                android.util.Log.d("UserManager", "旧登录数据清理完成");
+                boolean success = legacyPrefs.edit().clear().commit();
+                android.util.Log.d("UserManager", "旧登录数据清理完成，结果: " + success);
             }
         } catch (Exception e) {
             android.util.Log.e("UserManager", "清理旧登录数据时发生错误", e);
@@ -113,7 +124,9 @@ public class UserManager {
     public void logout() {
         currentUserJson = null;
         token = null;
-        preferences.edit().clear().apply();
+        // 使用commit()确保数据立即清除
+        boolean success = preferences.edit().clear().commit();
+        android.util.Log.d("UserManager", "清除用户数据结果: " + success);
     }
     
     /**

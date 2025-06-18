@@ -146,8 +146,12 @@ public class ProfileFragment extends Fragment {
         // 刷新数据
         viewModel.refreshFootprints();
         
-        // 加载用户数据
-        loadUserData();
+        // 延迟加载用户数据，确保UserManager完全初始化
+        mainHandler.postDelayed(() -> {
+            if (isAdded() && getContext() != null) {
+                loadUserData();
+            }
+        }, 200);
         
         // 设置定时刷新机制，每30秒从缓存刷新一次数据
         startPeriodicRefresh();
@@ -161,6 +165,41 @@ public class ProfileFragment extends Fragment {
         super.onResume();
         // 页面恢复时刷新统计数据，从缓存中读取最新数据
         refreshUserDataFromCache();
+        
+        // 强制刷新用户数据，解决首次登录后显示未登录状态的问题
+        // 延迟执行以确保UserManager数据完全同步
+        mainHandler.postDelayed(() -> {
+            if (isAdded() && getContext() != null && userManager != null) {
+                userManager.reloadUserData();
+                loadUserData();
+                Log.d("ProfileFragment", "onResume中刷新用户数据完成");
+            }
+        }, 100);
+    }
+    
+    @Override
+    public void onStart() {
+        super.onStart();
+        // 页面启动时也刷新用户数据，确保登录状态同步
+        // 延迟执行以确保UserManager数据完全同步
+        mainHandler.postDelayed(() -> {
+            if (isAdded() && getContext() != null && userManager != null) {
+                userManager.reloadUserData();
+                loadUserData();
+                Log.d("ProfileFragment", "onStart中刷新用户数据完成");
+            }
+        }, 50);
+    }
+    
+    @Override
+    public void setUserVisibleHint(boolean isVisibleToUser) {
+        super.setUserVisibleHint(isVisibleToUser);
+        // 当Fragment对用户可见时，强制刷新用户数据
+        if (isVisibleToUser && isResumed() && userManager != null) {
+            Log.d("ProfileFragment", "Fragment变为可见，刷新用户数据");
+            userManager.reloadUserData();
+            loadUserData();
+        }
     }
     
     @Override
@@ -179,6 +218,25 @@ public class ProfileFragment extends Fragment {
             // 直接从缓存读取用户数据，无需网络请求
             loadUserData();
             Log.d("ProfileFragment", "从缓存刷新用户数据");
+        }
+    }
+    
+    /**
+     * 公共方法：刷新用户数据
+     * 供外部调用，用于在登录状态变化时刷新界面
+     */
+    public void refreshUserData() {
+        if (userManager != null && isAdded() && getContext() != null) {
+            // 强制重新加载用户数据，确保数据同步
+            userManager.reloadUserData();
+            
+            // 在主线程中延迟执行UI更新，确保数据完全同步
+            mainHandler.post(() -> {
+                if (isAdded() && getContext() != null) {
+                    loadUserData();
+                    Log.d("ProfileFragment", "外部调用刷新用户数据完成");
+                }
+            });
         }
     }
     

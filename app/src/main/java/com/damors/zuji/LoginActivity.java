@@ -218,10 +218,12 @@ public class LoginActivity extends AppCompatActivity {
                             // 隐藏加载弹窗
                             loadingDialog.dismiss();
                             
-                            // 跳转到主页面
+                            // 跳转到主页面（数据已通过commit()同步保存）
                             Intent intent = new Intent(LoginActivity.this, MainActivity.class);
                             startActivity(intent);
                             finish();
+                            
+                            Log.d("LoginActivity", "登录完成，已跳转到主页面");
                         } else {
                             Log.e("LoginActivity", "登录响应为空");
                             loadingDialog.dismiss(); // 隐藏加载弹窗

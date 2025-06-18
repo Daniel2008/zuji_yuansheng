@@ -7,6 +7,8 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -248,6 +250,24 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) 
                 == PackageManager.PERMISSION_GRANTED) {
             startLocationUpdates();
+        }
+        
+        // 检查用户登录状态变化，刷新ProfileFragment
+        refreshProfileFragmentIfNeeded();
+    }
+    
+    /**
+     * 如果需要，刷新个人资料Fragment
+     */
+    private void refreshProfileFragmentIfNeeded() {
+        if (profileFragment != null && profileFragment.isAdded()) {
+            // 延迟通知ProfileFragment刷新用户数据，确保登录数据完全同步
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (profileFragment != null && profileFragment.isAdded()) {
+                    profileFragment.refreshUserData();
+                    Log.d("MainActivity", "延迟刷新ProfileFragment完成");
+                }
+            }, 150);
         }
     }
     
