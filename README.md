@@ -100,8 +100,8 @@ app/src/main/java/com/damors/zuji/
 
 1. **克隆项目**
    ```bash
-   git clone https://github.com/your-username/zuji-android.git
-   cd zuji-android
+   git clone https://github.com/Daniel2008/zuji_yuansheng.git
+   cd zuji_yuansheng
    ```
 
 2. **配置高德地图API Key**
@@ -224,8 +224,8 @@ signingConfigs {
 
 - **项目维护者**：[您的姓名]
 - **邮箱**：your-email@example.com
-- **项目地址**：https://github.com/your-username/zuji-android
-- **问题反馈**：https://github.com/your-username/zuji-android/issues
+- **项目地址**：https://github.com/Daniel2008/zuji_yuansheng
+- **问题反馈**：https://github.com/Daniel2008/zuji_yuansheng/issues
 
 ## 🙏 致谢
 
