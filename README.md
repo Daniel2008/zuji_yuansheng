@@ -223,7 +223,7 @@ signingConfigs {
 ## 📞 联系我们
 
 - **项目维护者**：[您的姓名]
-- **邮箱**：your-email@example.com
+- **邮箱**：1413772573@qq.com
 - **项目地址**：https://github.com/Daniel2008/zuji_yuansheng
 - **问题反馈**：https://github.com/Daniel2008/zuji_yuansheng/issues
 
