@@ -57,8 +57,6 @@ public class LoginActivity extends AppCompatActivity {
     private void initViews() {
         phoneEditText = findViewById(R.id.phoneEditText);
         verificationCodeEditText = findViewById(R.id.verificationCodeEditText);
-        phoneEditText.setText("18201307930");
-        verificationCodeEditText.setText("313131");
         getVerificationCodeButton = findViewById(R.id.getVerificationCodeButton);
         countdownTextView = findViewById(R.id.countdownTextView);
         loginButton = findViewById(R.id.loginButton);
