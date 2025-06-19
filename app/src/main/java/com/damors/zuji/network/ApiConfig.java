@@ -4,8 +4,6 @@ package com.damors.zuji.network;
  * API配置类，集中管理API相关的配置信息
  */
 public class ApiConfig {
-    // 开发环境API地址
-    private static final String DEV_BASE_URL = "http://192.168.1.5:8080/zuji/api/";
 
     // 测试环境API地址
     private static final String TEST_BASE_URL = "http://192.168.1.5:8080/zuji/api/";
@@ -19,7 +17,7 @@ public class ApiConfig {
     private static final String PROD_IMAGE_BASE_URL = "https://zuji.damors.com";
 
     // 当前环境，可以通过BuildConfig.DEBUG等条件来自动切换
-    private static final boolean IS_PRODUCTION = true;
+    private static final boolean IS_PRODUCTION = false;
 
     /**
      * 获取当前环境的API基础URL

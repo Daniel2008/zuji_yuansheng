@@ -6,15 +6,6 @@ import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
 
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
-import cn.hutool.http.HttpRequest;
-import cn.hutool.http.HttpResponse;
-import cn.hutool.http.HttpUtil;
-import cn.hutool.json.JSONArray;
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
-
 import com.damors.zuji.ZujiApp;
 import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.UserInfoResponse;
@@ -28,6 +19,7 @@ import com.damors.zuji.model.AppUpdateInfo;
 import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.model.response.LoginResponse;
 import com.damors.zuji.model.response.FootprintMessageResponse;
+import com.google.gson.Gson;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -241,7 +233,7 @@ public class HutoolApiService {
         if (dataObj == null) {
             return null;
         }
-        
+        Gson gson = new Gson();
         try {
             if (responseClass == String.class) {
                 return (T) dataObj.toString();
@@ -258,7 +250,7 @@ public class HutoolApiService {
                     List<Comment> records = new ArrayList<>();
                     for (Object item : commentsArray) {
                         if (item instanceof JSONObject) {
-                            Comment comment = parseComment((JSONObject) item);
+                            Comment comment = gson.fromJson(JSON.toJSONString(item), Comment.class);
                             records.add(comment);
                         }
                     }

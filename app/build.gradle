@@ -57,7 +57,8 @@ dependencies {
     implementation 'de.hdodenhof:circleimageview:3.1.0'
     implementation 'cn.hutool:hutool-all:5.8.16'
     implementation 'com.github.chrisbanes:PhotoView:2.3.0'
-    
+    implementation 'com.alibaba:fastjson:1.2.83'
+
     testImplementation libs.junit
     testImplementation 'org.mockito:mockito-core:5.7.0'
     testImplementation 'org.mockito:mockito-inline:5.2.0'

@@ -217,8 +217,13 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             // 设置用户名
             tvUserName.setText(reply.getUserName() != null ? reply.getUserName() : "匿名用户");
             
-            // 设置回复内容
-            tvContent.setText(reply.getContent());
+            // 设置回复内容，体现"谁回复谁"的功能
+            String replyContent = reply.getContent();
+            if (!TextUtils.isEmpty(reply.getParentUserName())) {
+                // 如果有父评论用户信息，显示"XX回复XX"格式
+                replyContent = reply.getUserName() + " 回复 " + reply.getParentUserName() + ": " + reply.getContent();
+            }
+            tvContent.setText(replyContent);
             
             // 设置时间
             if (!TextUtils.isEmpty(reply.getCreateTime())) {

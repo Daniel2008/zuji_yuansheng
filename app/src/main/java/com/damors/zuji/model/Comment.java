@@ -9,6 +9,12 @@ public class Comment {
     private Integer id;           // 对应数据库表的id字段(int类型)
     private Integer msgId;        // 对应数据库表的msg_id字段(int类型) 
     private Integer parentId;     // 对应数据库表的parent_id字段(int类型)
+    /** 父评论用户ID（回复评论时使用） */
+    private Long parentUserId;
+    /** 父评论用户名称（回复评论时使用） */
+    private String parentUserName;
+    /** 父评论用户头像（回复评论时使用） */
+    private String parentUserAvatar;
     private String content;       // 对应数据库表的content字段(varchar类型)
     private Integer userId;       // 对应数据库表的user_id字段(int类型)
     private String userAvatar;    // 用户头像
@@ -55,7 +61,31 @@ public class Comment {
     public Integer getParentId() {
         return parentId;
     }
-    
+
+    public Long getParentUserId() {
+        return parentUserId;
+    }
+
+    public void setParentUserId(Long parentUserId) {
+        this.parentUserId = parentUserId;
+    }
+
+    public String getParentUserName() {
+        return parentUserName;
+    }
+
+    public void setParentUserName(String parentUserName) {
+        this.parentUserName = parentUserName;
+    }
+
+    public String getParentUserAvatar() {
+        return parentUserAvatar;
+    }
+
+    public void setParentUserAvatar(String parentUserAvatar) {
+        this.parentUserAvatar = parentUserAvatar;
+    }
+
     public void setParentId(Integer parentId) {
         this.parentId = parentId;
     }
