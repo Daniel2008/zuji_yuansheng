@@ -104,6 +104,7 @@
         android:id="@+id/grid_recycler_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:nestedScrollingEnabled="false"
         android:visibility="gone"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"

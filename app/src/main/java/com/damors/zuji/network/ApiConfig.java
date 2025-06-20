@@ -17,7 +17,7 @@ public class ApiConfig {
     private static final String PROD_IMAGE_BASE_URL = "https://zuji.damors.com";
 
     // 当前环境，可以通过BuildConfig.DEBUG等条件来自动切换
-    private static final boolean IS_PRODUCTION = false;
+    private static final boolean IS_PRODUCTION = true;
 
     /**
      * 获取当前环境的API基础URL
@@ -67,6 +67,7 @@ public class ApiConfig {
         public static final String TOGGLE_LIKE = "toggleLike"; // 点赞/取消点赞接口
         public static final String ADD_COMMENT = "addComment"; // 添加评论接口
         public static final String GET_COMMENT_LIST = "getCommentList"; // 获取评论列表接口
+        public static final String DELETE_COMMENT = "deleteComment"; // 删除评论接口
         public static final String CHECK_APP_UPDATE = "checkAppUpdate"; // 检查应用更新接口
     }
 }

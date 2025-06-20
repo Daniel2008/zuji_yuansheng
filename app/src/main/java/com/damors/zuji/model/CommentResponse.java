@@ -40,7 +40,7 @@ public class CommentResponse {
      * 评论列表数据
      */
     public static class Data {
-        private List<Comment> records;
+        private List<CommentModel> records;
         private int total;
         private int size;
         private int current;
@@ -48,11 +48,11 @@ public class CommentResponse {
         
         public Data() {}
         
-        public List<Comment> getRecords() {
+        public List<CommentModel> getRecords() {
             return records;
         }
         
-        public void setRecords(List<Comment> records) {
+        public void setRecords(List<CommentModel> records) {
             this.records = records;
         }
         

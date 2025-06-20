@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -17,7 +18,8 @@ import com.damors.zuji.model.FootprintMessage;
 import com.damors.zuji.model.GuluFile;
 import com.damors.zuji.model.response.FootprintMessageResponse;
 import com.damors.zuji.network.ApiConfig;
-import com.damors.zuji.network.HutoolApiService;
+import com.damors.zuji.network.RetrofitApiService;
+import com.damors.zuji.model.response.BaseResponse;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +35,7 @@ public class FootprintMessageListActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private FootprintMessageAdapter adapter;
     private List<FootprintMessage> messageList;
-    private HutoolApiService apiService;
+    private RetrofitApiService apiService;
     
     // 分页参数
     private int currentPage = 1;
@@ -96,6 +98,12 @@ public class FootprintMessageListActivity extends AppCompatActivity {
                 // 处理图片点击事件，启动图片预览
                 handleImageClick(message, position, imageIndex, imageFiles);
             }
+            
+            @Override
+            public void onDeleteClick(FootprintMessage message, int position) {
+                // 处理删除点击事件
+                handleDeleteClick(message, position);
+            }
         });
         
         // 设置滚动监听，实现分页加载
@@ -120,7 +128,7 @@ public class FootprintMessageListActivity extends AppCompatActivity {
     }
     
     private void initData() {
-        apiService = HutoolApiService.getInstance(this);
+        apiService = RetrofitApiService.getInstance(getApplicationContext());
     }
     
     /**
@@ -137,34 +145,44 @@ public class FootprintMessageListActivity extends AppCompatActivity {
         apiService.getFootprintMessages(
             currentPage,
             pageSize,
-            new HutoolApiService.SuccessCallback<FootprintMessageResponse.Data>() {
+            new RetrofitApiService.SuccessCallback<BaseResponse<FootprintMessageResponse.Data>>() {
                 @Override
-                public void onSuccess(FootprintMessageResponse.Data response) {
+                public void onSuccess(BaseResponse<FootprintMessageResponse.Data> response) {
                     isLoading = false;
                     
-                    if (response != null && response.getRecords() != null) {
-                        List<FootprintMessage> newMessages = response.getRecords();
-                        Log.d(TAG, "获取到 " + newMessages.size() + " 条足迹动态");
-                        
-                        if (currentPage == 1) {
-                            // 第一页，清空现有数据
-                            messageList.clear();
+                    if (response.getCode() == 200 && response.getData() != null) {
+                        FootprintMessageResponse.Data data = response.getData();
+                        if (data.getRecords() != null) {
+                            List<FootprintMessage> newMessages = data.getRecords();
+                            Log.d(TAG, "获取到 " + newMessages.size() + " 条足迹动态");
+                            
+                            if (currentPage == 1) {
+                                // 第一页，清空现有数据
+                                messageList.clear();
+                            }
+                            
+                            messageList.addAll(newMessages);
+                            adapter.notifyDataSetChanged();
+                            
+                            // 检查是否还有更多数据
+                            hasMoreData = newMessages.size() >= pageSize;
+                            
+                            Log.d(TAG, "当前共有 " + messageList.size() + " 条足迹动态，是否还有更多: " + hasMoreData);
+                        } else {
+                            Log.w(TAG, "响应数据为空");
+                            hasMoreData = false;
                         }
-                        
-                        messageList.addAll(newMessages);
-                        adapter.notifyDataSetChanged();
-                        
-                        // 检查是否还有更多数据
-                        hasMoreData = newMessages.size() >= pageSize;
-                        
-                        Log.d(TAG, "当前共有 " + messageList.size() + " 条足迹动态，是否还有更多: " + hasMoreData);
                     } else {
-                        Log.w(TAG, "响应数据为空");
+                        String msg = response.getMsg() != null ? response.getMsg() : "加载失败";
+                        Log.e(TAG, "加载足迹动态列表失败: " + msg);
+                        Toast.makeText(FootprintMessageListActivity.this, 
+                            "加载足迹动态失败: " + msg, 
+                            Toast.LENGTH_SHORT).show();
                         hasMoreData = false;
                     }
                 }
             },
-            new HutoolApiService.ErrorCallback() {
+            new RetrofitApiService.ErrorCallback() {
                 @Override
                 public void onError(String errorMessage) {
                     isLoading = false;
@@ -253,5 +271,61 @@ public class FootprintMessageListActivity extends AppCompatActivity {
         Log.d("FootprintMessageList", "Building full URL - Image base: " + imageBaseUrl + ", Full URL: " + fullUrl);
         
         return fullUrl;
+    }
+    
+    /**
+     * 处理删除点击事件
+     * @param message 足迹动态
+     * @param position 位置
+     */
+    private void handleDeleteClick(FootprintMessage message, int position) {
+        // 显示确认删除对话框
+        new AlertDialog.Builder(this)
+            .setTitle("删除足迹")
+            .setMessage("确定要删除这条足迹吗？删除后无法恢复。")
+            .setPositiveButton("删除", (dialog, which) -> {
+                // 执行删除操作
+                deleteFootprint(message, position);
+            })
+            .setNegativeButton("取消", null)
+            .show();
+    }
+    
+    /**
+     * 删除足迹
+     * @param message 足迹动态
+     * @param position 位置
+     */
+    private void deleteFootprint(FootprintMessage message, int position) {
+        // 调用API删除足迹
+        apiService.deleteFootprint(message.getId(),
+            new RetrofitApiService.SuccessCallback<BaseResponse<String>>() {
+                @Override
+                public void onSuccess(BaseResponse<String> response) {
+                    if (response.getCode() == 200) {
+                        // 删除成功，从列表中移除该项
+                        messageList.remove(position);
+                        adapter.notifyItemRemoved(position);
+                        adapter.notifyItemRangeChanged(position, messageList.size());
+                        
+                        // 显示成功提示
+                        Toast.makeText(FootprintMessageListActivity.this, "足迹删除成功", Toast.LENGTH_SHORT).show();
+                        Log.d(TAG, "足迹删除成功: " + response.toString());
+                    } else {
+                        // 删除失败
+                        String msg = response.getMsg() != null ? response.getMsg() : "删除失败";
+                        Toast.makeText(FootprintMessageListActivity.this, msg, Toast.LENGTH_SHORT).show();
+                        Log.e(TAG, "足迹删除失败: " + msg);
+                    }
+                }
+            },
+            new RetrofitApiService.ErrorCallback() {
+                @Override
+                public void onError(String error) {
+                    Toast.makeText(FootprintMessageListActivity.this, "网络错误: " + error, Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "删除足迹网络错误: " + error);
+                }
+            }
+        );
     }
 }

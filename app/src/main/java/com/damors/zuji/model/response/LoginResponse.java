@@ -1,6 +1,6 @@
 package com.damors.zuji.model.response;
 
-import cn.hutool.json.JSONObject;
+import com.google.gson.JsonObject;
 
 /**
  * 登录响应数据模型
@@ -19,7 +19,7 @@ public class LoginResponse extends BaseResponse<LoginResponse.Data> {
      */
     public static class Data {
         /** 用户信息JSON对象 */
-        private JSONObject user;
+        private JsonObject user;
         /** 用户认证token */
         private String token;
 
@@ -28,7 +28,7 @@ public class LoginResponse extends BaseResponse<LoginResponse.Data> {
          * 
          * @return 用户信息JSON对象
          */
-        public JSONObject getUser() {
+        public JsonObject getUser() {
             return user;
         }
 
@@ -37,7 +37,7 @@ public class LoginResponse extends BaseResponse<LoginResponse.Data> {
          * 
          * @param user 用户信息JSON对象
          */
-        public void setUser(JSONObject user) {
+        public void setUser(JsonObject user) {
             this.user = user;
         }
 

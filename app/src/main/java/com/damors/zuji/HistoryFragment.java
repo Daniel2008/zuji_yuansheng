@@ -30,9 +30,12 @@ import com.damors.zuji.model.FootprintMessage;
 import com.damors.zuji.model.GuluFile;
 import com.damors.zuji.model.response.FootprintMessageResponse;
 import com.damors.zuji.network.ApiConfig;
-import com.damors.zuji.network.HutoolApiService;
+import com.damors.zuji.network.RetrofitApiService;
+import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.utils.LoadingDialog;
 import com.damors.zuji.viewmodel.FootprintViewModel;
+
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +53,7 @@ public class HistoryFragment extends Fragment {
     private RecyclerView recyclerView;
     private SwipeRefreshLayout swipeRefreshLayout;
     private FootprintMessageAdapter adapter;
-    private HutoolApiService apiService;
+    private RetrofitApiService apiService;
     private TextView emptyView;
     private LoadingDialog loadingDialog;
     private int currentPage = 1;
@@ -64,7 +67,7 @@ public class HistoryFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_history, container, false);
         
         // 初始化API服务
-        apiService = HutoolApiService.getInstance(requireContext());
+        apiService = RetrofitApiService.getInstance(requireContext());
         
         // 初始化加载对话框
         loadingDialog = new LoadingDialog(requireContext());
@@ -142,7 +145,11 @@ public class HistoryFragment extends Fragment {
                 handleLikeClick(message, position);
             }
             
-            // 收藏功能已移除
+            @Override
+            public void onDeleteClick(FootprintMessage message, int position) {
+                // 处理删除点击事件
+                handleDeleteClick(message, position);
+            }
             
             @Override
             public void onCommentClick(FootprintMessage message, int position) {
@@ -185,47 +192,56 @@ public class HistoryFragment extends Fragment {
         isLoading = true;
         Log.d(TAG, "开始加载足迹动态数据，页码: " + currentPage);
         
+        // 显示加载状态
+        if (currentPage == 1 && !swipeRefreshLayout.isRefreshing()) {
+            // 首次加载且不是下拉刷新时显示加载对话框
+            loadingDialog.show("正在加载足迹动态...");
+        }
+        
         apiService.getFootprintMessages(
             currentPage,
             PAGE_SIZE,
-                data -> {
+            new RetrofitApiService.SuccessCallback<BaseResponse<FootprintMessageResponse.Data>>() {
+                @Override
+                public void onSuccess(BaseResponse<FootprintMessageResponse.Data> response) {
                     if (!isAdded() || getContext() == null) {
                         return;
                     }
+                    
+                    // 停止下拉刷新动画
+                    if (swipeRefreshLayout.isRefreshing()) {
+                        swipeRefreshLayout.setRefreshing(false);
+                    }
+                    // 隐藏加载对话框
+                    loadingDialog.dismiss();
 
                     isLoading = false;
-                    handleFootprintMessagesSuccess(data);
-                },
-                errorMessage -> {
+                    if (response.getCode() == 200 && response.getData() != null) {
+                        handleFootprintMessagesSuccess(response.getData());
+                    } else {
+                        String msg = response.getMsg() != null ? response.getMsg() : "加载失败";
+                        handleFootprintMessagesError(msg);
+                    }
+                }
+            },
+            new RetrofitApiService.ErrorCallback() {
+                @Override
+                public void onError(String errorMessage) {
                     if (!isAdded() || getContext() == null) {
                         return;
                     }
+                    
+                    // 停止下拉刷新动画
+                    if (swipeRefreshLayout.isRefreshing()) {
+                        swipeRefreshLayout.setRefreshing(false);
+                    }
+                    // 隐藏加载对话框
+                    loadingDialog.dismiss();
 
                     isLoading = false;
                     handleFootprintMessagesError(errorMessage);
-                },
-                new HutoolApiService.LoadingCallback() {
-                    @Override
-                    public void onLoadingStart() {
-                        if (currentPage == 1 && !swipeRefreshLayout.isRefreshing()) {
-                            // 首次加载且不是下拉刷新时显示加载对话框
-                            loadingDialog.show("正在加载足迹动态...");
-                        }
-                    }
-
-                    @Override
-                    public void onLoadingEnd() {
-                        // 停止下拉刷新动画
-                        if (swipeRefreshLayout.isRefreshing()) {
-                            swipeRefreshLayout.setRefreshing(false);
-                        }
-                        
-                        if (currentPage == 1 && !swipeRefreshLayout.isRefreshing()) {
-                            // 首次加载隐藏加载对话框
-                            loadingDialog.dismiss();
-                        }
-                    }
                 }
+            }
         );
     }
     
@@ -294,6 +310,13 @@ public class HistoryFragment extends Fragment {
     }
     
     /**
+     * 更新空视图可见性
+     */
+    private void updateEmptyViewVisibility() {
+        updateUIVisibility();
+    }
+    
+    /**
      * 刷新数据
      */
     public void refreshData() {
@@ -356,16 +379,26 @@ public class HistoryFragment extends Fragment {
         
         // 调用API更新点赞状态
         apiService.toggleLike(message.getId(),
-            new HutoolApiService.SuccessCallback<String>() {
+            new RetrofitApiService.SuccessCallback<BaseResponse<JSONObject>>() {
                 @Override
-                public void onSuccess(String response) {
-                    // API调用成功，显示提示信息
-                    String toastMessage = newLikeStatus ? "已点赞" : "已取消点赞";
-                    Toast.makeText(requireContext(), toastMessage, Toast.LENGTH_SHORT).show();
-                    Log.d(TAG, "点赞状态更新成功: " + response);
+                public void onSuccess(BaseResponse<JSONObject> response) {
+                    if (response.getCode() == 200) {
+                        // API调用成功，显示提示信息
+                        String toastMessage = newLikeStatus ? "已点赞" : "已取消点赞";
+                        Toast.makeText(requireContext(), toastMessage, Toast.LENGTH_SHORT).show();
+                        Log.d(TAG, "点赞状态更新成功: " + response.toString());
+                    } else {
+                        // API调用失败，回滚UI状态
+                        boolean originalStatus = !newLikeStatus;
+                        int originalCount = message.getLikeCount() + (originalStatus ? 1 : -1);
+                        adapter.updateItemLikeStatus(position, originalStatus, originalCount);
+                        
+                        String msg = response.getMsg() != null ? response.getMsg() : "点赞操作失败";
+                        Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show();
+                    }
                 }
             },
-            new HutoolApiService.ErrorCallback() {
+            new RetrofitApiService.ErrorCallback() {
                 @Override
                 public void onError(String error) {
                     // API调用失败，回滚UI状态
@@ -382,6 +415,72 @@ public class HistoryFragment extends Fragment {
     
     // 收藏功能已移除
     
+    /**
+     * 处理删除点击事件
+     * @param message 足迹动态
+     * @param position 位置
+     */
+    private void handleDeleteClick(FootprintMessage message, int position) {
+        // 显示确认删除对话框
+        new AlertDialog.Builder(requireContext())
+            .setTitle("删除足迹")
+            .setMessage("确定要删除这条足迹吗？删除后无法恢复。")
+            .setPositiveButton("删除", (dialog, which) -> {
+                // 执行删除操作
+                deleteFootprint(message, position);
+            })
+            .setNegativeButton("取消", null)
+            .show();
+    }
+    
+    /**
+     * 删除足迹
+     * @param message 足迹动态
+     * @param position 位置
+     */
+    private void deleteFootprint(FootprintMessage message, int position) {
+        // 显示加载对话框
+        loadingDialog.show("正在删除足迹...");
+        
+        // 调用API删除足迹
+        apiService.deleteFootprint(message.getId(),
+            new RetrofitApiService.SuccessCallback<BaseResponse<String>>() {
+                @Override
+                public void onSuccess(BaseResponse<String> response) {
+                    loadingDialog.dismiss();
+                    
+                    if (response.getCode() == 200) {
+                        // 删除成功，从列表中移除该项
+                        footprintMessages.remove(position);
+                        adapter.notifyItemRemoved(position);
+                        adapter.notifyItemRangeChanged(position, footprintMessages.size());
+                        
+                        // 显示成功提示
+                        Toast.makeText(requireContext(), "足迹删除成功", Toast.LENGTH_SHORT).show();
+                        Log.d(TAG, "足迹删除成功: " + response.toString());
+                        
+                        // 检查是否需要显示空视图
+                        updateEmptyViewVisibility();
+                    } else {
+                        // 删除失败
+                        String msg = response.getMsg() != null ? response.getMsg() : "删除失败";
+                        Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show();
+                        Log.e(TAG, "足迹删除失败: " + response.toString());
+                    }
+                }
+            },
+            new RetrofitApiService.ErrorCallback() {
+                @Override
+                public void onError(String error) {
+                    loadingDialog.dismiss();
+                    
+                    Toast.makeText(requireContext(), "删除操作失败，请重试", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "足迹删除失败: " + error);
+                }
+            }
+        );
+    }
+
     /**
      * 处理评论点击事件
      * @param message 足迹动态
@@ -547,16 +646,24 @@ public class HistoryFragment extends Fragment {
      * @param content 评论内容
      */
     private void addComment(Integer msgId, String content) {
-        apiService.addComment(msgId, content,
-                response -> {
-                    // 评论成功
-                    Toast.makeText(requireContext(), "评论发表成功", Toast.LENGTH_SHORT).show();
-                    Log.d(TAG, "评论发表成功: " + response);
+        apiService.addComment(msgId, content, null,
+            new RetrofitApiService.SuccessCallback<BaseResponse<JSONObject>>() {
+                @Override
+                public void onSuccess(BaseResponse<JSONObject> response) {
+                    if (response.getCode() == 200) {
+                        // 评论成功
+                        Toast.makeText(requireContext(), "评论发表成功", Toast.LENGTH_SHORT).show();
+                        Log.d(TAG, "评论发表成功: " + response);
 
-                    // 这里可以刷新评论列表或更新UI
-                    // TODO: 刷新当前页面的评论数据
-                },
-            new HutoolApiService.ErrorCallback() {
+                        // 这里可以刷新评论列表或更新UI
+                        // TODO: 刷新当前页面的评论数据
+                    } else {
+                        String msg = response.getMsg() != null ? response.getMsg() : "评论发表失败";
+                        Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show();
+                    }
+                }
+            },
+            new RetrofitApiService.ErrorCallback() {
                 @Override
                 public void onError(String error) {
                     // 评论失败

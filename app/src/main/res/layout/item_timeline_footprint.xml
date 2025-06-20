@@ -72,6 +72,39 @@
         app:layout_constraintTop_toBottomOf="@+id/text_view_date"
         tools:text="14:30" />
 
+    <!-- 删除按钮 -->
+    <LinearLayout
+        android:id="@+id/layout_delete"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/text_view_date">
+
+        <ImageView
+            android:id="@+id/iv_delete"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_delete_outline"
+            android:tint="@color/action_icon_color" />
+
+        <TextView
+            android:id="@+id/tv_delete"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:text="删除"
+            android:textColor="@color/action_text_color"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
     <!-- 足迹内容卡片 -->
     <androidx.cardview.widget.CardView
         android:id="@+id/card_view_content"
@@ -83,7 +116,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/view_timeline_dot"
-        app:layout_constraintTop_toBottomOf="@+id/text_view_time">
+        app:layout_constraintTop_toBottomOf="@+id/layout_delete">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -181,7 +214,7 @@
 
                 </LinearLayout>
 
-                <!-- 收藏功能已移除 -->
+
 
                 <!-- 评论按钮 -->
                 <LinearLayout

@@ -18,6 +18,8 @@ import com.damors.zuji.R;
 import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.model.FootprintMessage;
 import com.damors.zuji.model.GuluFile;
+import com.damors.zuji.config.ImageDisplayConfig;
+import com.damors.zuji.utils.GridSpacingItemDecoration;
 import android.widget.LinearLayout;
 import android.widget.FrameLayout;
 
@@ -37,7 +39,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         void onUserAvatarClick(FootprintMessage message, int position);
         void onLocationClick(FootprintMessage message, int position);
         void onLikeClick(FootprintMessage message, int position);
-        // 收藏功能已移除
+        void onDeleteClick(FootprintMessage message, int position);
         void onCommentClick(FootprintMessage message, int position);
         void onImageClick(FootprintMessage message, int position, int imageIndex, List<GuluFile> imageFiles);
     }
@@ -355,8 +357,19 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         
         // 设置网格布局管理器
         androidx.recyclerview.widget.GridLayoutManager gridLayoutManager = 
-            new androidx.recyclerview.widget.GridLayoutManager(context, 3);
+            new androidx.recyclerview.widget.GridLayoutManager(context, ImageDisplayConfig.GRID_SPAN_COUNT);
         holder.gridRecyclerView.setLayoutManager(gridLayoutManager);
+        
+        // 添加网格间距装饰器
+        if (holder.gridRecyclerView.getItemDecorationCount() == 0) {
+            holder.gridRecyclerView.addItemDecoration(new GridSpacingItemDecoration(ImageDisplayConfig.GRID_SPAN_COUNT, ImageDisplayConfig.GRID_SPACING_DP, true));
+        }
+        
+        // 计算并设置RecyclerView的高度
+        int calculatedHeight = com.damors.zuji.adapter.GridImageAdapter.calculateRecyclerViewHeight(context, imageFiles.size());
+        ViewGroup.LayoutParams layoutParams = holder.gridRecyclerView.getLayoutParams();
+        layoutParams.height = calculatedHeight;
+        holder.gridRecyclerView.setLayoutParams(layoutParams);
         
         // 设置适配器
         GridImageAdapter adapter = new GridImageAdapter(context, imageFiles);
@@ -377,7 +390,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
             holder.moreImagesText.setText("+" + (imageFiles.size() - 8));
         }
         
-        android.util.Log.d("FootprintMessageAdapter", "显示九宫格图片，总数: " + imageFiles.size());
+        // android.util.Log.d("FootprintMessageAdapter", "显示九宫格图片，总数: " + imageFiles.size() + "，计算高度: " + calculatedHeight);
     }
     
     /**
@@ -450,7 +463,11 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
             }
         });
         
-        // 收藏功能已移除
+        holder.layoutDelete.setOnClickListener(v -> {
+            if (onItemClickListener != null) {
+                onItemClickListener.onDeleteClick(message, position);
+            }
+        });
         
         holder.layoutComment.setOnClickListener(v -> {
             if (onItemClickListener != null) {
@@ -545,6 +562,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
             || type.equals("gif")
             || type.equals("bmp")
             || type.equals("webp")
+                || type.equals("image/*")
             || type.equals("image/jpeg");
     }
     
@@ -626,7 +644,9 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         LinearLayout layoutLike;
         ImageView ivLike;
         TextView tvLikeCount;
-        // 收藏功能已移除
+        LinearLayout layoutDelete;
+        ImageView ivDelete;
+        TextView tvDelete;
         LinearLayout layoutComment;
         ImageView ivComment;
         TextView tvCommentCount;
@@ -667,7 +687,9 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
             layoutLike = itemView.findViewById(R.id.layout_like);
             ivLike = itemView.findViewById(R.id.iv_like);
             tvLikeCount = itemView.findViewById(R.id.tv_like_count);
-            // 收藏功能已移除
+            layoutDelete = itemView.findViewById(R.id.layout_delete);
+            ivDelete = itemView.findViewById(R.id.iv_delete);
+            tvDelete = itemView.findViewById(R.id.tv_delete);
             layoutComment = itemView.findViewById(R.id.layout_comment);
             ivComment = itemView.findViewById(R.id.iv_comment);
             tvCommentCount = itemView.findViewById(R.id.tv_comment_count);

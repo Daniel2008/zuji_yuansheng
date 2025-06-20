@@ -28,7 +28,8 @@ import com.bumptech.glide.Glide;
 import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.UserInfoResponse;
 import com.damors.zuji.network.ApiConfig;
-import com.damors.zuji.network.HutoolApiService;
+import com.damors.zuji.network.RetrofitApiService;
+import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.utils.ImageUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -37,6 +38,9 @@ import com.google.gson.JsonParser;
 
 import java.io.File;
 import java.io.IOException;
+
+import okhttp3.MediaType;
+import okhttp3.RequestBody;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -58,7 +62,7 @@ public class EditProfileActivity extends AppCompatActivity {
     private androidx.appcompat.widget.Toolbar toolbar;
     
     private UserManager userManager;
-    private HutoolApiService apiService;
+    private RetrofitApiService apiService;
     private String currentAvatarUrl;
     private String currentUsername;
     private File tempImageFile;
@@ -98,7 +102,7 @@ public class EditProfileActivity extends AppCompatActivity {
     
     private void initData() {
         userManager = UserManager.getInstance();
-        apiService = HutoolApiService.getInstance(this);
+        apiService = RetrofitApiService.getInstance(this);
     }
     
     private void setupClickListeners() {
@@ -315,68 +319,73 @@ public class EditProfileActivity extends AppCompatActivity {
             return;
         }
         
+        // 将userInfoJson转换为RequestBody
+        okhttp3.RequestBody userInfoRequestBody = okhttp3.RequestBody.create(
+            okhttp3.MediaType.parse("application/json; charset=utf-8"), 
+            userInfoJson
+        );
+        
         // 调用实际的更新用户资料API
-        apiService.saveUserInfo(userInfoJson, avatarFile, 
+        apiService.saveUserInfo(userInfoRequestBody, 
             // 成功回调
-            response -> {
-                Log.d(TAG, "用户信息保存成功: " + response);
-                
-                // 解析服务器返回的用户数据，特别是新的头像信息
-                JsonObject serverUserData = null;
-                try {
-                    Log.d(TAG, "服务器响应原始数据: " + response);
-                    
-                    // 由于HutoolApiService的handleResponse对String类型只返回data字段的toString()
-                    // 我们需要重新从UserManager获取最新的用户数据
-                    // 因为saveUserInfo成功后，服务器应该已经更新了用户信息
-                    
-                    // 先尝试解析response，看是否包含用户数据
-                    if (!TextUtils.isEmpty(response)) {
+            new RetrofitApiService.SuccessCallback<BaseResponse<String>>() {
+                @Override
+                public void onSuccess(BaseResponse<String> response) {
+                    if (response.getCode() == 200) {
+                        Log.d(TAG, "用户信息保存成功: " + response);
+                        
+                        // 解析服务器返回的用户数据，特别是新的头像信息
+                        JsonObject serverUserData = null;
                         try {
-                            // 如果response是JSON格式
-                            if (response.trim().startsWith("{")) {
-                                JsonObject responseObj = JsonParser.parseString(response).getAsJsonObject();
-                                if (responseObj.has("data") && !responseObj.get("data").isJsonNull()) {
-                                    serverUserData = responseObj.get("data").getAsJsonObject();
-                                    Log.d(TAG, "从响应中解析到用户数据: " + serverUserData.toString());
+                            String responseData = response.getData();
+                            Log.d(TAG, "服务器响应数据: " + responseData);
+                            
+                            // 先尝试解析response.getData()，看是否包含用户数据
+                            if (!TextUtils.isEmpty(responseData)) {
+                                try {
+                                    // 如果responseData是JSON格式
+                                    if (responseData.trim().startsWith("{")) {
+                                        serverUserData = JsonParser.parseString(responseData).getAsJsonObject();
+                                        Log.d(TAG, "从响应中解析到用户数据: " + serverUserData.toString());
+                                        } else {
+                                        // 如果responseData只是简单字符串，说明需要重新获取用户信息
+                                        Log.d(TAG, "响应为简单字符串，需要重新获取用户信息: " + responseData);
+                                    }
+                                } catch (Exception parseEx) {
+                                    Log.w(TAG, "解析响应JSON失败: " + parseEx.getMessage());
                                 }
-                            } else {
-                                // 如果response只是简单字符串，说明需要重新获取用户信息
-                                Log.d(TAG, "响应为简单字符串，需要重新获取用户信息: " + response);
                             }
-                        } catch (Exception parseEx) {
-                            Log.w(TAG, "解析响应JSON失败: " + parseEx.getMessage());
+                        } catch (Exception e) {
+                            Log.w(TAG, "处理服务器响应失败: " + e.getMessage());
                         }
-                    }
-                } catch (Exception e) {
-                    Log.w(TAG, "处理服务器响应失败: " + e.getMessage());
-                }
-                
-                final JsonObject finalServerUserData = serverUserData;
-                
-                // 如果没有从响应中获取到用户数据，需要重新获取用户信息
-                 if (finalServerUserData == null) {
-                     Log.d(TAG, "响应中没有用户数据，重新获取用户信息");
+                        
+                        final JsonObject finalServerUserData = serverUserData;
+                        
+                        // 如果没有从响应中获取到用户数据，需要重新获取用户信息
+                         if (finalServerUserData == null) {
+                             final String username = editTextUsername.getText().toString().trim();
+                             Log.d(TAG, "响应中没有用户数据，重新获取用户信息");
                      // 获取当前用户的token
                      String currentToken = UserManager.getInstance().getToken();
                      if (currentToken != null) {
                          // 重新获取用户信息以获取最新的头像URL
                          apiService.getUserInfo(
-                             currentToken,
-                             new HutoolApiService.SuccessCallback<UserInfoResponse>() {
+                             new RetrofitApiService.SuccessCallback<UserInfoResponse>() {
                                  @Override
-                                 public void onSuccess(UserInfoResponse userInfoResponse) {
+                                 public void onSuccess(UserInfoResponse response) {
                                 runOnUiThread(() -> {
-                                    if (userInfoResponse != null && userInfoResponse.getData() != null) {
+                                    if (response.getCode() == 200 && response.getData() != null) {
                                         // 使用最新的用户信息更新本地数据
-                                        cn.hutool.json.JSONObject userJsonObj = userInfoResponse.getData().getUser();
-                                        String userJson = userJsonObj.toString();
-                                        JsonObject latestUserData = JsonParser.parseString(userJson).getAsJsonObject();
+                                        JsonObject userJsonObj = response.getData().getUser();
+                                        JsonObject latestUserData = userJsonObj;
                                         
                                         updateLocalUserData(username, latestUserData);
                                         
                                         // 更新当前页面头像显示
-                                        String newAvatar = userJsonObj.getStr("avatar");
+                                        String newAvatar = null;
+                                        if (userJsonObj.has("avatar") && !userJsonObj.get("avatar").isJsonNull()) {
+                                            newAvatar = userJsonObj.get("avatar").getAsString();
+                                        }
                                         if (!TextUtils.isEmpty(newAvatar)) {
                                             String newAvatarUrl = ApiConfig.getImageBaseUrl() + newAvatar;
                                             Glide.with(EditProfileActivity.this)
@@ -398,7 +407,7 @@ public class EditProfileActivity extends AppCompatActivity {
                                 });
                             }
                         },
-                        new HutoolApiService.ErrorCallback() {
+                        new RetrofitApiService.ErrorCallback() {
                             @Override
                             public void onError(String errorMessage) {
                                 Log.w(TAG, "重新获取用户信息失败: " + errorMessage);
@@ -449,25 +458,25 @@ public class EditProfileActivity extends AppCompatActivity {
                         finish();
                     });
                 }
+                    } else {
+                        String msg = response.getMsg() != null ? response.getMsg() : "更新失败";
+                        Log.e(TAG, "用户信息保存失败: " + msg);
+                        runOnUiThread(() -> {
+                            Toast.makeText(EditProfileActivity.this, "更新失败: " + msg, Toast.LENGTH_SHORT).show();
+                            resetSaveButton();
+                        });
+                    }
+                }
             },
             // 错误回调
-            errorMessage -> {
-                Log.e(TAG, "用户信息保存失败: " + errorMessage);
-                runOnUiThread(() -> {
-                    Toast.makeText(this, "更新失败: " + errorMessage, Toast.LENGTH_SHORT).show();
-                    resetSaveButton();
-                });
-            },
-            // 加载状态回调
-            new HutoolApiService.LoadingCallback() {
+            new RetrofitApiService.ErrorCallback() {
                 @Override
-                public void onLoadingStart() {
-                    // 已经在saveProfile方法中设置了按钮状态
-                }
-                
-                @Override
-                public void onLoadingEnd() {
-                    // 在成功或失败回调中处理按钮状态重置
+                public void onError(String errorMessage) {
+                    Log.e(TAG, "用户信息保存失败: " + errorMessage);
+                    runOnUiThread(() -> {
+                        Toast.makeText(EditProfileActivity.this, "更新失败: " + errorMessage, Toast.LENGTH_SHORT).show();
+                        resetSaveButton();
+                    });
                 }
             }
         );

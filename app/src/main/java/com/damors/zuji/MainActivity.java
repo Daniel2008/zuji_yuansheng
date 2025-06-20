@@ -33,7 +33,8 @@ import com.damors.zuji.utils.AMapHelper;
 import com.damors.zuji.dialog.AppUpdateDialog;
 import com.damors.zuji.manager.AppUpdateManager;
 import com.damors.zuji.model.AppUpdateInfo;
-import com.damors.zuji.network.HutoolApiService;
+import com.damors.zuji.network.RetrofitApiService;
+import com.damors.zuji.model.response.BaseResponse;
 
 /**
  * 主活动类，作为应用的入口点
@@ -325,22 +326,29 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             int currentVersionCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
             
             // 调用API检查更新
-            HutoolApiService.getInstance(this).checkAppUpdate(
+            RetrofitApiService.getInstance(getApplicationContext()).checkAppUpdate(
                 currentVersionCode,
-                new HutoolApiService.SuccessCallback<AppUpdateInfo>() {
+                "android",
+                new RetrofitApiService.SuccessCallback<BaseResponse<AppUpdateInfo>>() {
                     @Override
-                    public void onSuccess(AppUpdateInfo updateInfo) {
+                    public void onSuccess(BaseResponse<AppUpdateInfo> response) {
                         runOnUiThread(() -> {
-                            if (updateInfo != null && updateInfo.getVersionCode() > currentVersionCode) {
-                                // 有新版本，显示更新对话框
-                                showUpdateDialog(updateInfo);
+                            if (response != null && response.getCode() == 200 && response.getData() != null) {
+                                AppUpdateInfo updateInfo = response.getData();
+                                if (updateInfo.getVersionCode() > currentVersionCode) {
+                                    // 有新版本，显示更新对话框
+                                    showUpdateDialog(updateInfo);
+                                } else {
+                                    Log.d(TAG, "当前已是最新版本");
+                                }
                             } else {
-                                Log.d(TAG, "当前已是最新版本");
+                                String msg = response != null ? response.getMsg() : "检查更新失败";
+                                Log.e(TAG, "检查更新失败: " + msg);
                             }
                         });
                     }
                 },
-                new HutoolApiService.ErrorCallback() {
+                new RetrofitApiService.ErrorCallback() {
                     @Override
                     public void onError(String error) {
                         Log.e(TAG, "检查更新失败: " + error);

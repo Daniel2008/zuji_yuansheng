@@ -14,6 +14,7 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -21,11 +22,14 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.damors.zuji.R;
 import com.damors.zuji.adapter.CommentAdapter;
-import com.damors.zuji.model.Comment;
+import com.damors.zuji.model.CommentModel;
 import com.damors.zuji.model.CommentResponse;
-import com.damors.zuji.network.HutoolApiService;
+import com.damors.zuji.network.RetrofitApiService;
+import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.utils.AndroidBug5497Workaround;
 import com.damors.zuji.utils.LoadingDialog;
+
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,9 +50,9 @@ public class CommentListActivity extends AppCompatActivity implements CommentAda
     private EditText etComment;
     private ImageButton btnSend;
     
-    private HutoolApiService apiService;
+    private RetrofitApiService apiService;
     private LoadingDialog loadingDialog;
-    private Comment currentReplyComment; // 当前回复的评论
+    private CommentModel currentReplyComment; // 当前回复的评论
     
     private Integer msgId;
     private String msgTitle;
@@ -142,7 +146,7 @@ public class CommentListActivity extends AppCompatActivity implements CommentAda
     }
     
     private void initData() {
-        apiService = HutoolApiService.getInstance(this);
+        apiService = RetrofitApiService.getInstance(this);
         loadingDialog = new LoadingDialog(this);
     }
     
@@ -195,14 +199,14 @@ public class CommentListActivity extends AppCompatActivity implements CommentAda
                 data -> {
                     swipeRefreshLayout.setRefreshing(false);
 
-                    if (data != null && data.getRecords() != null) {
-                        List<Comment> allComments = data.getRecords();
+                    if (data != null && data.getData() != null && data.getData().size() > 0) {
+                        List<CommentModel> allComments = data.getData();
                         Log.d(TAG, "获取到评论数量: " + allComments.size());
 
                         // 分离主评论和回复
-                        List<Comment> mainComments = new ArrayList<>();
-                        List<Comment> replyComments = new ArrayList<>();
-                        for (Comment comment : allComments) {
+                        List<CommentModel> mainComments = new ArrayList<>();
+                        List<CommentModel> replyComments = new ArrayList<>();
+                        for (CommentModel comment : allComments) {
                             if (comment.getParentId() == null || comment.getParentId() == 0) {
                                 mainComments.add(comment);
                             } else {
@@ -228,7 +232,7 @@ public class CommentListActivity extends AppCompatActivity implements CommentAda
                         recyclerView.setVisibility(View.GONE);
                     }
                 },
-            new HutoolApiService.ErrorCallback() {
+            new RetrofitApiService.ErrorCallback() {
                 @Override
                 public void onError(String error) {
                     swipeRefreshLayout.setRefreshing(false);
@@ -263,23 +267,29 @@ public class CommentListActivity extends AppCompatActivity implements CommentAda
                        currentReplyComment.getParentId().longValue();
         }
         
-        apiService.addComment(msgId, parentId, content,
-            new HutoolApiService.SuccessCallback<String>() {
+        apiService.addComment(msgId, content, parentId,
+            new RetrofitApiService.SuccessCallback<BaseResponse<JSONObject>>() {
                 @Override
-                public void onSuccess(String response) {
+                public void onSuccess(BaseResponse<JSONObject> response) {
                     loadingDialog.dismiss();
-                    String message = currentReplyComment != null ? "回复发表成功" : "评论发表成功";
-                    Toast.makeText(CommentListActivity.this, message, Toast.LENGTH_SHORT).show();
-                    
-                    // 清空输入框和重置回复状态
-                    etComment.setText("");
-                    resetReplyState();
-                    
-                    // 刷新评论列表
-                    loadComments();
+                    if (response != null && response.getCode() == 200) {
+                        String message = currentReplyComment != null ? "回复发表成功" : "评论发表成功";
+                        Toast.makeText(CommentListActivity.this, message, Toast.LENGTH_SHORT).show();
+                        
+                        // 清空输入框和重置回复状态
+                        etComment.setText("");
+                        resetReplyState();
+                        
+                        // 刷新评论列表
+                        loadComments();
+                    } else {
+                        String msg = response != null ? response.getMsg() : "发表失败";
+                        String message = currentReplyComment != null ? "回复发表失败: " : "评论发表失败: ";
+                        Toast.makeText(CommentListActivity.this, message + msg, Toast.LENGTH_SHORT).show();
+                    }
                 }
             },
-            new HutoolApiService.ErrorCallback() {
+            new RetrofitApiService.ErrorCallback() {
                 @Override
                 public void onError(String error) {
                     loadingDialog.dismiss();
@@ -299,7 +309,7 @@ public class CommentListActivity extends AppCompatActivity implements CommentAda
     }
 
     @Override
-    public void onReplyClick(Comment comment) {
+    public void onReplyClick(CommentModel comment) {
         // 设置回复状态
         currentReplyComment = comment;
         
@@ -320,5 +330,47 @@ public class CommentListActivity extends AppCompatActivity implements CommentAda
         etComment.postDelayed(() -> {
             recyclerView.smoothScrollToPosition(adapter.getItemCount() - 1);
         }, 300);
+    }
+
+    @Override
+    public void onDeleteClick(CommentModel comment) {
+        // 显示删除确认对话框
+        new AlertDialog.Builder(this)
+                .setTitle("删除评论")
+                .setMessage("确定要删除这条评论吗？删除后无法恢复。")
+                .setPositiveButton("删除", (dialog, which) -> {
+                    deleteComment(comment.getId());
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    /**
+     * 删除评论
+     * 
+     * @param commentId 评论ID
+     */
+    private void deleteComment(Integer commentId) {
+        apiService.deleteComment(commentId,
+                response -> {
+                    if (response != null && response.isSuccess()) {
+                        // 删除成功
+                        Toast.makeText(CommentListActivity.this, "评论删除成功", Toast.LENGTH_SHORT).show();
+                        Log.d(TAG, "评论删除成功: " + response.getData());
+                        
+                        // 刷新评论列表
+                        loadComments();
+                    } else {
+                        String msg = response != null ? response.getMsg() : "评论删除失败";
+                        Toast.makeText(CommentListActivity.this, msg, Toast.LENGTH_SHORT).show();
+                        Log.e(TAG, "评论删除失败: " + msg);
+                    }
+                },
+                error -> {
+                    // 删除失败
+                    Toast.makeText(CommentListActivity.this, "评论删除失败，请重试", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "评论删除失败: " + error);
+                }
+        );
     }
 }

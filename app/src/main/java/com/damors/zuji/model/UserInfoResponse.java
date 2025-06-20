@@ -125,7 +125,7 @@ public class UserInfoResponse {
     public static class UserInfoData {
         
         /** 用户信息JSON对象 */
-        private cn.hutool.json.JSONObject user;
+        private com.google.gson.JsonObject user;
         
         /** 用户token */
         private String token;
@@ -142,7 +142,7 @@ public class UserInfoResponse {
          * @param user 用户信息JSON对象
          * @param token 用户token
          */
-        public UserInfoData(cn.hutool.json.JSONObject user, String token) {
+        public UserInfoData(com.google.gson.JsonObject user, String token) {
             this.user = user;
             this.token = token;
         }
@@ -152,7 +152,7 @@ public class UserInfoResponse {
          * 
          * @return 用户信息JSON对象
          */
-        public cn.hutool.json.JSONObject getUser() {
+        public com.google.gson.JsonObject getUser() {
             return user;
         }
         
@@ -161,7 +161,7 @@ public class UserInfoResponse {
          * 
          * @param user 用户信息JSON对象
          */
-        public void setUser(cn.hutool.json.JSONObject user) {
+        public void setUser(com.google.gson.JsonObject user) {
             this.user = user;
         }
         

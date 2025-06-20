@@ -29,6 +29,12 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.chip.Chip;
 
+import java.util.HashMap;
+import java.util.Map;
+import okhttp3.RequestBody;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+
 import com.amap.api.services.geocoder.GeocodeSearch;
 import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
@@ -42,10 +48,13 @@ import com.damors.zuji.viewmodel.FootprintViewModel;
 import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.PublishTrandsInfoPO;
 
-import com.damors.zuji.network.HutoolApiService;
+import com.damors.zuji.network.RetrofitApiService;
+import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.utils.LoadingDialog;
 
 import com.damors.zuji.adapter.ImageGridAdapter;
+
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -84,7 +93,7 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
     private Uri photoUri; // 拍照后的图片URI
     
     // 网络服务实例
-    private HutoolApiService apiService;
+    private RetrofitApiService apiService;
     private LoadingDialog loadingDialog;
     
     // 位置管理器
@@ -99,7 +108,7 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
         setContentView(R.layout.activity_add_footprint);
 
         // 初始化网络服务
-        apiService = HutoolApiService.getInstance(this);
+        apiService = RetrofitApiService.getInstance(this);
         // 初始化加载对话框
         loadingDialog = new LoadingDialog(this);
         
@@ -286,6 +295,11 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
         imageAdapter = new ImageGridAdapter(this, selectedImages, new ImageGridAdapter.OnImageActionListener() {
             @Override
             public void onAddImageClick() {
+                // 检查是否已经选择了9张图片
+                if (selectedImages.size() >= 9) {
+                    Toast.makeText(AddFootprintActivity.this, "最多只能选择9张图片", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 pickImages();
             }
 
@@ -410,21 +424,39 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
             if (requestCode == REQUEST_PICK_IMAGES && data != null) {
                 if (data.getClipData() != null) {
                     // 多选图片
-                    int count = Math.min(data.getClipData().getItemCount(), 9 - selectedImages.size());
+                    int totalSelected = data.getClipData().getItemCount();
+                    int availableSlots = 9 - selectedImages.size();
+                    int count = Math.min(totalSelected, availableSlots);
+                    
                     for (int i = 0; i < count; i++) {
                         selectedImages.add(data.getClipData().getItemAt(i).getUri());
                     }
-                } else if (data.getData() != null && selectedImages.size() < 9) {
+                    
+                    // 如果用户选择的图片数量超过了可用槽位，给出提示
+                    if (totalSelected > availableSlots && availableSlots > 0) {
+                        Toast.makeText(this, String.format("最多只能选择9张图片，已为您选择前%d张", count), Toast.LENGTH_SHORT).show();
+                    } else if (availableSlots == 0) {
+                        Toast.makeText(this, "已达到最大图片数量限制（9张）", Toast.LENGTH_SHORT).show();
+                    }
+                } else if (data.getData() != null) {
                     // 单选图片
-                    selectedImages.add(data.getData());
+                    if (selectedImages.size() < 9) {
+                        selectedImages.add(data.getData());
+                    } else {
+                        Toast.makeText(this, "最多只能选择9张图片", Toast.LENGTH_SHORT).show();
+                    }
                 }
                 imageAdapter.notifyDataSetChanged();
             } else if (requestCode == REQUEST_CAMERA) {
                 // 处理相机拍照结果
-                if (photoUri != null && selectedImages.size() < 9) {
-                    selectedImages.add(photoUri);
-                    imageAdapter.notifyDataSetChanged();
-                    Log.d("AddFootprintActivity", "添加拍照图片: " + photoUri.toString());
+                if (photoUri != null) {
+                    if (selectedImages.size() < 9) {
+                        selectedImages.add(photoUri);
+                        imageAdapter.notifyDataSetChanged();
+                        Log.d("AddFootprintActivity", "添加拍照图片: " + photoUri.toString());
+                    } else {
+                        Toast.makeText(this, "最多只能选择9张图片", Toast.LENGTH_SHORT).show();
+                    }
                 }
             } else if (requestCode == REQUEST_SELECT_LOCATION) {
                 selectedLocation = data.getStringExtra("location");
@@ -518,50 +550,77 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
         }
         publishInfo.setImages(imageFiles);
         
-        // 调用网络接口发布足迹（带加载回调）
-        apiService.publishFootprint(publishInfo,
-            new HutoolApiService.SuccessCallback<String>() {
+        // 显示加载对话框并禁用发布按钮
+        loadingDialog.show("正在发布足迹...");
+        btnPublish.setEnabled(false);
+        btnPublish.setText("发布中...");
+        
+        // 将PublishTrandsInfoPO转换为Map<String, RequestBody>格式
+        Map<String, RequestBody> requestBodyMap = new HashMap<>();
+        requestBodyMap.put("userId", RequestBody.create(MediaType.parse("text/plain"), publishInfo.getUserId()));
+        requestBodyMap.put("city", RequestBody.create(MediaType.parse("text/plain"), publishInfo.getCity() != null ? publishInfo.getCity() : ""));
+        requestBodyMap.put("content", RequestBody.create(MediaType.parse("text/plain"), publishInfo.getContent()));
+        requestBodyMap.put("locationInfo", RequestBody.create(MediaType.parse("text/plain"), publishInfo.getLocationInfo()));
+        requestBodyMap.put("type", RequestBody.create(MediaType.parse("text/plain"), publishInfo.getType()));
+        requestBodyMap.put("tag", RequestBody.create(MediaType.parse("text/plain"), publishInfo.getTag() != null ? publishInfo.getTag() : ""));
+        requestBodyMap.put("lng", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(publishInfo.getLng())));
+        requestBodyMap.put("lat", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(publishInfo.getLat())));
+        requestBodyMap.put("msgType", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(publishInfo.getMsgType())));
+        
+        // 准备图片文件列表
+        List<MultipartBody.Part> imageParts = new ArrayList<>();
+        if (publishInfo.getImages() != null) {
+            for (int i = 0; i < publishInfo.getImages().size(); i++) {
+                File imageFile = publishInfo.getImages().get(i);
+                if (imageFile != null && imageFile.exists()) {
+                    RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), imageFile);
+                    MultipartBody.Part imagePart = MultipartBody.Part.createFormData("images", imageFile.getName(), requestFile);
+                    imageParts.add(imagePart);
+                }
+            }
+        }
+        
+        // 调用网络接口发布足迹
+        apiService.publishFootprint(requestBodyMap, imageParts,
+            new RetrofitApiService.SuccessCallback<BaseResponse<JSONObject>>() {
                 @Override
-                public void onSuccess(String response) {
-                    // 发布成功
-                    // 注释：已移除本地数据库保存功能
-                    // saveToLocalDatabase(content, location);
+                public void onSuccess(BaseResponse<JSONObject> response) {
+                    // 隐藏加载对话框并恢复按钮状态
+                    loadingDialog.dismiss();
+                    btnPublish.setEnabled(true);
+                    btnPublish.setText("发布足迹");
                     
-                    runOnUiThread(() -> {
-                        Toast.makeText(AddFootprintActivity.this, "发布成功", Toast.LENGTH_SHORT).show();
-                        setResult(RESULT_OK);
-                        finish();
-                    });
+                    if (response.getCode() == 200) {
+                        // 发布成功
+                        runOnUiThread(() -> {
+                            Toast.makeText(AddFootprintActivity.this, "发布成功", Toast.LENGTH_SHORT).show();
+                            setResult(RESULT_OK);
+                            finish();
+                        });
+                    } else {
+                        // 发布失败
+                        runOnUiThread(() -> {
+                            String msg = response.getMsg() != null ? response.getMsg() : "发布失败";
+                            Toast.makeText(AddFootprintActivity.this, msg, Toast.LENGTH_LONG).show();
+                        });
+                    }
                 }
             },
-            new HutoolApiService.ErrorCallback() {
+            new RetrofitApiService.ErrorCallback() {
                 @Override
                 public void onError(String errorMessage) {
+                    // 隐藏加载对话框并恢复按钮状态
+                    loadingDialog.dismiss();
+                    btnPublish.setEnabled(true);
+                    btnPublish.setText("发布足迹");
+                    
                     // 发布失败
                     runOnUiThread(() -> {
                         Toast.makeText(AddFootprintActivity.this, 
                             "发布失败: " + errorMessage, Toast.LENGTH_LONG).show();
                     });
                 }
-            },
-            new HutoolApiService.LoadingCallback() {
-                @Override
-                public void onLoadingStart() {
-                    // 显示加载对话框并禁用发布按钮
-                    loadingDialog.show("正在发布足迹...");
-                    btnPublish.setEnabled(false);
-                    btnPublish.setText("发布中...");
-                }
-
-                @Override
-                public void onLoadingEnd() {
-                    // 隐藏加载对话框并恢复按钮状态
-                    loadingDialog.dismiss();
-                    btnPublish.setEnabled(true);
-                    btnPublish.setText("发布");
-                }
-            }
-        );
+            });
     }
     
     /**

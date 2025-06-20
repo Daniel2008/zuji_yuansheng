@@ -52,4 +52,5 @@
     <color name="text_hint">#BDBDBD</color>
     <color name="input_background">#F8F9FA</color>
     <color name="input_border">#E1E5E9</color>
+    <color name="error_color">#F44336</color>
 </resources>

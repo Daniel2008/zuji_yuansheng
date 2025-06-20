@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.damors.zuji.R;
+import com.damors.zuji.config.ImageDisplayConfig;
 import com.damors.zuji.model.GuluFile;
 import com.damors.zuji.network.ApiConfig;
 import java.util.List;
@@ -24,7 +25,7 @@ public class GridImageAdapter extends RecyclerView.Adapter<GridImageAdapter.Imag
     private Context context;
     private List<GuluFile> imageFiles;
     private OnImageClickListener onImageClickListener;
-    private int maxDisplayCount = 9; // 最大显示数量
+    private int maxDisplayCount = ImageDisplayConfig.MAX_GRID_DISPLAY_COUNT; // 最大显示数量
 
     /**
      * 图片点击监听器接口
@@ -46,6 +47,20 @@ public class GridImageAdapter extends RecyclerView.Adapter<GridImageAdapter.Imag
     public GridImageAdapter(Context context, List<GuluFile> imageFiles) {
         this.context = context;
         this.imageFiles = imageFiles;
+    }
+    
+    /**
+     * 计算RecyclerView应该的高度
+     * @param context 上下文
+     * @param imageCount 图片数量
+     * @return RecyclerView的高度（像素）
+     */
+    public static int calculateRecyclerViewHeight(Context context, int imageCount) {
+        int displayCount = Math.min(imageCount, ImageDisplayConfig.MAX_GRID_DISPLAY_COUNT);
+        int rows = (int) Math.ceil((double) displayCount / ImageDisplayConfig.GRID_SPAN_COUNT);
+        int itemHeight = ImageDisplayConfig.dpToPx(context, ImageDisplayConfig.GRID_ITEM_HEIGHT_DP);
+        int spacing = ImageDisplayConfig.dpToPx(context, ImageDisplayConfig.GRID_SPACING_DP);
+        return rows * itemHeight + (rows - 1) * spacing;
     }
 
     /**
@@ -69,7 +84,6 @@ public class GridImageAdapter extends RecyclerView.Adapter<GridImageAdapter.Imag
         
         // 加载图片
         String imageUrl = getFullImageUrl(imageFile.getFilePath());
-        android.util.Log.d("GridImageAdapter", "加载图片: " + imageUrl);
         
         Glide.with(context)
             .load(imageUrl)
@@ -77,18 +91,20 @@ public class GridImageAdapter extends RecyclerView.Adapter<GridImageAdapter.Imag
             .placeholder(R.drawable.ic_placeholder_image)
             .error(R.drawable.ic_error_image)
             .centerCrop()
+            .thumbnail(ImageDisplayConfig.THUMBNAIL_RATIO) // 添加缩略图支持，提升加载速度
+            .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade()) // 添加渐变效果
             .listener(new com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable>() {
                 @Override
-                public boolean onLoadFailed(@androidx.annotation.Nullable com.bumptech.glide.load.engine.GlideException e, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, boolean isFirstResource) {
-                    android.util.Log.e("GridImageAdapter", "图片加载失败: " + model, e);
-                    return false;
-                }
+                    public boolean onLoadFailed(@androidx.annotation.Nullable com.bumptech.glide.load.engine.GlideException e, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, boolean isFirstResource) {
+                        // 图片加载失败处理
+                        return false;
+                    }
 
-                @Override
-                public boolean onResourceReady(android.graphics.drawable.Drawable resource, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, com.bumptech.glide.load.DataSource dataSource, boolean isFirstResource) {
-                    android.util.Log.d("GridImageAdapter", "图片加载成功: " + model);
-                    return false;
-                }
+                    @Override
+                    public boolean onResourceReady(android.graphics.drawable.Drawable resource, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, com.bumptech.glide.load.DataSource dataSource, boolean isFirstResource) {
+                        // 图片加载成功处理
+                        return false;
+                    }
             })
             .into(holder.imageView);
 
@@ -124,13 +140,11 @@ public class GridImageAdapter extends RecyclerView.Adapter<GridImageAdapter.Imag
      */
     private String getFullImageUrl(String filePath) {
         if (filePath == null || filePath.isEmpty()) {
-            android.util.Log.w("GridImageAdapter", "图片路径为空");
             return "";
         }
         
         // 如果已经是完整URL，直接返回
         if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
-            android.util.Log.d("GridImageAdapter", "使用完整URL: " + filePath);
             return filePath;
         }
         
@@ -142,9 +156,23 @@ public class GridImageAdapter extends RecyclerView.Adapter<GridImageAdapter.Imag
         }
         String fullImageUrl = imageBaseUrl + filePath;
         
-        android.util.Log.d("GridImageAdapter", "构建图片URL: " + filePath + " -> " + fullImageUrl);
-        android.util.Log.d("GridImageAdapter", "图片基础URL: " + imageBaseUrl);
         return fullImageUrl;
+    }
+
+    @Override
+    public void onViewRecycled(@NonNull ImageViewHolder holder) {
+        super.onViewRecycled(holder);
+        // 清理Glide加载，避免内存泄漏
+        Glide.with(context).clear(holder.imageView);
+    }
+
+    @Override
+    public void onDetachedFromRecyclerView(@NonNull RecyclerView recyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView);
+        // 清理资源
+        if (imageFiles != null) {
+            imageFiles.clear();
+        }
     }
 
     /**

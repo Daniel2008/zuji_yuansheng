@@ -12,7 +12,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.damors.zuji.R;
 import com.damors.zuji.dialog.AppUpdateDialog;
 import com.damors.zuji.model.AppUpdateInfo;
-import com.damors.zuji.network.HutoolApiService;
+import com.damors.zuji.network.RetrofitApiService;
+import com.damors.zuji.model.response.BaseResponse;
 
 /**
  * 更新测试Activity
@@ -81,15 +82,17 @@ public class UpdateTestActivity extends AppCompatActivity {
             int currentVersionCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
             
             // 调用API检查更新
-            HutoolApiService.getInstance(this).checkAppUpdate(
+            RetrofitApiService.getInstance(getApplicationContext()).checkAppUpdate(
                 currentVersionCode,
-                new HutoolApiService.SuccessCallback<AppUpdateInfo>() {
+                "android", // 添加平台参数
+                new RetrofitApiService.SuccessCallback<BaseResponse<AppUpdateInfo>>() {
                     @Override
-                    public void onSuccess(AppUpdateInfo updateInfo) {
+                    public void onSuccess(BaseResponse<AppUpdateInfo> response) {
                         runOnUiThread(() -> {
                             btnCheckUpdate.setEnabled(true);
                             btnCheckUpdate.setText("检查更新");
                             
+                            AppUpdateInfo updateInfo = response.getData();
                             if (updateInfo != null && updateInfo.getVersionCode() > currentVersionCode) {
                                 // 有新版本，显示更新对话框
                                 showUpdateDialog(updateInfo);
@@ -100,7 +103,7 @@ public class UpdateTestActivity extends AppCompatActivity {
                         });
                     }
                 },
-                new HutoolApiService.ErrorCallback() {
+                new RetrofitApiService.ErrorCallback() {
                     @Override
                     public void onError(String error) {
                         runOnUiThread(() -> {

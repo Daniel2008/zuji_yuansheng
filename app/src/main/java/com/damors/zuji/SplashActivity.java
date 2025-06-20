@@ -15,7 +15,8 @@ import com.damors.zuji.R;
 import com.damors.zuji.MainActivity;
 import com.damors.zuji.LoginActivity;
 import com.damors.zuji.manager.UserManager;
-import com.damors.zuji.network.HutoolApiService;
+import com.damors.zuji.network.RetrofitApiService;
+import com.damors.zuji.model.response.BaseResponse;
 
 /**
  * 启动页面活动
@@ -40,7 +41,7 @@ public class SplashActivity extends AppCompatActivity {
     private TextView appNameTextView;
     private TextView loadingTextView;
     
-    private HutoolApiService apiService;
+    private RetrofitApiService apiService;
     private UserManager userManager;
     private Handler mainHandler;
     
@@ -68,7 +69,7 @@ public class SplashActivity extends AppCompatActivity {
      * 初始化组件
      */
     private void initComponents() {
-        apiService = HutoolApiService.getInstance(this);
+        apiService = RetrofitApiService.getInstance(getApplicationContext());
         userManager = UserManager.getInstance();
         mainHandler = new Handler(Looper.getMainLooper());
         

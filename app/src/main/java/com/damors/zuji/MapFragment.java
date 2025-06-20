@@ -18,8 +18,10 @@ import android.view.ViewGroup;
 import com.amap.api.maps.model.BitmapDescriptor;
 import com.amap.api.maps.model.CameraPosition;
 import com.damors.zuji.adapter.GridImageAdapter;
+import com.damors.zuji.config.ImageDisplayConfig;
 import com.damors.zuji.model.GuluFile;
 import com.damors.zuji.network.ApiConfig;
+import com.damors.zuji.utils.GridSpacingItemDecoration;
 import com.damors.zuji.utils.ImageUtils;
 import com.damors.zuji.CommentListActivity;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -46,8 +48,9 @@ import androidx.lifecycle.ViewModelProvider;
 import com.damors.zuji.data.FootprintEntity;
 
 import com.damors.zuji.viewmodel.FootprintViewModel;
-import com.damors.zuji.network.HutoolApiService;
+import com.damors.zuji.network.RetrofitApiService;
 import com.damors.zuji.model.FootprintMessage;
+import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.model.response.FootprintMessageResponse;
 // Glide图片加载库导入
 import com.bumptech.glide.Glide;
@@ -67,6 +70,8 @@ import com.amap.api.location.AMapLocation;
 import com.amap.api.location.AMapLocationClient;
 import com.amap.api.location.AMapLocationClientOption;
 import com.amap.api.location.AMapLocationListener;
+
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -109,7 +114,7 @@ public class MapFragment extends Fragment {
 
     // 核心服务
     private FootprintViewModel viewModel;
-    private HutoolApiService apiService;
+    private RetrofitApiService apiService;
     
     // 位置相关
     private AMapLocation lastAMapLocation;
@@ -186,7 +191,7 @@ public class MapFragment extends Fragment {
         viewModel = new ViewModelProvider(requireActivity()).get(FootprintViewModel.class);
         
         // 初始化API服务
-        apiService = HutoolApiService.getInstance(requireContext());
+        apiService = RetrofitApiService.getInstance(requireContext());
         
         // 初始化UI组件
         mapView = view.findViewById(R.id.map);
@@ -673,13 +678,13 @@ public class MapFragment extends Fragment {
                 50, // 每页大小
                     response -> {
                         try {
-                            Log.d(TAG, "获取地图mark数据成功，记录数: " + response.getRecords().size());
+                            Log.d(TAG, "获取地图mark数据成功，记录数: " + response.getData().getRecords().size());
 
                             // 在主线程更新UI
                             if (mainHandler != null) {
                                 mainHandler.post(() -> {
                                     try {
-                                        handleFootprintMessages(response.getRecords());
+                                        handleFootprintMessages(response.getData().getRecords());
                                         Log.d(TAG, "地图mark数据显示完成");
                                     } catch (Exception e) {
                                         Log.e(TAG, "显示地图mark数据失败: " + e.getMessage(), e);
@@ -953,16 +958,29 @@ public class MapFragment extends Fragment {
             
             // 调用API更新点赞状态
             apiService.toggleLike(message.getId(),
-                new HutoolApiService.SuccessCallback<String>() {
+                new RetrofitApiService.SuccessCallback<BaseResponse<JSONObject>>() {
                     @Override
-                    public void onSuccess(String response) {
-                        // API调用成功，显示提示信息
-                        String toastMessage = newLikeStatus ? "已点赞" : "已取消点赞";
-                        Toast.makeText(requireContext(), toastMessage, Toast.LENGTH_SHORT).show();
-                        Log.d(TAG, "点赞状态更新成功: " + response);
+                    public void onSuccess(BaseResponse<JSONObject> response) {
+                        if (response != null && response.getCode() == 200) {
+                            // API调用成功，显示提示信息
+                            String toastMessage = newLikeStatus ? "已点赞" : "已取消点赞";
+                            Toast.makeText(requireContext(), toastMessage, Toast.LENGTH_SHORT).show();
+                            Log.d(TAG, "点赞状态更新成功: " + response.getData());
+                        } else {
+                            // 业务失败，回滚UI状态
+                            boolean originalStatus = !newLikeStatus;
+                            int originalCount = message.getLikeCount() + (originalStatus ? 1 : -1);
+                            updateLikeStatus(ivLike, tvLikeCount, originalStatus, originalCount);
+                            message.setHasLiked(originalStatus);
+                            message.setLikeCount(originalCount);
+                            
+                            String msg = response != null ? response.getMsg() : "点赞操作失败";
+                            Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show();
+                            Log.e(TAG, "点赞状态更新失败: " + msg);
+                        }
                     }
                 },
-                new HutoolApiService.ErrorCallback() {
+                new RetrofitApiService.ErrorCallback() {
                     @Override
                     public void onError(String error) {
                         // API调用失败，回滚UI状态
@@ -1033,7 +1051,7 @@ public class MapFragment extends Fragment {
                 }
             }
             
-            android.util.Log.d("MapFragment", "找到图片文件数量: " + imageFiles.size());
+            // 找到图片文件数量: " + imageFiles.size()
             
             if (!imageFiles.isEmpty()) {
                 frameLayoutImages.setVisibility(View.VISIBLE);
@@ -1067,18 +1085,25 @@ public class MapFragment extends Fragment {
      * 设置网格图片布局
      */
     private void setupGridImageLayout(View gridImageLayout, java.util.List<GuluFile> imageFiles) {
-        ImageView singleImage = gridImageLayout.findViewById(R.id.single_image);
-        LinearLayout twoImagesLayout = gridImageLayout.findViewById(R.id.two_images_layout);
-        LinearLayout threeImagesLayout = gridImageLayout.findViewById(R.id.three_images_layout);
-        androidx.recyclerview.widget.RecyclerView gridRecyclerView = gridImageLayout.findViewById(R.id.grid_recycler_view);
-        
-        // 隐藏所有布局
-        if (singleImage != null) singleImage.setVisibility(View.GONE);
-        if (twoImagesLayout != null) twoImagesLayout.setVisibility(View.GONE);
-        if (threeImagesLayout != null) threeImagesLayout.setVisibility(View.GONE);
-        if (gridRecyclerView != null) gridRecyclerView.setVisibility(View.GONE);
-        
-        int imageCount = imageFiles.size();
+        try {
+            if (gridImageLayout == null || imageFiles == null || imageFiles.isEmpty()) {
+                Log.w("MapFragment", "setupGridImageLayout: 参数无效");
+                return;
+            }
+            
+            ImageView singleImage = gridImageLayout.findViewById(R.id.single_image);
+            LinearLayout twoImagesLayout = gridImageLayout.findViewById(R.id.two_images_layout);
+            LinearLayout threeImagesLayout = gridImageLayout.findViewById(R.id.three_images_layout);
+            androidx.recyclerview.widget.RecyclerView gridRecyclerView = gridImageLayout.findViewById(R.id.grid_recycler_view);
+            
+            // 隐藏所有布局
+            if (singleImage != null) singleImage.setVisibility(View.GONE);
+            if (twoImagesLayout != null) twoImagesLayout.setVisibility(View.GONE);
+            if (threeImagesLayout != null) threeImagesLayout.setVisibility(View.GONE);
+            if (gridRecyclerView != null) gridRecyclerView.setVisibility(View.GONE);
+            
+            int imageCount = imageFiles.size();
+            Log.d("MapFragment", "设置网格布局，图片数量: " + imageCount);
         
         if (imageCount == 2 && twoImagesLayout != null) {
             twoImagesLayout.setVisibility(View.VISIBLE);
@@ -1108,12 +1133,32 @@ public class MapFragment extends Fragment {
         } else if (imageCount >= 4 && gridRecyclerView != null) {
             gridRecyclerView.setVisibility(View.VISIBLE);
             androidx.recyclerview.widget.GridLayoutManager gridLayoutManager = 
-                new androidx.recyclerview.widget.GridLayoutManager(getContext(), 3);
+                new androidx.recyclerview.widget.GridLayoutManager(getContext(), ImageDisplayConfig.GRID_SPAN_COUNT);
             gridRecyclerView.setLayoutManager(gridLayoutManager);
+            
+            // 添加网格间距装饰器
+            if (gridRecyclerView.getItemDecorationCount() == 0) {
+                gridRecyclerView.addItemDecoration(new GridSpacingItemDecoration(ImageDisplayConfig.GRID_SPAN_COUNT, ImageDisplayConfig.GRID_SPACING_DP, true));
+            }
+            
+            // 计算并设置RecyclerView的高度
+            int calculatedHeight = com.damors.zuji.adapter.GridImageAdapter.calculateRecyclerViewHeight(getContext(), imageFiles.size());
+            ViewGroup.LayoutParams layoutParams = gridRecyclerView.getLayoutParams();
+            layoutParams.height = calculatedHeight;
+            gridRecyclerView.setLayoutParams(layoutParams);
             
             GridImageAdapter adapter = new GridImageAdapter(getContext(), imageFiles);
             adapter.setOnImageClickListener((position, files) -> openImagePreview(files, position));
             gridRecyclerView.setAdapter(adapter);
+            
+            // Log.d("MapFragment", "设置RecyclerView高度: " + calculatedHeight + "px，图片数量: " + imageFiles.size());
+        }
+        } catch (Exception e) {
+            Log.e("MapFragment", "设置网格图片布局时发生错误", e);
+            // 发生错误时隐藏图片布局
+            if (gridImageLayout != null) {
+                gridImageLayout.setVisibility(View.GONE);
+            }
         }
     }
     
@@ -1121,15 +1166,47 @@ public class MapFragment extends Fragment {
      * 加载图片到ImageView
      */
     private void loadImageIntoView(ImageView imageView, GuluFile imageFile) {
-        String imageUrl = getFullImageUrl(imageFile.getFilePath());
-        
-        com.bumptech.glide.Glide.with(this)
-            .load(imageUrl)
-            .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
-            .placeholder(R.drawable.ic_placeholder_image)
-            .error(R.drawable.ic_error_image)
-            .centerCrop()
-            .into(imageView);
+        try {
+            if (imageView == null || imageFile == null) {
+                Log.w("MapFragment", "loadImageIntoView: 参数无效");
+                return;
+            }
+            
+            String imageUrl = getFullImageUrl(imageFile.getFilePath());
+            if (imageUrl.isEmpty()) {
+                Log.w("MapFragment", "图片URL为空，使用默认占位图");
+                imageView.setImageResource(R.drawable.ic_placeholder_image);
+                return;
+            }
+            
+            com.bumptech.glide.Glide.with(this)
+                .load(imageUrl)
+                .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
+                .placeholder(R.drawable.ic_placeholder_image)
+                .error(R.drawable.ic_error_image)
+                .centerCrop()
+                .thumbnail(ImageDisplayConfig.THUMBNAIL_RATIO)
+                .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade())
+                .listener(new com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable>() {
+                    @Override
+                    public boolean onLoadFailed(@androidx.annotation.Nullable com.bumptech.glide.load.engine.GlideException e, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, boolean isFirstResource) {
+                        Log.e("MapFragment", "图片加载失败: " + model, e);
+                        return false;
+                    }
+
+                    @Override
+                    public boolean onResourceReady(android.graphics.drawable.Drawable resource, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, com.bumptech.glide.load.DataSource dataSource, boolean isFirstResource) {
+                        Log.d("MapFragment", "图片加载成功: " + model);
+                        return false;
+                    }
+                })
+                .into(imageView);
+        } catch (Exception e) {
+            Log.e("MapFragment", "加载图片时发生错误", e);
+            if (imageView != null) {
+                imageView.setImageResource(R.drawable.ic_error_image);
+            }
+        }
     }
     
     /**
@@ -1242,19 +1319,26 @@ public class MapFragment extends Fragment {
      * @param content 评论内容
      */
     private void addComment(Integer msgId, String content) {
-        apiService.addComment(msgId, content,
-            new HutoolApiService.SuccessCallback<String>() {
+        apiService.addComment(msgId, content, null, // parentId设为null，表示不是回复评论
+            new RetrofitApiService.SuccessCallback<BaseResponse<JSONObject>>() {
                 @Override
-                public void onSuccess(String response) {
-                    // 评论成功
-                    Toast.makeText(requireContext(), "评论发表成功", Toast.LENGTH_SHORT).show();
-                    Log.d(TAG, "评论发表成功: " + response);
-                    
-                    // 这里可以刷新评论列表或更新UI
-                    // TODO: 刷新当前页面的评论数据
+                public void onSuccess(BaseResponse<JSONObject> response) {
+                    if (response != null && response.getCode() == 200) {
+                        // 评论成功
+                        Toast.makeText(requireContext(), "评论发表成功", Toast.LENGTH_SHORT).show();
+                        Log.d(TAG, "评论发表成功: " + response.getData());
+                        
+                        // 这里可以刷新评论列表或更新UI
+                        // TODO: 刷新当前页面的评论数据
+                    } else {
+                        // 业务失败
+                        String msg = response != null ? response.getMsg() : "评论发表失败";
+                        Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show();
+                        Log.e(TAG, "评论发表失败: " + msg);
+                    }
                 }
             },
-            new HutoolApiService.ErrorCallback() {
+            new RetrofitApiService.ErrorCallback() {
                 @Override
                 public void onError(String error) {
                     // 评论失败

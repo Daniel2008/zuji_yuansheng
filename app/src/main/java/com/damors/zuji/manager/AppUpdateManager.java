@@ -20,7 +20,8 @@ import android.widget.Toast;
 import androidx.core.content.FileProvider;
 
 import com.damors.zuji.model.AppUpdateInfo;
-import com.damors.zuji.network.HutoolApiService;
+import com.damors.zuji.network.RetrofitApiService;
+import com.damors.zuji.model.response.BaseResponse;
 
 import java.io.File;
 import java.security.MessageDigest;
@@ -36,7 +37,7 @@ public class AppUpdateManager {
     private static AppUpdateManager instance;
     
     private Context context;
-    private HutoolApiService apiService;
+    private RetrofitApiService apiService;
     private DownloadManager downloadManager;
     private long downloadId = -1;
     private AppUpdateInfo currentUpdateInfo;
@@ -98,7 +99,7 @@ public class AppUpdateManager {
      */
     private AppUpdateManager(Context context) {
         this.context = context.getApplicationContext();
-        this.apiService = HutoolApiService.getInstance(context);
+        this.apiService = RetrofitApiService.getInstance(context);
         this.downloadManager = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
     }
     
@@ -122,27 +123,37 @@ public class AppUpdateManager {
         int currentVersionCode = getCurrentVersionCode();
         Log.d(TAG, "当前版本号: " + currentVersionCode);
         
-        apiService.checkAppUpdate(currentVersionCode, 
-            new HutoolApiService.SuccessCallback<AppUpdateInfo>() {
+        apiService.checkAppUpdate(currentVersionCode, "android", 
+            new RetrofitApiService.SuccessCallback<BaseResponse<AppUpdateInfo>>() {
                 @Override
-                public void onSuccess(AppUpdateInfo updateInfo) {
-                    Log.d(TAG, "检查更新成功: " + updateInfo.toString());
-                    
-                    if (updateInfo != null && updateInfo.getVersionCode() > currentVersionCode) {
-                        // 发现新版本
-                        currentUpdateInfo = updateInfo;
-                        if (callback != null) {
-                            callback.onUpdateAvailable(updateInfo);
+                public void onSuccess(BaseResponse<AppUpdateInfo> response) {
+                    if (response != null && response.getCode() == 200 && response.getData() != null) {
+                        AppUpdateInfo updateInfo = response.getData();
+                        Log.d(TAG, "检查更新成功: " + updateInfo.toString());
+                        
+                        if (updateInfo.getVersionCode() > currentVersionCode) {
+                            // 发现新版本
+                            currentUpdateInfo = updateInfo;
+                            if (callback != null) {
+                                callback.onUpdateAvailable(updateInfo);
+                            }
+                        } else {
+                            // 已是最新版本
+                            if (callback != null) {
+                                callback.onNoUpdateAvailable();
+                            }
                         }
                     } else {
-                        // 已是最新版本
+                        // 业务失败
+                        String msg = response != null ? response.getMsg() : "检查更新失败";
+                        Log.e(TAG, "检查更新失败: " + msg);
                         if (callback != null) {
-                            callback.onNoUpdateAvailable();
+                            callback.onCheckUpdateError(msg);
                         }
                     }
                 }
             },
-            new HutoolApiService.ErrorCallback() {
+            new RetrofitApiService.ErrorCallback() {
                 @Override
                 public void onError(String errorMessage) {
                     Log.e(TAG, "检查更新失败: " + errorMessage);

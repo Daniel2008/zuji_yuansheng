@@ -17,7 +17,8 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.response.LoginResponse;
-import com.damors.zuji.network.HutoolApiService;
+import com.damors.zuji.model.response.BaseResponse;
+import com.damors.zuji.network.RetrofitApiService;
 import com.damors.zuji.utils.DeviceUtils;
 import com.damors.zuji.utils.LoadingDialog;
 import com.google.android.material.button.MaterialButton;
@@ -33,7 +34,7 @@ public class LoginActivity extends AppCompatActivity {
     private TextView countdownTextView;
     private MaterialButton loginButton;
     private CountDownTimer countDownTimer;
-    private HutoolApiService apiService;
+    private RetrofitApiService apiService;
     private LoadingDialog loadingDialog; // 加载弹窗
 
     @Override
@@ -46,7 +47,7 @@ public class LoginActivity extends AppCompatActivity {
         // 初始化视图
         initViews();
         // 初始化API服务
-        apiService = HutoolApiService.getInstance(this);
+        apiService = RetrofitApiService.getInstance(this);
         
         // 初始化加载弹窗
         loadingDialog = new LoadingDialog(this);
@@ -114,44 +115,22 @@ public class LoginActivity extends AppCompatActivity {
 
         // 调用发送验证码API
         apiService.sendVerificationCode(phone,
-                new HutoolApiService.SuccessCallback<String>() {
-                    @Override
-                    public void onSuccess(String response) {
-                        // 记录原始响应
-                        Log.d("LoginActivity", "验证码响应: " + response);
-                        
-                        try {
-                            // 检查响应是否为空
-                            if (response == null || response.isEmpty()) {
-                                Toast.makeText(LoginActivity.this, "服务器返回空响应", Toast.LENGTH_SHORT).show();
-                                getVerificationCodeButton.setEnabled(true);
-                                return;
-                            }
-                            
-                            // 尝试解析JSON响应
-                            JSONObject jsonResponse = new JSONObject(response);
-                            // 检查是否包含成功消息
-                            String message = jsonResponse.optString("message", "");
-                            // 检查是否包含完整的响应结构（code, msg, data）
-                            Log.d("LoginActivity", "收到简化响应格式，默认为成功");
-                            if (message.contains("验证码发送成功")) {
-                                // 验证码发送成功，开始倒计时
-                                Toast.makeText(LoginActivity.this, "验证码已发送", Toast.LENGTH_SHORT).show();
-                                startCountdown();
-                            } else {
-                                // 根据响应内容判断
-                                Toast.makeText(LoginActivity.this, "验证码发送失败", Toast.LENGTH_SHORT).show();
-                            }
+                response -> {
+                    // 记录原始响应
+                    Log.d("LoginActivity", "验证码响应: " + response.toString());
 
-                        } catch (Exception e) {
-                            Log.e("LoginActivity", "解析验证码响应失败: " + e.getMessage(), e);
-                            Log.e("LoginActivity", "原始响应: " + response);
-                            Toast.makeText(LoginActivity.this, "请求失败，请稍后重试", Toast.LENGTH_SHORT).show();
-                            getVerificationCodeButton.setEnabled(true);
-                        }
+                    if (response.getCode() == 200) {
+                        // 验证码发送成功，开始倒计时
+                        Toast.makeText(LoginActivity.this, "验证码已发送", Toast.LENGTH_SHORT).show();
+                        startCountdown();
+                    } else {
+                        // 根据响应消息判断
+                        String msg = response.getMsg() != null ? response.getMsg() : "验证码发送失败";
+                        Toast.makeText(LoginActivity.this, msg, Toast.LENGTH_SHORT).show();
+                        getVerificationCodeButton.setEnabled(true);
                     }
                 },
-                new HutoolApiService.ErrorCallback() {
+                new RetrofitApiService.ErrorCallback() {
                     @Override
                     public void onError(String errorMessage) {
                         Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
@@ -201,48 +180,55 @@ public class LoginActivity extends AppCompatActivity {
 
         // 调用登录API
         apiService.smsLogin(phone, code, deviceId,
-                response -> {
-                    try {
-                        // 直接使用返回的LoginResponse.Data对象
-                        if (response != null) {
-                            // 登录成功，获取用户信息和token
-                            String token = response.getToken();
-                            Log.d("LoginActivity", "登录成功，获取到token: " + (token != null ? "有效" : "无效"));
+                new RetrofitApiService.SuccessCallback<BaseResponse<LoginResponse.Data>>() {
+                    @Override
+                    public void onSuccess(BaseResponse<LoginResponse.Data> response) {
+                        try {
+                            if (response.getCode() == 200 && response.getData() != null) {
+                                LoginResponse.Data data = response.getData();
+                                // 登录成功，获取用户信息和token
+                                String token = data.getToken();
+                                Log.d("LoginActivity", "登录成功，获取到token: " + (token != null ? "有效" : "无效"));
 
-                            // 统一使用UserManager保存用户信息和token（修复重复保存问题）
-                            Gson gson = new Gson();
-                            String userDataJson = gson.toJson(response.getUser());
-                            UserManager.getInstance().saveUserAndToken(userDataJson, token);
-                            Log.d("LoginActivity", "用户信息已保存到UserManager");
+                                // 统一使用UserManager保存用户信息和token（修复重复保存问题）
+                                Gson gson = new Gson();
+                                String userDataJson = gson.toJson(data.getUser());
+                                UserManager.getInstance().saveUserAndToken(userDataJson, token);
+                                Log.d("LoginActivity", "用户信息已保存到UserManager");
 
-                            // 隐藏加载弹窗
-                            loadingDialog.dismiss();
-                            
-                            // 跳转到主页面（数据已通过commit()同步保存）
-                            Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-                            startActivity(intent);
-                            finish();
-                            
-                            Log.d("LoginActivity", "登录完成，已跳转到主页面");
-                        } else {
-                            Log.e("LoginActivity", "登录响应为空");
+                                // 隐藏加载弹窗
+                                loadingDialog.dismiss();
+                                
+                                // 跳转到主页面（数据已通过commit()同步保存）
+                                Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+                                startActivity(intent);
+                                finish();
+                                
+                                Log.d("LoginActivity", "登录完成，已跳转到主页面");
+                            } else {
+                                Log.e("LoginActivity", "登录响应异常: code=" + response.getCode());
+                                loadingDialog.dismiss(); // 隐藏加载弹窗
+                                String msg = response.getMsg() != null ? response.getMsg() : "登录失败，请稍后重试";
+                                Toast.makeText(LoginActivity.this, msg, Toast.LENGTH_SHORT).show();
+                                loginButton.setEnabled(true);
+                            }
+                        } catch (Exception e) {
+                            Log.e("LoginActivity", "处理登录响应时发生异常", e);
                             loadingDialog.dismiss(); // 隐藏加载弹窗
-                            Toast.makeText(LoginActivity.this, "登录失败，请稍后重试", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(LoginActivity.this, "请求失败，请稍后重试", Toast.LENGTH_SHORT).show();
                             loginButton.setEnabled(true);
                         }
-                    } catch (Exception e) {
-                        Log.e("LoginActivity", "处理登录响应时发生异常", e);
-                        loadingDialog.dismiss(); // 隐藏加载弹窗
-                        Toast.makeText(LoginActivity.this, "请求失败，请稍后重试", Toast.LENGTH_SHORT).show();
-                        loginButton.setEnabled(true);
                     }
                 },
-                errorMessage -> {
-                    // 处理登录失败
-                    Log.e("LoginActivity", "登录失败: " + errorMessage);
-                    loadingDialog.dismiss(); // 隐藏加载弹窗
-                    Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
-                    loginButton.setEnabled(true);
+                new RetrofitApiService.ErrorCallback() {
+                    @Override
+                    public void onError(String errorMessage) {
+                        // 处理登录失败
+                        Log.e("LoginActivity", "登录失败: " + errorMessage);
+                        loadingDialog.dismiss(); // 隐藏加载弹窗
+                        Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
+                        loginButton.setEnabled(true);
+                    }
                 });
     }
 

@@ -1,7 +1,10 @@
 package com.damors.zuji.adapter;
 
 import android.content.Context;
+import android.text.SpannableString;
+import android.text.Spanned;
 import android.text.TextUtils;
+import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,11 +13,12 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.damors.zuji.R;
-import com.damors.zuji.model.Comment;
+import com.damors.zuji.model.CommentModel;
 import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.utils.TimeUtils;
 
@@ -26,21 +30,22 @@ import java.util.List;
  */
 public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentViewHolder> {
     private Context context;
-    private List<Comment> comments;
-    private List<Comment> allComments; // 存储所有评论数据，包括回复
+    private List<CommentModel> comments;
+    private List<CommentModel> allComments; // 存储所有评论数据，包括回复
     private OnCommentClickListener onCommentClickListener;
     
     public interface OnCommentClickListener {
-        void onReplyClick(Comment comment);
+        void onReplyClick(CommentModel comment);
+        void onDeleteClick(CommentModel comment);
     }
     
-    public CommentAdapter(Context context, List<Comment> comments, List<Comment> allComments) {
+    public CommentAdapter(Context context, List<CommentModel> comments, List<CommentModel> allComments) {
         this.context = context;
         this.comments = comments != null ? comments : new ArrayList<>();
         this.allComments = allComments != null ? allComments : new ArrayList<>();
     }
     
-    public void setComments(List<Comment> comments) {
+    public void setComments(List<CommentModel> comments) {
         this.comments = comments != null ? comments : new ArrayList<>();
         notifyDataSetChanged();
     }
@@ -49,7 +54,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
      * 设置所有评论数据（包括回复）
      * @param allComments 所有评论数据
      */
-    public void setAllComments(List<Comment> allComments) {
+    public void setAllComments(List<CommentModel> allComments) {
         this.allComments = allComments != null ? allComments : new ArrayList<>();
     }
     
@@ -58,13 +63,13 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
      * @param comments 主评论列表
      * @param allComments 所有评论数据（包括回复）
      */
-    public void setCommentsAndAllComments(List<Comment> comments, List<Comment> allComments) {
+    public void setCommentsAndAllComments(List<CommentModel> comments, List<CommentModel> allComments) {
         this.comments = comments != null ? comments : new ArrayList<>();
         this.allComments = allComments != null ? allComments : new ArrayList<>();
         notifyDataSetChanged();
     }
     
-    public void addComments(List<Comment> newComments) {
+    public void addComments(List<CommentModel> newComments) {
         if (newComments != null && !newComments.isEmpty()) {
             int startPosition = this.comments.size();
             this.comments.addAll(newComments);
@@ -85,7 +90,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
     
     @Override
     public void onBindViewHolder(@NonNull CommentViewHolder holder, int position) {
-        Comment comment = comments.get(position);
+        CommentModel comment = comments.get(position);
         
         // 设置用户头像
         if (!TextUtils.isEmpty(comment.getUserAvatar())) {
@@ -120,9 +125,20 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             }
         });
         
+        // 设置删除按钮点击事件
+        holder.tvDelete.setOnClickListener(v -> {
+            if (onCommentClickListener != null) {
+                onCommentClickListener.onDeleteClick(comment);
+            }
+        });
+        
+        // 根据评论所有者显示删除按钮（这里可以根据实际需求判断是否显示删除按钮）
+        // TODO: 添加判断当前用户是否为评论作者的逻辑
+        holder.tvDelete.setVisibility(View.VISIBLE); // 暂时显示所有删除按钮，后续可根据用户权限控制
+        
         // 处理子评论显示
         android.util.Log.d("CommentAdapter", "处理评论ID=" + comment.getId() + ", parentId=" + comment.getParentId() + ", 内容=" + comment.getContent());
-        List<Comment> replies = getRepliesByParentId(comment.getId());
+        List<CommentModel> replies = getRepliesByParentId(comment.getId());
         if (replies != null && !replies.isEmpty()) {
             holder.tvReplyCount.setVisibility(View.VISIBLE);
             
@@ -161,13 +177,13 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
      * @param parentId 父评论ID
      * @return 回复列表
      */
-    private List<Comment> getRepliesByParentId(Integer parentId) {
+    private List<CommentModel> getRepliesByParentId(Integer parentId) {
         if (allComments == null || parentId == null) {
             return new ArrayList<>();
         }
         
-        List<Comment> replies = new ArrayList<>();
-        for (Comment comment : allComments) {
+        List<CommentModel> replies = new ArrayList<>();
+        for (CommentModel comment : allComments) {
             if (parentId.equals(comment.getParentId())) {
                 replies.add(comment);
             }
@@ -184,13 +200,13 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
      * @param holder ViewHolder
      * @param replies 子评论列表
      */
-    private void showReplies(CommentViewHolder holder, List<Comment> replies) {
+    private void showReplies(CommentViewHolder holder, List<CommentModel> replies) {
         holder.layoutReplies.removeAllViews();
         holder.layoutReplies.setVisibility(View.VISIBLE);
         
         LayoutInflater inflater = LayoutInflater.from(context);
         
-        for (Comment reply : replies) {
+        for (CommentModel reply : replies) {
             View replyView = inflater.inflate(R.layout.item_reply, holder.layoutReplies, false);
             
             // 绑定子评论数据
@@ -217,13 +233,24 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             // 设置用户名
             tvUserName.setText(reply.getUserName() != null ? reply.getUserName() : "匿名用户");
             
-            // 设置回复内容，体现"谁回复谁"的功能
-            String replyContent = reply.getContent();
+            // 设置回复内容，按照新的格式："回复 被回复用户名：回复内容"
             if (!TextUtils.isEmpty(reply.getParentUserName())) {
-                // 如果有父评论用户信息，显示"XX回复XX"格式
-                replyContent = reply.getUserName() + " 回复 " + reply.getParentUserName() + ": " + reply.getContent();
+                // 创建SpannableString来设置不同颜色
+                SpannableString spannableContent = new SpannableString(
+                    "回复 " + reply.getParentUserName() + "：" + reply.getContent());
+                
+                // 设置"回复 被回复用户名"为蓝色
+                int blueTextEnd = ("回复 " + reply.getParentUserName()).length();
+                spannableContent.setSpan(
+                    new ForegroundColorSpan(
+                        ContextCompat.getColor(context, R.color.primary_color)),
+                    0, blueTextEnd,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                
+                tvContent.setText(spannableContent);
+            } else {
+                tvContent.setText(reply.getContent());
             }
-            tvContent.setText(replyContent);
             
             // 设置时间
             if (!TextUtils.isEmpty(reply.getCreateTime())) {
@@ -239,6 +266,18 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
                 }
             });
             
+            // 设置删除按钮点击事件
+            TextView tvDelete = replyView.findViewById(R.id.tv_delete);
+            tvDelete.setOnClickListener(v -> {
+                if (onCommentClickListener != null) {
+                    onCommentClickListener.onDeleteClick(reply);
+                }
+            });
+            
+            // 根据回复所有者显示删除按钮（这里可以根据实际需求判断是否显示删除按钮）
+            // TODO: 添加判断当前用户是否为回复作者的逻辑
+            tvDelete.setVisibility(View.VISIBLE); // 暂时显示所有删除按钮，后续可根据用户权限控制
+            
             holder.layoutReplies.addView(replyView);
         }
     }
@@ -249,6 +288,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         TextView tvContent;
         TextView tvTime;
         TextView tvReply;
+        TextView tvDelete;
         TextView tvReplyCount;
         LinearLayout layoutReplies;
         boolean isExpanded = false;
@@ -260,6 +300,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             tvContent = itemView.findViewById(R.id.tv_content);
             tvTime = itemView.findViewById(R.id.tv_time);
             tvReply = itemView.findViewById(R.id.tv_reply);
+            tvDelete = itemView.findViewById(R.id.tv_delete);
             tvReplyCount = itemView.findViewById(R.id.tv_reply_count);
             layoutReplies = itemView.findViewById(R.id.layout_replies);
         }
