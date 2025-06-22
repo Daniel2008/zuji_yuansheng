@@ -1,22 +1,19 @@
-package com.damors.zuji;
+package com.damors.zuji.activity;
 
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
-import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.damors.zuji.R;
-import com.damors.zuji.MainActivity;
-import com.damors.zuji.LoginActivity;
 import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.network.RetrofitApiService;
-import com.damors.zuji.model.response.BaseResponse;
+import com.gyf.immersionbar.ImmersionBar;
 
 /**
  * 启动页面活动
@@ -32,7 +29,7 @@ import com.damors.zuji.model.response.BaseResponse;
  * @version 1.0
  * @since 2024
  */
-public class SplashActivity extends AppCompatActivity {
+public class SplashActivity extends BaseActivity {
     
     private static final String TAG = "SplashActivity";
     private static final int SPLASH_DELAY_MS = 2000; // 启动页显示时间（毫秒）
@@ -48,13 +45,9 @@ public class SplashActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
-        // 隐藏状态栏，全屏显示
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        
+
         setContentView(R.layout.activity_splash);
-        
+
         // 初始化组件
         initComponents();
         

@@ -2,22 +2,16 @@ package com.damors.zuji.adapter;
 
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.TextView;
-
-import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.bumptech.glide.request.RequestOptions;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.damors.zuji.AddFootprintActivity;
+import com.damors.zuji.activity.AddFootprintActivity;
 import com.damors.zuji.R;
 import com.damors.zuji.data.FootprintEntity;
 import com.amap.api.services.geocoder.GeocodeSearch;

@@ -1,6 +1,5 @@
-package com.damors.zuji;
+package com.damors.zuji.fragment;
 
-import android.graphics.Color;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,6 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.damors.zuji.R;
 import com.damors.zuji.data.FootprintEntity;
 import com.damors.zuji.viewmodel.FootprintViewModel;
 

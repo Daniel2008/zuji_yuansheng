@@ -1,5 +1,7 @@
 package com.damors.zuji.network;
 
+import com.damors.zuji.BuildConfig;
+
 /**
  * API配置类，集中管理API相关的配置信息
  */
@@ -16,15 +18,18 @@ public class ApiConfig {
     // 线上环境地址
     private static final String PROD_IMAGE_BASE_URL = "https://zuji.damors.com";
 
-    // 当前环境，可以通过BuildConfig.DEBUG等条件来自动切换
-    private static final boolean IS_PRODUCTION = false;
+    public static final String APP_UPDATE_URL = "https://zuji.damors.com/zuji/api/";
+
+    // 从BuildConfig获取正式模式配置
+    // Get production mode configuration from BuildConfig
+    private static boolean proMode = BuildConfig.PRO_MODE;
 
     /**
      * 获取当前环境的API基础URL
      * @return API基础URL
      */
     public static String getBaseUrl() {
-        if (IS_PRODUCTION) {
+        if (proMode) {
             return PROD_BASE_URL;
         } else {
             // 默认使用测试环境
@@ -37,7 +42,7 @@ public class ApiConfig {
      * @return 图片基础URL
      */
     public static String getImageBaseUrl() {
-        if (IS_PRODUCTION) {
+        if (proMode) {
             return PROD_IMAGE_BASE_URL;
         } else {
             // 默认使用测试环境

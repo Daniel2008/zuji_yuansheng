@@ -1,4 +1,4 @@
-package com.damors.zuji;
+package com.damors.zuji.fragment;
 
 import android.content.Context;
 import android.content.Intent;
@@ -22,10 +22,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.damors.zuji.ImagePreviewActivity;
-import com.damors.zuji.CommentListActivity;
+import com.damors.zuji.R;
+import com.damors.zuji.activity.CommentListActivity;
+import com.damors.zuji.activity.ImagePreviewActivity;
 import com.damors.zuji.adapter.FootprintMessageAdapter;
-import com.damors.zuji.data.FootprintEntity;
 import com.damors.zuji.model.FootprintMessage;
 import com.damors.zuji.model.GuluFile;
 import com.damors.zuji.model.response.FootprintMessageResponse;
@@ -44,7 +44,7 @@ import java.util.List;
  * 历史记录Fragment
  * 显示用户的足迹历史记录，通过getFootprintMessages获取数据并以时间轴形式展示
  */
-public class HistoryFragment extends Fragment {
+public class FootPrintFragment extends Fragment {
 
     private static final String TAG = "HistoryFragment";
     private static final int PAGE_SIZE = 10; // 每页显示数量

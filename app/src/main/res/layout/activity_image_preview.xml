@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/black"
-    tools:context=".ImagePreviewActivity">
+    tools:context=".activity.ImagePreviewActivity">
 
     <!-- ViewPager2 用于滑动浏览多张图片 -->
     <androidx.viewpager2.widget.ViewPager2

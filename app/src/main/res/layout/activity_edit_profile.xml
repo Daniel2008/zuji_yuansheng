@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/profile_background"
-    tools:context=".EditProfileActivity">
+    tools:context=".activity.EditProfileActivity">
 
     <!-- 顶部工具栏 -->
     <androidx.appcompat.widget.Toolbar

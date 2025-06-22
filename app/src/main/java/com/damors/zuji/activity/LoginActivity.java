@@ -1,4 +1,4 @@
-package com.damors.zuji;
+package com.damors.zuji.activity;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -6,15 +6,12 @@ import android.os.CountDownTimer;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
-import android.view.WindowManager;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
+import com.damors.zuji.R;
 import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.response.LoginResponse;
 import com.damors.zuji.model.response.BaseResponse;
@@ -24,10 +21,10 @@ import com.damors.zuji.utils.LoadingDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
-import org.json.JSONObject;
 import com.google.gson.Gson;
+import com.gyf.immersionbar.ImmersionBar;
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends BaseActivity {
     private TextInputEditText phoneEditText;
     private TextInputEditText verificationCodeEditText;
     private MaterialButton getVerificationCodeButton;
@@ -41,8 +38,7 @@ public class LoginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // 隐藏状态栏
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        ImmersionBar.with(this).init();
         setContentView(R.layout.activity_login);
         // 初始化视图
         initViews();

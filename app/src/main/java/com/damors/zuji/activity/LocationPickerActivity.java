@@ -1,4 +1,4 @@
-package com.damors.zuji;
+package com.damors.zuji.activity;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -29,9 +29,11 @@ import com.amap.api.services.geocoder.RegeocodeResult;
 import com.amap.api.services.geocoder.RegeocodeAddress;
 import com.amap.api.services.geocoder.GeocodeResult;
 import com.amap.api.services.core.LatLonPoint;
+import com.damors.zuji.R;
+
 import android.util.Log;
 
-public class LocationPickerActivity extends AppCompatActivity implements AMapLocationListener, GeocodeSearch.OnGeocodeSearchListener {
+public class LocationPickerActivity extends BaseActivity implements AMapLocationListener, GeocodeSearch.OnGeocodeSearchListener {
     private static final String TAG = "LocationPickerActivity";
     private MapView mapView;
     private AMap aMap;

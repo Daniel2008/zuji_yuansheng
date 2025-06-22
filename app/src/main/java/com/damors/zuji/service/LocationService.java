@@ -19,12 +19,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
-import com.damors.zuji.MainActivity;
+import com.damors.zuji.activity.MainActivity;
 import com.damors.zuji.R;
-import com.damors.zuji.data.FootprintEntity;
 import com.damors.zuji.data.FootprintRepository;
-
-import java.util.Date;
 
 /**
  * 位置服务类

@@ -88,7 +88,79 @@ app/src/main/java/com/damors/zuji/
 └── viewmodel/          # ViewModel类
 ```
 
+## 📁 文件结构
+
+```
+project/
+├── config/
+│   └── app.properties           # 统一配置文件（包含所有环境配置）
+├── app/
+│   └── build.gradle             # 已配置自动读取环境配置
+└── switch_env.bat               # 环境切换脚本
+```
+
 ## 🚀 快速开始
+
+### 🔄 环境配置与切换
+
+本项目支持开发环境和正式环境的快速切换，所有配置统一管理在 `config/app.properties` 文件中。
+
+#### 环境切换方法
+
+**方法1: 使用批处理脚本（推荐）**
+```bash
+# 切换到开发环境
+.\switch_env.bat dev
+
+# 切换到正式环境
+.\switch_env.bat prod
+```
+
+**方法2: 使用Gradle任务**
+```bash
+# 切换到开发环境
+.\gradlew switchToDev
+
+# 切换到正式环境
+.\gradlew switchToProd
+
+# 查看当前环境配置
+.\gradlew showEnvironmentConfig
+```
+
+**方法3: 手动编辑**
+
+编辑 `config/app.properties` 文件中的环境设置：
+```properties
+# 切换到开发环境
+current.environment=dev
+
+# 切换到正式环境
+current.environment=prod
+```
+
+#### 配置文件说明
+
+`config/app.properties` 是唯一的配置文件，包含所有环境的配置，通过前缀区分：
+- `dev.*` - 开发环境配置
+- `prod.*` - 正式环境配置
+- `current.environment` - 当前环境设置
+
+#### 在代码中使用配置
+
+```java
+// 获取当前环境
+String environment = BuildConfig.ENVIRONMENT;
+
+// 获取API地址
+String apiUrl = BuildConfig.API_BASE_URL;
+
+// 检查是否为正式模式
+boolean isProMode = BuildConfig.PRO_MODE;
+
+// 检查日志是否启用
+boolean logEnabled = BuildConfig.LOG_ENABLED;
+```
 
 ### 环境要求
 - Android Studio Arctic Fox 或更高版本

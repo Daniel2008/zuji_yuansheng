@@ -52,12 +52,13 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Zuji_yuansheng"
         android:usesCleartextTraffic="true"
+        android:resizeableActivity="true"
         tools:targetApi="31"
         tools:replace="android:allowBackup">
         
         <!-- 启动页面活动 -->
         <activity
-            android:name=".SplashActivity"
+            android:name=".activity.SplashActivity"
             android:exported="true"
             android:theme="@style/Theme.Zuji_yuansheng">
             <intent-filter>
@@ -68,31 +69,25 @@
         
         <!-- 登录活动 -->
         <activity
-            android:name=".LoginActivity"
+            android:name=".activity.LoginActivity"
             android:exported="false"
             android:theme="@style/Theme.Zuji_yuansheng" />
         
         <!-- 主活动 -->
         <activity
-            android:name=".MainActivity"
+            android:name=".activity.MainActivity"
             android:exported="false" />
         
         <!-- 足迹详情活动 -->
         <activity
-            android:name="com.damors.zuji.AddFootprintActivity"
+            android:name="com.damors.zuji.activity.AddFootprintActivity"
             android:exported="false" />
             
         <!-- 图片预览活动 -->
         <activity
-            android:name="com.damors.zuji.ImagePreviewActivity"
+            android:name="com.damors.zuji.activity.ImagePreviewActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
-            
-        <!-- 更新测试活动 (仅用于开发测试) -->
-        <activity
-            android:name="com.damors.zuji.activity.UpdateTestActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Zuji_yuansheng" />
         
         <!-- 位置服务 -->
         <service
@@ -105,20 +100,31 @@
         <meta-data
             android:name="com.amap.api.v2.apikey"
             android:value="1cea0ca7ef16e075c91fa22a5c69cd93" />
+        <meta-data
+            android:name="android.max_aspect"
+            android:value="2.4" />
+        <!--适配华为（huawei）刘海屏-->
+        <meta-data
+            android:name="android.notch_support"
+            android:value="true"/>
+        <!--适配小米（xiaomi）刘海屏-->
+        <meta-data
+            android:name="notch.config"
+            android:value="portrait|landscape" />
             
         <!-- 高德定位服务 -->
         <service android:name="com.amap.api.location.APSService" />
             
         <!-- 位置选择活动 -->
         <activity
-            android:name=".LocationPickerActivity"
+            android:name=".activity.LocationPickerActivity"
             android:exported="false"
             android:label="选择位置"
             android:theme="@style/Theme.Footprint" />
             
         <!-- 评论列表活动 -->
         <activity
-            android:name=".CommentListActivity"
+            android:name=".activity.CommentListActivity"
             android:exported="false"
             android:label="评论详情"
             android:theme="@style/Theme.Zuji_yuansheng"
@@ -128,14 +134,14 @@
             
         <!-- 设置页面活动 -->
         <activity
-            android:name=".SettingsActivity"
+            android:name=".activity.SettingsActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Zuji_yuansheng" />
             
         <!-- 编辑资料页面活动 -->
         <activity
-            android:name=".EditProfileActivity"
+            android:name=".activity.EditProfileActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Zuji_yuansheng"

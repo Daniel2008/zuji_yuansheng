@@ -88,7 +88,7 @@ public class AppUpdateManager {
         initXUpdate();
         
         // 构建完整的检查更新接口地址
-        String updateUrl = ApiConfig.getBaseUrl() + ApiConfig.Endpoints.CHECK_APP_UPDATE;
+        String updateUrl = ApiConfig.APP_UPDATE_URL + ApiConfig.Endpoints.CHECK_APP_UPDATE;
         
         XUpdate.newBuild(context)
                 .updateUrl(updateUrl)

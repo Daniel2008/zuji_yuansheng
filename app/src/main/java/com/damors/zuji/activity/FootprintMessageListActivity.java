@@ -11,7 +11,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.damors.zuji.ImagePreviewActivity;
 import com.damors.zuji.R;
 import com.damors.zuji.adapter.FootprintMessageAdapter;
 import com.damors.zuji.model.FootprintMessage;
@@ -28,7 +27,7 @@ import java.util.List;
  * 足迹动态列表Activity
  * 展示用户发布的足迹动态信息
  */
-public class FootprintMessageListActivity extends AppCompatActivity {
+public class FootprintMessageListActivity extends BaseActivity {
     
     private static final String TAG = "FootprintMessageList";
     

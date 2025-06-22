@@ -1,4 +1,4 @@
-package com.damors.zuji;
+package com.damors.zuji.activity;
 
 import android.Manifest;
 import android.app.Activity;
@@ -20,11 +20,11 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 // 移除AlertDialog导入，因为不再使用头像选择对话框
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.bumptech.glide.Glide;
+import com.damors.zuji.R;
 import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.UserInfoResponse;
 import com.damors.zuji.network.ApiConfig;
@@ -37,10 +37,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import java.io.File;
-import java.io.IOException;
-
-import okhttp3.MediaType;
-import okhttp3.RequestBody;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -48,7 +44,7 @@ import de.hdodenhof.circleimageview.CircleImageView;
  * 用户资料编辑页面
  * 支持编辑用户头像和用户名
  */
-public class EditProfileActivity extends AppCompatActivity {
+public class EditProfileActivity extends BaseActivity {
     
     private static final String TAG = "EditProfileActivity";
     // 移除相机相关常量，只保留相册选择功能

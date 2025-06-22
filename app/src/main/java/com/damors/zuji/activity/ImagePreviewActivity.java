@@ -1,36 +1,28 @@
-package com.damors.zuji;
+package com.damors.zuji.activity;
 
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager2.widget.ViewPager2;
 
-import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
-import com.bumptech.glide.request.RequestListener;
-import com.bumptech.glide.request.target.Target;
-import com.bumptech.glide.load.DataSource;
-import com.bumptech.glide.load.engine.GlideException;
 import android.util.Log;
 import java.util.ArrayList;
-import java.util.List;
+
+import com.damors.zuji.R;
 import com.damors.zuji.adapter.ImagePreviewAdapter;
 
 /**
  * 图片全屏预览Activity
  * 用于显示足迹中的图片大图
  */
-public class ImagePreviewActivity extends AppCompatActivity {
+public class ImagePreviewActivity extends BaseActivity {
 
     private static final String EXTRA_IMAGE_URLS = "image_urls";
     private static final String EXTRA_CURRENT_INDEX = "current_index";

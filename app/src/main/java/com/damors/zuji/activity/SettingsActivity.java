@@ -1,4 +1,4 @@
-package com.damors.zuji;
+package com.damors.zuji.activity;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -10,13 +10,14 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import com.damors.zuji.R;
 import com.damors.zuji.manager.UserManager;
 
 /**
  * 设置页面Activity
  * 提供应用的各种设置选项，包括退出登录功能
  */
-public class SettingsActivity extends AppCompatActivity {
+public class SettingsActivity extends BaseActivity {
 
     private static final String TAG = "SettingsActivity";
     

@@ -1,4 +1,4 @@
-package com.damors.zuji;
+package com.damors.zuji.activity;
 
 import android.Manifest;
 import android.content.Intent;
@@ -9,7 +9,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioGroup;
@@ -22,10 +21,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import android.view.WindowManager;
-import androidx.lifecycle.ViewModelProvider;
+
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.damors.zuji.R;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.chip.Chip;
 
@@ -43,8 +43,6 @@ import com.amap.api.services.geocoder.GeocodeResult;
 import com.amap.api.services.core.LatLonPoint;
 
 
-import com.damors.zuji.data.FootprintEntity;
-import com.damors.zuji.viewmodel.FootprintViewModel;
 import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.PublishTrandsInfoPO;
 
@@ -62,7 +60,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AddFootprintActivity extends AppCompatActivity implements GeocodeSearch.OnGeocodeSearchListener {
+public class AddFootprintActivity extends BaseActivity implements GeocodeSearch.OnGeocodeSearchListener {
 
     private static final int REQUEST_PICK_IMAGES = 1;
     private static final int REQUEST_SELECT_LOCATION = 2;
@@ -102,9 +100,6 @@ public class AddFootprintActivity extends AppCompatActivity implements GeocodeSe
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // 隐藏状态栏
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_add_footprint);
 
         // 初始化网络服务

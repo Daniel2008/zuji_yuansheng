@@ -1,4 +1,4 @@
-package com.damors.zuji;
+package com.damors.zuji.activity;
 
 import android.content.Context;
 import android.content.Intent;
@@ -23,11 +23,12 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.damors.zuji.R;
 import com.damors.zuji.adapter.CommentAdapter;
 import com.damors.zuji.model.CommentModel;
-import com.damors.zuji.model.CommentResponse;
 import com.damors.zuji.network.RetrofitApiService;
 import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.utils.AndroidBug5497Workaround;
 import com.damors.zuji.utils.LoadingDialog;
+import com.gyf.immersionbar.BarHide;
+import com.gyf.immersionbar.ImmersionBar;
 
 import org.json.JSONObject;
 
@@ -37,7 +38,7 @@ import java.util.List;
 /**
  * 评论列表页面
  */
-public class CommentListActivity extends AppCompatActivity implements CommentAdapter.OnCommentClickListener {
+public class CommentListActivity extends BaseActivity implements CommentAdapter.OnCommentClickListener {
     
     private static final String TAG = "CommentListActivity";
     private static final String EXTRA_MSG_ID = "msg_id";
@@ -74,16 +75,9 @@ public class CommentListActivity extends AppCompatActivity implements CommentAda
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // 隐藏状态栏
-        getWindow().getDecorView().setSystemUiVisibility(
-            View.SYSTEM_UI_FLAG_FULLSCREEN | 
-            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-        );
-        
         setContentView(R.layout.activity_comment_list);
         AndroidBug5497Workaround.assistActivity(this);
-        
+
         // 获取传递的参数
         msgId = getIntent().getIntExtra(EXTRA_MSG_ID, -1);
         msgTitle = getIntent().getStringExtra(EXTRA_MSG_TITLE);

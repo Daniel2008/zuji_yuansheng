@@ -1,11 +1,10 @@
-package com.damors.zuji;
+package com.damors.zuji.fragment;
 
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -15,15 +14,16 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.amap.api.maps.model.BitmapDescriptor;
-import com.amap.api.maps.model.CameraPosition;
+import com.damors.zuji.R;
+import com.damors.zuji.activity.AddFootprintActivity;
+import com.damors.zuji.activity.CommentListActivity;
+import com.damors.zuji.activity.ImagePreviewActivity;
 import com.damors.zuji.adapter.GridImageAdapter;
 import com.damors.zuji.config.ImageDisplayConfig;
 import com.damors.zuji.model.GuluFile;
 import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.utils.GridSpacingItemDecoration;
 import com.damors.zuji.utils.ImageUtils;
-import com.damors.zuji.CommentListActivity;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import android.widget.EditText;
@@ -34,9 +34,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.view.inputmethod.InputMethodManager;
 import androidx.appcompat.app.AlertDialog;
-import java.util.Date;
-import java.text.SimpleDateFormat;
-import java.util.Locale;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -45,18 +42,14 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
-import com.damors.zuji.data.FootprintEntity;
-
 import com.damors.zuji.viewmodel.FootprintViewModel;
 import com.damors.zuji.network.RetrofitApiService;
 import com.damors.zuji.model.FootprintMessage;
 import com.damors.zuji.model.response.BaseResponse;
-import com.damors.zuji.model.response.FootprintMessageResponse;
 // Glide图片加载库导入
 import com.bumptech.glide.Glide;
 // 高德地图相关导入
 import com.amap.api.maps.AMap;
-import com.amap.api.maps.CameraUpdate;
 import com.amap.api.maps.CameraUpdateFactory;
 import com.amap.api.maps.MapView;
 import com.amap.api.maps.model.BitmapDescriptorFactory;
@@ -64,17 +57,13 @@ import com.amap.api.maps.model.LatLng;
 import com.amap.api.maps.model.Marker;
 import com.amap.api.maps.model.MarkerOptions;
 import com.amap.api.maps.model.MyLocationStyle;
-import com.amap.api.maps.model.Polyline;
-import com.amap.api.maps.model.PolylineOptions;
 import com.amap.api.location.AMapLocation;
 import com.amap.api.location.AMapLocationClient;
 import com.amap.api.location.AMapLocationClientOption;
-import com.amap.api.location.AMapLocationListener;
 
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -1000,7 +989,7 @@ public class MapFragment extends Fragment {
         // 设置评论点击事件
         layoutComment.setOnClickListener(v -> {
             // 跳转到评论详情页面
-            CommentListActivity.start(requireContext(), message.getId(), 
+            CommentListActivity.start(requireContext(), message.getId(),
                 message.getTextContent() != null ? message.getTextContent() : "足迹详情");
         });
         

@@ -7,11 +7,41 @@ android {
     compileSdk 35
 
     defaultConfig {
+        // 统一环境配置加载逻辑
+        // Unified environment configuration loading logic
+        Properties appProperties = new Properties()
+        
+        // 读取统一配置文件
+        // Read unified configuration file
+        def configFile = "config/app.properties"
+        if (rootProject.file(configFile).exists()) {
+            appProperties.load(rootProject.file(configFile).newDataInputStream())
+            println "已加载应用配置文件: ${configFile}"
+            println "Loaded application config file: ${configFile}"
+        } else {
+            println "错误: 配置文件 ${configFile} 不存在!"
+            println "Error: Configuration file ${configFile} does not exist!"
+            throw new GradleException("Required configuration file ${configFile} is missing")
+        }
+        
+        // 直接从配置文件获取属性值的辅助函数
+        // Helper function to get property values directly from config file
+        def getProperty = { key, defaultValue = "" ->
+            return appProperties.getProperty(key, defaultValue)
+        }
+        
         applicationId "com.damors.zuji"
         minSdk 24
-        targetSdk 35
-        versionCode 101
-        versionName "1.01"
+        targetSdk 34
+        versionCode getProperty("versionCode", "1").toInteger()
+        versionName getProperty("versionName", "1.0")
+        
+        println "版本代码 Version Code: ${getProperty('versionCode')}"
+        println "版本名称 Version Name: ${getProperty('versionName')}"
+        
+        // 将配置添加到BuildConfig中，方便代码中使用
+        // Add configuration to BuildConfig for use in code
+        buildConfigField "boolean", "PRO_MODE", getProperty("proMode", "false")
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -19,6 +49,12 @@ android {
             //设置支持的SO库架构（开发者可以根据需要，选择一个或多个平台的so）
             abiFilters  "armeabi-v7a", "arm64-v8a"
         }
+    }
+
+    // 启用BuildConfig功能
+    // Enable BuildConfig feature
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
@@ -50,6 +86,44 @@ android {
     }
 }
 
+// 添加自定义Gradle任务
+// Add custom Gradle tasks
+task showEnvironmentConfig {
+    group = 'environment'
+    description = '显示当前环境配置信息 (Show current environment configuration)'
+    
+    doLast {
+        println "\n========================================"
+        println "当前环境配置信息 Current Environment Configuration"
+        println "========================================"
+        
+        // 读取配置文件
+        Properties appProperties = new Properties()
+        def configFile = "config/app.properties"
+        
+        if (rootProject.file(configFile).exists()) {
+            appProperties.load(rootProject.file(configFile).newDataInputStream())
+        }
+        
+        // 获取配置值的辅助函数
+        def getProperty = { key, defaultValue = "N/A" ->
+            return appProperties.getProperty(key, defaultValue)
+        }
+        
+        println "配置文件 Config File: ${configFile}"
+        println "========================================"
+        println "版本信息 Version Information:"
+        println "  版本代码 Version Code: ${getProperty('versionCode')}"
+        println "  版本名称 Version Name: ${getProperty('versionName')}"
+        println "环境设置 Environment Settings:"
+        println "  正式模式 Pro Mode: ${getProperty('proMode')}"
+        println "========================================\n"
+    }
+}
+
+// 环境切换任务已移除，因为当前配置文件不支持多环境
+// Environment switching tasks removed as current config file doesn't support multiple environments
+
 dependencies {
     implementation libs.appcompat
     
@@ -77,6 +151,9 @@ dependencies {
     
     // XUpdate版本更新库
     implementation libs.xupdate
+
+    // 状态栏
+    implementation libs.immersionbar
 
 
     testImplementation libs.junit

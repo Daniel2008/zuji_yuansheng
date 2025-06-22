@@ -1,4 +1,4 @@
-package com.damors.zuji;
+package com.damors.zuji.activity;
 
 import android.Manifest;
 import android.content.Context;
@@ -11,8 +11,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.WindowManager;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -21,19 +19,20 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import com.damors.zuji.R;
+import com.damors.zuji.fragment.FootPrintFragment;
+import com.damors.zuji.fragment.MapFragment;
+import com.damors.zuji.fragment.ProfileFragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationBarView;
 
 // 高德地图相关导入 (暂时注释)
 import com.amap.api.location.AMapLocationClient;
-import com.amap.api.maps.MapsInitializer;
 import com.damors.zuji.utils.AMapHelper;
 
 // 应用更新相关导入
 import com.damors.zuji.manager.AppUpdateManager;
-import com.damors.zuji.model.AppUpdateInfo;
-import com.damors.zuji.network.RetrofitApiService;
-import com.damors.zuji.model.response.BaseResponse;
+import com.gyf.immersionbar.ImmersionBar;
 
 /**
  * 主活动类，作为应用的入口点
@@ -51,7 +50,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
     // 主要的Fragment
     private MapFragment mapFragment;
-    private HistoryFragment historyFragment;
+    private FootPrintFragment footPrintFragment;
     private ProfileFragment profileFragment;
 
     @Override
@@ -60,10 +59,6 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         setTheme(R.style.Theme_Zuji_yuansheng);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        // 隐藏状态栏
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         // 初始化高德地图SDK (暂时注释)
         initAMapSDK();
@@ -221,10 +216,10 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             }
             selectedFragment = mapFragment;
         } else if (itemId == R.id.nav_footprint) {
-            if (historyFragment == null) {
-                historyFragment = new HistoryFragment();
+            if (footPrintFragment == null) {
+                footPrintFragment = new FootPrintFragment();
             }
-            selectedFragment = historyFragment;
+            selectedFragment = footPrintFragment;
             // 设置选中状态
             item.setChecked(true);
         } else if (itemId == R.id.nav_profile) {
