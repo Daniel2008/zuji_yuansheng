@@ -20,6 +20,8 @@ import com.damors.zuji.model.FootprintMessage;
 import com.damors.zuji.model.GuluFile;
 import com.damors.zuji.config.ImageDisplayConfig;
 import com.damors.zuji.utils.GridSpacingItemDecoration;
+import com.damors.zuji.utils.ImageUtils;
+
 import android.widget.LinearLayout;
 import android.widget.FrameLayout;
 
@@ -218,7 +220,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
             java.util.List<GuluFile> imageFiles = new java.util.ArrayList<>();
             
             for (GuluFile file : message.getGuluFiles()) {
-                if (isImageFile(file.getFileType())) {
+                if (ImageUtils.isImageFile(file.getFileType())) {
                     imageFiles.add(file);
                 }
             }
@@ -402,7 +404,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         List<GuluFile> imageFiles = new java.util.ArrayList<>();
         if (message.getGuluFiles() != null) {
             for (GuluFile file : message.getGuluFiles()) {
-                if (isImageFile(file.getFileType())) {
+                if (ImageUtils.isImageFile(file.getFileType())) {
                     imageFiles.add(file);
                 }
             }
@@ -547,25 +549,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
             holder.bottomLineView.setVisibility(View.VISIBLE);
         }
     }
-    
-    /**
-     * 判断是否为图片文件
-     * @param fileType 文件类型
-     * @return 是否为图片
-     */
-    private boolean isImageFile(String fileType) {
-        if (fileType == null) return false;
-        String type = fileType.toLowerCase();
-        return type.equals("jpg")
-            || type.equals("jpeg")
-            || type.equals("png")
-            || type.equals("gif")
-            || type.equals("bmp")
-            || type.equals("webp")
-                || type.equals("image/*")
-            || type.equals("image/jpeg");
-    }
-    
+
     /**
      * 判断是否为视频文件
      * @param fileType 文件类型
@@ -574,7 +558,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
     private boolean isVideoFile(String fileType) {
         if (fileType == null) return false;
         String type = fileType.toLowerCase();
-        return type.equals("mp4") || type.equals("avi") || type.equals("mov") || 
+        return type.equals("mp4") || type.equals("avi") || type.equals("mov") ||
                type.equals("wmv") || type.equals("flv") || type.equals("mkv");
     }
     

@@ -30,6 +30,22 @@ public class ImageUtils {
     
     private static final String TAG = "ImageUtils";
     private static final String FILE_PROVIDER_AUTHORITY = "com.damors.zuji.fileprovider";
+
+    /**
+     * 判断是否为图片文件
+     */
+    public static boolean isImageFile(String fileType) {
+        if (fileType == null) return false;
+        String type = fileType.toLowerCase();
+        return type.equals("jpg")
+                || type.equals("jpeg")
+                || type.equals("png")
+                || type.equals("gif")
+                || type.equals("bmp")
+                || type.equals("webp")
+                || type.equals("image/*")
+                || type.equals("image/jpeg");
+    }
     
     public static Bitmap getBitmap(Context context, int vectorDrawableId) {
         final VectorDrawableCompat drawable = VectorDrawableCompat.create(context.getResources(), vectorDrawableId, null);

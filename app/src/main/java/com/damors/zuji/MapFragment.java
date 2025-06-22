@@ -1046,12 +1046,12 @@ public class MapFragment extends Fragment {
             java.util.List<GuluFile> imageFiles = new java.util.ArrayList<>();
             
             for (GuluFile file : message.getGuluFiles()) {
-                if (isImageFile(file.getFileType())) {
+                if (ImageUtils.isImageFile(file.getFileType())) {
                     imageFiles.add(file);
                 }
             }
             
-            // 找到图片文件数量: " + imageFiles.size()
+            Log.d("MapFragment", "找到图片文件数量: " + imageFiles.size());
             
             if (!imageFiles.isEmpty()) {
                 frameLayoutImages.setVisibility(View.VISIBLE);
@@ -1131,6 +1131,7 @@ public class MapFragment extends Fragment {
                 image3.setOnClickListener(v -> openImagePreview(imageFiles, 2));
             }
         } else if (imageCount >= 4 && gridRecyclerView != null) {
+            Log.d("MapFragment", "显示4张及以上图片，使用RecyclerView，图片数量: " + imageCount);
             gridRecyclerView.setVisibility(View.VISIBLE);
             androidx.recyclerview.widget.GridLayoutManager gridLayoutManager = 
                 new androidx.recyclerview.widget.GridLayoutManager(getContext(), ImageDisplayConfig.GRID_SPAN_COUNT);
@@ -1150,6 +1151,7 @@ public class MapFragment extends Fragment {
             GridImageAdapter adapter = new GridImageAdapter(getContext(), imageFiles);
             adapter.setOnImageClickListener((position, files) -> openImagePreview(files, position));
             gridRecyclerView.setAdapter(adapter);
+            Log.d("MapFragment", "GridImageAdapter已设置，适配器项目数量: " + adapter.getItemCount());
             
             // Log.d("MapFragment", "设置RecyclerView高度: " + calculatedHeight + "px，图片数量: " + imageFiles.size());
         }
@@ -1228,16 +1230,7 @@ public class MapFragment extends Fragment {
         return imageBaseUrl + imagePath;
     }
     
-    /**
-     * 判断是否为图片文件
-     */
-    private boolean isImageFile(String fileType) {
-        if (fileType == null) return false;
-        String type = fileType.toLowerCase();
-        return type.equals("jpg") || type.equals("jpeg") || type.equals("png") || 
-               type.equals("gif") || type.equals("bmp") || type.equals("webp") || 
-               type.equals("image/jpeg");
-    }
+
     
     /**
      * 打开图片预览
