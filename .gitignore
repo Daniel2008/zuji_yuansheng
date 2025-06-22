@@ -16,3 +16,5 @@ local.properties
 /key/zuji_yuansheng.jks
 /.idea/
 /.vscode/
+/app/release/
+/app/debug/
