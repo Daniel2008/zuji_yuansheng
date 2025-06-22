@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- 位置权限 -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     
@@ -12,9 +16,11 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     
-    <!-- 文件读写权限 -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- 文件读写权限 - 仅在Android 10以下版本需要，应用更新使用私有目录无需此权限 -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
+        android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" 
+        android:maxSdkVersion="28" />
     
     <!-- 相机权限 -->
     <uses-permission android:name="android.permission.CAMERA" />
@@ -142,6 +148,8 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.OfflineMap.Fullscreen" />
             
+        <!-- DownloadReceiver已移除，XUpdate会自动处理下载完成事件 -->
+        
         <!-- FileProvider配置 -->
         <provider
             android:name="androidx.core.content.FileProvider"

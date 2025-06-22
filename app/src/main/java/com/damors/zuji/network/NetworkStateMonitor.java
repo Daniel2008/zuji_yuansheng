@@ -100,7 +100,12 @@ public class NetworkStateMonitor {
                 }
             };
 
-            context.registerReceiver(networkReceiver, intentFilter);
+            // Android 14 (API 34+) 要求在注册广播接收器时指定导出标志
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                context.registerReceiver(networkReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                context.registerReceiver(networkReceiver, intentFilter);
+            }
         }
     }
 

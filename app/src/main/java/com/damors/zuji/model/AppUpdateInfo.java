@@ -5,12 +5,12 @@ package com.damors.zuji.model;
  * 用于表示从服务器获取的应用版本更新信息
  */
 public class AppUpdateInfo {
-    private int versionCode;        // 版本号
+    private Integer versionCode;        // 版本号
     private String versionName;     // 版本名称
     private String downloadUrl;     // 下载链接
     private String updateContent;   // 更新内容描述
-    private boolean forceUpdate;    // 是否强制更新
-    private long fileSize;          // 文件大小（字节）
+    private Long forceUpdate;    // 是否强制更新
+    private Integer fileSize;          // 文件大小（字节）
     private String md5;             // 文件MD5校验值
     private String releaseTime;     // 发布时间
     
@@ -29,8 +29,8 @@ public class AppUpdateInfo {
      * @param updateContent 更新内容
      * @param forceUpdate 是否强制更新
      */
-    public AppUpdateInfo(int versionCode, String versionName, String downloadUrl, 
-                        String updateContent, boolean forceUpdate) {
+    public AppUpdateInfo(Integer versionCode, String versionName, String downloadUrl,
+                        String updateContent, Long forceUpdate) {
         this.versionCode = versionCode;
         this.versionName = versionName;
         this.downloadUrl = downloadUrl;
@@ -44,7 +44,7 @@ public class AppUpdateInfo {
      * 获取版本号
      * @return 版本号
      */
-    public int getVersionCode() {
+    public Integer getVersionCode() {
         return versionCode;
     }
     
@@ -52,7 +52,7 @@ public class AppUpdateInfo {
      * 设置版本号
      * @param versionCode 版本号
      */
-    public void setVersionCode(int versionCode) {
+    public void setVersionCode(Integer versionCode) {
         this.versionCode = versionCode;
     }
     
@@ -108,7 +108,7 @@ public class AppUpdateInfo {
      * 是否强制更新
      * @return true表示强制更新，false表示可选更新
      */
-    public boolean isForceUpdate() {
+    public Long isForceUpdate() {
         return forceUpdate;
     }
     
@@ -116,7 +116,7 @@ public class AppUpdateInfo {
      * 设置是否强制更新
      * @param forceUpdate true表示强制更新，false表示可选更新
      */
-    public void setForceUpdate(boolean forceUpdate) {
+    public void setForceUpdate(Long forceUpdate) {
         this.forceUpdate = forceUpdate;
     }
     
@@ -124,7 +124,7 @@ public class AppUpdateInfo {
      * 获取文件大小
      * @return 文件大小（字节）
      */
-    public long getFileSize() {
+    public Integer getFileSize() {
         return fileSize;
     }
     
@@ -132,7 +132,7 @@ public class AppUpdateInfo {
      * 设置文件大小
      * @param fileSize 文件大小（字节）
      */
-    public void setFileSize(long fileSize) {
+    public void setFileSize(Integer fileSize) {
         this.fileSize = fileSize;
     }
     

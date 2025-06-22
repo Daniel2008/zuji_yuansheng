@@ -175,7 +175,7 @@
 
         <Button
             android:id="@+id/btn_cancel"
-            style="@style/Widget.Material3.Button.TextButton"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="稍后更新"
@@ -184,7 +184,7 @@
 
         <Button
             android:id="@+id/btn_update"
-            style="@style/Widget.Material3.Button"
+            style="@style/Widget.MaterialComponents.Button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="立即更新"
@@ -195,7 +195,7 @@
     <!-- 取消下载按钮 -->
     <Button
         android:id="@+id/btn_cancel_download"
-        style="@style/Widget.Material3.Button.TextButton"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="取消下载"

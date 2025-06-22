@@ -10,8 +10,8 @@ android {
         applicationId "com.damors.zuji"
         minSdk 24
         targetSdk 35
-        versionCode 1
-        versionName "1.01"
+        versionCode 101
+        versionName "1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -74,6 +74,10 @@ dependencies {
     implementation libs.logging.interceptor
     
     implementation libs.photoview
+    
+    // XUpdate版本更新库
+    implementation libs.xupdate
+
 
     testImplementation libs.junit
     testImplementation libs.mockito.core

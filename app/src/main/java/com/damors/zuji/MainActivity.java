@@ -30,7 +30,6 @@ import com.amap.api.maps.MapsInitializer;
 import com.damors.zuji.utils.AMapHelper;
 
 // 应用更新相关导入
-import com.damors.zuji.dialog.AppUpdateDialog;
 import com.damors.zuji.manager.AppUpdateManager;
 import com.damors.zuji.model.AppUpdateInfo;
 import com.damors.zuji.network.RetrofitApiService;
@@ -46,7 +45,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     private static final String TAG = "MainActivity";
     private static final long MIN_TIME_BETWEEN_UPDATES = 5000; // 5秒
     private static final float MIN_DISTANCE_CHANGE = 10; // 10米
-    
+
     private BottomNavigationView bottomNavigationView;
     private LocationManager locationManager;
 
@@ -61,23 +60,23 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         setTheme(R.style.Theme_Zuji_yuansheng);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        
+
         // 隐藏状态栏
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         // 初始化高德地图SDK (暂时注释)
         initAMapSDK();
-        
+
         // 初始化视图
         initViews();
-        
+
         // 初始化位置管理器
         initLocationManager();
-        
+
         // 检查并请求位置权限
         checkLocationPermission();
-        
+
         // 默认显示地图Fragment
         if (savedInstanceState == null) {
             mapFragment = new MapFragment();
@@ -85,7 +84,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
                     .replace(R.id.fragment_container, mapFragment)
                     .commit();
         }
-        
+
         // 检查应用更新
         checkAppUpdate();
     }
@@ -97,18 +96,18 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         try {
             // 初始化高德地图SDK
             AMapHelper.initialize(this);
-            
+
             Log.d(TAG, "高德地图SDK初始化成功");
-            
+
             // 设置隐私政策同意状态
             AMapLocationClient.updatePrivacyShow(this, true, true);
             AMapLocationClient.updatePrivacyAgree(this, true);
-            
+
         } catch (Exception e) {
             Log.e(TAG, "高德地图SDK初始化失败: " + e.getMessage(), e);
         }
     }
-    
+
     /**
      * 初始化视图组件
      */
@@ -123,7 +122,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
      * 检查位置权限，如果没有则请求
      */
     private void checkLocationPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) 
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
@@ -133,7 +132,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             startLocationUpdates();
         }
     }
-    
+
     /**
      * 初始化位置管理器
      */
@@ -141,25 +140,25 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         Log.d(TAG, "位置管理器初始化完成");
     }
-    
+
     /**
      * 开始获取位置更新
      */
     private void startLocationUpdates() {
         // 检查权限
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) 
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             return;
         }
-        
+
         // 检查GPS是否可用
         boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
         // 检查网络定位是否可用
         boolean isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-        
+
         Log.d(TAG, "GPS状态: " + (isGPSEnabled ? "可用" : "不可用"));
         Log.d(TAG, "网络定位状态: " + (isNetworkEnabled ? "可用" : "不可用"));
-        
+
         try {
             if (isGPSEnabled) {
                 // 使用GPS获取位置
@@ -169,7 +168,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
                         MIN_DISTANCE_CHANGE,
                         this);
                 Log.d(TAG, "已注册GPS位置更新监听器");
-                
+
                 // 获取最后已知位置
                 Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 if (lastKnownLocation != null) {
@@ -183,7 +182,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
                         MIN_DISTANCE_CHANGE,
                         this);
                 Log.d(TAG, "已注册网络位置更新监听器");
-                
+
                 // 获取最后已知位置
                 Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
                 if (lastKnownLocation != null) {
@@ -243,20 +242,20 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         }
         return false;
     }
-    
+
     @Override
     protected void onResume() {
         super.onResume();
         // 在活动恢复时重新注册位置更新
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) 
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
             startLocationUpdates();
         }
-        
+
         // 检查用户登录状态变化，刷新ProfileFragment
         refreshProfileFragmentIfNeeded();
     }
-    
+
     /**
      * 如果需要，刷新个人资料Fragment
      */
@@ -271,7 +270,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             }, 150);
         }
     }
-    
+
     @Override
     protected void onPause() {
         super.onPause();
@@ -281,7 +280,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             Log.d(TAG, "已停止位置更新");
         }
     }
-    
+
     /**
      * 位置变化回调
      */
@@ -292,14 +291,14 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         double longitude = location.getLongitude();
         float accuracy = location.getAccuracy();
         long time = location.getTime();
-        
+
         // 输出位置日志
         Log.d(TAG, "位置更新 - 纬度: " + latitude + ", 经度: " + longitude);
         Log.d(TAG, "精确度: " + accuracy + "米, 时间: " + time);
-        
+
         // 如果需要，可以在这里将位置信息传递给其他组件
     }
-    
+
     /**
      * 位置提供者状态变化回调
      */
@@ -307,7 +306,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     public void onProviderEnabled(@NonNull String provider) {
         Log.d(TAG, "位置提供者已启用: " + provider);
     }
-    
+
     /**
      * 位置提供者状态变化回调
      */
@@ -316,82 +315,17 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         Log.d(TAG, "位置提供者已禁用: " + provider);
         Toast.makeText(this, "请开启" + (provider.equals(LocationManager.GPS_PROVIDER) ? "GPS" : "网络定位"), Toast.LENGTH_SHORT).show();
     }
-    
+
     /**
      * 检查应用更新
      */
     private void checkAppUpdate() {
         try {
-            // 获取当前版本号
-            int currentVersionCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
-            
-            // 调用API检查更新
-            RetrofitApiService.getInstance(getApplicationContext()).checkAppUpdate(
-                currentVersionCode,
-                "android",
-                new RetrofitApiService.SuccessCallback<BaseResponse<AppUpdateInfo>>() {
-                    @Override
-                    public void onSuccess(BaseResponse<AppUpdateInfo> response) {
-                        runOnUiThread(() -> {
-                            if (response != null && response.getCode() == 200 && response.getData() != null) {
-                                AppUpdateInfo updateInfo = response.getData();
-                                if (updateInfo.getVersionCode() > currentVersionCode) {
-                                    // 有新版本，显示更新对话框
-                                    showUpdateDialog(updateInfo);
-                                } else {
-                                    Log.d(TAG, "当前已是最新版本");
-                                }
-                            } else {
-                                String msg = response != null ? response.getMsg() : "检查更新失败";
-                                Log.e(TAG, "检查更新失败: " + msg);
-                            }
-                        });
-                    }
-                },
-                new RetrofitApiService.ErrorCallback() {
-                    @Override
-                    public void onError(String error) {
-                        Log.e(TAG, "检查更新失败: " + error);
-                        // 静默失败，不影响用户体验
-                    }
-                }
-            );
+            // 有新版本，使用XUpdate自带弹窗进行更新
+            AppUpdateManager.getInstance(MainActivity.this).startUpdate();
         } catch (Exception e) {
             Log.e(TAG, "检查更新异常: " + e.getMessage(), e);
         }
     }
-    
-    /**
-     * 显示更新对话框
-     * 
-     * @param updateInfo 更新信息
-     */
-    private void showUpdateDialog(AppUpdateInfo updateInfo) {
-        if (isFinishing() || isDestroyed()) {
-            return;
-        }
-        
-        AppUpdateDialog updateDialog = new AppUpdateDialog(this, updateInfo);
-        updateDialog.setOnUpdateActionListener(new AppUpdateDialog.OnUpdateActionListener() {
-            @Override
-            public void onUpdateClicked() {
-                Log.d(TAG, "用户选择立即更新");
-                // 对话框内部会处理下载逻辑
-            }
-            
-            @Override
-            public void onCancelClicked() {
-                Log.d(TAG, "用户选择稍后更新");
-                // 用户选择稍后更新，不做任何操作
-            }
-            
-            @Override
-            public void onDownloadCancelled() {
-                Log.d(TAG, "用户取消下载");
-                // 用户取消下载，不做任何操作
-            }
-        });
-        
-        updateDialog.show();
-    }
+
 }

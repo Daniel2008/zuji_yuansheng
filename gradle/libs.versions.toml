@@ -19,6 +19,7 @@ retrofit = "3.0.0"
 robolectric = "4.14.1"
 roomRuntime = "2.7.2"
 swiperefreshlayout = "1.1.0"
+xupdate = "2.1.5"
 
 [libraries]
 cardview = { module = "androidx.cardview:cardview", version.ref = "cardview" }
@@ -44,7 +45,7 @@ robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectr
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomRuntime" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }
 swiperefreshlayout = { module = "androidx.swiperefreshlayout:swiperefreshlayout", version.ref = "swiperefreshlayout" }
-
+xupdate = { module = "com.github.xuexiangjys:XUpdate", version.ref = "xupdate" }
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 

@@ -2,7 +2,7 @@
 <resources>
     
     <!-- 自定义对话框样式 -->
-    <style name="CustomDialogStyle" parent="Theme.Material3.DayNight.Dialog">
+    <style name="CustomDialogStyle" parent="Theme.MaterialComponents.DayNight.Dialog">
         <item name="android:windowBackground">@drawable/bg_dialog_rounded</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowIsFloating">true</item>
