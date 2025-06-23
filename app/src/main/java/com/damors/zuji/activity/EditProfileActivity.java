@@ -345,7 +345,7 @@ public class EditProfileActivity extends BaseActivity {
         
         // 构建用户信息JSON
         UserInfoModel userinfo = userManager.getUserInfo();
-        userinfo.setUserName(username);
+        userinfo.setNickName(username);
         
         // 创建RequestBody
         okhttp3.RequestBody userInfoRequestBody = okhttp3.RequestBody.create(
@@ -363,7 +363,7 @@ public class EditProfileActivity extends BaseActivity {
                         Log.d(TAG, "用户信息保存成功: " + response);
                         UserInfoModel userInfoModel = response.getData();
                         // 更新本地用户数据
-                        updateLocalUserData(username,userInfoModel);
+                        userManager.saveUserInfo(userInfoModel);
 
                         if (!TextUtils.isEmpty(userInfoModel.getAvatar())) {
                             String newAvatarUrl = ApiConfig.getImageBaseUrl() + userInfoModel.getAvatar();
@@ -401,42 +401,6 @@ public class EditProfileActivity extends BaseActivity {
                 }
             }
         );
-    }
-
-    
-    /**
-     * 更新本地用户数据
-     * 
-     * @param username 新的用户名
-     * @param userInfoModel 服务器返回的用户数据（可为null）
-     */
-    private void updateLocalUserData(String username, UserInfoModel userInfoModel) {
-        try {
-            // 获取当前用户数据
-            String userJson = userManager.getCurrentUserJson();
-            if (!TextUtils.isEmpty(userJson)) {
-                JsonObject userObj = JsonParser.parseString(userJson).getAsJsonObject();
-                
-                // 更新用户名
-                userObj.addProperty("nickName", username);
-                
-                // 如果服务器返回了用户数据，使用服务器的数据更新
-                if (userInfoModel != null) {
-                    // 更新头像URL（如果服务器返回了新的头像URL）
-                    userObj.addProperty("avatar", userInfoModel.getAvatar());
-                    // 更新其他可能的用户信息字段
-                    userObj.addProperty("userName", userInfoModel.getUserName());
-                }
-                
-                // 保存更新后的用户数据
-                String updatedUserJson = new Gson().toJson(userObj);
-                userManager.saveUserAndToken(updatedUserJson, userManager.getToken());
-                
-                Log.d(TAG, "本地用户数据更新成功");
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "更新本地用户数据失败", e);
-        }
     }
     
     /**

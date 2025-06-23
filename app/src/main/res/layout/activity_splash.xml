@@ -1,58 +1,167 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:background="@color/white"
-    android:padding="32dp">
+    android:background="@drawable/splash_gradient_background">
 
-    <!-- 应用Logo -->
-    <ImageView
-        android:id="@+id/logoImageView"
-        android:layout_width="120dp"
-        android:layout_height="120dp"
-        android:layout_marginBottom="24dp"
-        android:src="@mipmap/ic_launcher"
-        android:contentDescription="应用Logo" />
+    <!-- 背景装饰圆圈 -->
+    <View
+        android:id="@+id/decorCircle1"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:background="@drawable/splash_circle_decoration"
+        android:alpha="0.1"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="-100dp"
+        android:layout_marginEnd="-100dp" />
 
-    <!-- 应用名称 -->
-    <TextView
-        android:id="@+id/appNameTextView"
+    <View
+        android:id="@+id/decorCircle2"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:background="@drawable/splash_circle_decoration"
+        android:alpha="0.08"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginBottom="-75dp"
+        android:layout_marginStart="-75dp" />
+
+    <!-- 主要内容容器 -->
+    <LinearLayout
+        android:id="@+id/contentContainer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="48dp"
-        android:text="足迹"
-        android:textSize="32sp"
-        android:textStyle="bold"
-        android:textColor="@color/black" />
+        android:orientation="vertical"
+        android:gravity="center"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="80dp">
 
-    <!-- 加载进度指示器 -->
-    <ProgressBar
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        style="?android:attr/progressBarStyle" />
+        <!-- Logo容器 -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/logoContainer"
+            android:layout_width="140dp"
+            android:layout_height="140dp"
+            android:layout_marginBottom="32dp"
+            app:cardCornerRadius="70dp"
+            app:cardElevation="12dp"
+            app:cardBackgroundColor="@color/white">
 
-    <!-- 加载状态文本 -->
-    <TextView
-        android:id="@+id/loadingTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="正在启动..."
-        android:textSize="16sp"
-        android:textColor="@color/black"
-        android:alpha="0.7" />
+            <ImageView
+                android:id="@+id/logoImageView"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_gravity="center"
+                android:src="@mipmap/ic_launcher"
+                android:contentDescription="应用Logo"
+                android:scaleType="centerCrop" />
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- 应用名称 -->
+        <TextView
+            android:id="@+id/appNameTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="足迹"
+            android:textSize="36sp"
+            android:textStyle="bold"
+            android:textColor="@color/white"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.05" />
+
+        <!-- 应用标语 -->
+        <TextView
+            android:id="@+id/appSloganTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="64dp"
+            android:text="记录生活，留下足迹"
+            android:textSize="16sp"
+            android:textColor="@color/white"
+            android:alpha="0.9"
+            android:fontFamily="sans-serif-light" />
+
+        <!-- 现代化进度指示器 -->
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/modernProgressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:indeterminate="true"
+            app:indicatorColor="@color/white"
+            app:trackColor="@color/white"
+            app:trackCornerRadius="2dp"
+            app:indicatorSize="32dp"
+            app:trackThickness="3dp" />
+
+        <!-- 加载状态文本 -->
+        <TextView
+            android:id="@+id/loadingTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="正在启动..."
+            android:textSize="14sp"
+            android:textColor="@color/white"
+            android:alpha="0.8"
+            android:fontFamily="sans-serif-light" />
+
+    </LinearLayout>
 
     <!-- 版本信息 -->
     <TextView
+        android:id="@+id/versionTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="48dp"
-        android:text="版本 1.0.0"
         android:textSize="12sp"
-        android:textColor="@color/black"
-        android:alpha="0.5" />
+        android:textColor="@color/white"
+        android:alpha="0.6"
+        android:fontFamily="sans-serif-light"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="32dp" />
 
-</LinearLayout>
+    <!-- 品牌标识 -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        app:layout_constraintBottom_toTopOf="@id/versionTextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="16dp">
+
+        <View
+            android:layout_width="20dp"
+            android:layout_height="2dp"
+            android:background="@color/white"
+            android:alpha="0.5" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="DAMORS"
+            android:textSize="10sp"
+            android:textColor="@color/white"
+            android:alpha="0.5"
+            android:fontFamily="sans-serif-light"
+            android:letterSpacing="0.2"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp" />
+
+        <View
+            android:layout_width="20dp"
+            android:layout_height="2dp"
+            android:background="@color/white"
+            android:alpha="0.5" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
