@@ -113,6 +113,8 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
                     .load(avatarUrl)
                     .placeholder(R.drawable.ic_default_avatar)
                     .error(R.drawable.ic_default_avatar)
+                    .skipMemoryCache(true)  // 跳过内存缓存
+                    .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)  // 跳过磁盘缓存
                     .circleCrop()
                     .into(holder.imageViewAvatar);
                     

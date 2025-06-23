@@ -11,7 +11,7 @@ import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.AppUpdateInfo;
 import com.damors.zuji.model.CommentModel;
 import com.damors.zuji.model.PublishTrandsInfoPO;
-import com.damors.zuji.model.UserInfoResponse;
+import com.damors.zuji.model.UserInfoModel;
 import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.model.response.FootprintMessageResponse;
 import com.damors.zuji.model.response.LoginResponse;
@@ -259,12 +259,32 @@ public class RetrofitApiService {
                     loadingCallback.onLoadingEnd();
                 }
                 
+                // 添加详细的响应日志
+                Log.d(TAG, "收到HTTP响应 - 状态码: " + response.code());
+                Log.d(TAG, "响应是否成功: " + response.isSuccessful());
+                Log.d(TAG, "响应体是否为null: " + (response.body() == null));
+                
+                if (response.body() != null) {
+                    Log.d(TAG, "响应体内容: " + response.body().toString());
+                }
+                
                 if (response.isSuccessful() && response.body() != null) {
+                    Log.d(TAG, "调用成功回调");
                     if (successCallback != null) {
                         successCallback.onSuccess(response.body());
                     }
                 } else {
                     String errorMsg = "请求失败: " + response.code();
+                    if (response.errorBody() != null) {
+                        try {
+                            String errorBodyString = response.errorBody().string();
+                            Log.e(TAG, "错误响应体: " + errorBodyString);
+                            errorMsg += ", 错误详情: " + errorBodyString;
+                        } catch (Exception e) {
+                            Log.e(TAG, "读取错误响应体失败: " + e.getMessage());
+                        }
+                    }
+                    Log.e(TAG, "调用错误回调: " + errorMsg);
                     if (errorCallback != null) {
                         errorCallback.onError(errorMsg);
                     }
@@ -371,11 +391,11 @@ public class RetrofitApiService {
      * @param successCallback 成功回调
      * @param errorCallback 错误回调
      */
-    public void getUserInfo(SuccessCallback<UserInfoResponse> successCallback,
+    public void getUserInfo(SuccessCallback<BaseResponse<UserInfoModel>> successCallback,
                            ErrorCallback errorCallback) {
         
-        Call<UserInfoResponse> call = apiService.getUserInfo();
-        call.enqueue(new BaseCallback<UserInfoResponse>(successCallback, errorCallback) {
+        Call<BaseResponse<UserInfoModel>> call = apiService.getUserInfo();
+        call.enqueue(new BaseCallback<BaseResponse<UserInfoModel>>(successCallback, errorCallback) {
             // 使用父类的默认实现
         });
     }
@@ -388,7 +408,7 @@ public class RetrofitApiService {
      * @param errorCallback 错误回调
      */
     public void saveUserInfo(RequestBody userInfo,
-                            SuccessCallback<BaseResponse<String>> successCallback,
+                            SuccessCallback<BaseResponse<UserInfoModel>> successCallback,
                             ErrorCallback errorCallback) {
         
         if (!isNetworkAvailable()) {
@@ -400,8 +420,8 @@ public class RetrofitApiService {
             return;
         }
         
-        Call<BaseResponse<String>> call = apiService.saveUserInfo(userInfo);
-        call.enqueue(new BaseCallback<BaseResponse<String>>(successCallback, errorCallback) {
+        Call<BaseResponse<UserInfoModel>> call = apiService.saveUserInfo(userInfo);
+        call.enqueue(new BaseCallback<BaseResponse<UserInfoModel>>(successCallback, errorCallback) {
             // 使用父类的默认实现
         });
     }
@@ -414,7 +434,7 @@ public class RetrofitApiService {
      * @param errorCallback 错误回调
      */
     public void uploadAvatar(File avatarFile,
-                            SuccessCallback<BaseResponse<String>> successCallback,
+                            SuccessCallback<BaseResponse<Map<String,Object>>> successCallback,
                             ErrorCallback errorCallback) {
         
         if (!isNetworkAvailable()) {
@@ -430,8 +450,8 @@ public class RetrofitApiService {
         RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), avatarFile);
         MultipartBody.Part body = MultipartBody.Part.createFormData("file", avatarFile.getName(), requestFile);
         
-        Call<BaseResponse<String>> call = apiService.uploadAvatar(body);
-        call.enqueue(new BaseCallback<BaseResponse<String>>(successCallback, errorCallback) {
+        Call<BaseResponse<Map<String,Object>>> call = apiService.uploadAvatar(body);
+        call.enqueue(new BaseCallback<BaseResponse<Map<String,Object>>>(successCallback, errorCallback) {
             // 使用父类的默认实现
         });
     }

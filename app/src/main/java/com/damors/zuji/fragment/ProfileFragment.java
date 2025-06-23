@@ -131,18 +131,6 @@ public class ProfileFragment extends Fragment {
         // 设置地图缓存管理布局点击事件 - 直接打开离线地图管理
         layoutMapCache.setOnClickListener(v -> openOfflineMapManager());
         
-        // 观察足迹数据变化，更新统计信息
-        // 注释：已移除本地足迹统计功能
-        /*
-        viewModel.getAllFootprints().observe(getViewLifecycleOwner(), footprints -> {
-            if (footprints != null) {
-                textViewFootprintCount.setText(String.format("%d", footprints.size()));
-            } else {
-                textViewFootprintCount.setText("0");
-            }
-        });
-        */
-        
         // 刷新数据
         viewModel.refreshFootprints();
         
@@ -414,6 +402,8 @@ public class ProfileFragment extends Fragment {
                     .load(avatarUrl)
                     .placeholder(R.drawable.default_avatar)
                     .error(R.drawable.default_avatar)
+                    .skipMemoryCache(true)  // 跳过内存缓存
+                    .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)  // 跳过磁盘缓存
                     .circleCrop()
                     .into(imageViewAvatar);
             }

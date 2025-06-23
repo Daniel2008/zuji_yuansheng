@@ -4,12 +4,15 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.text.TextUtils;
 
-import com.damors.zuji.network.RetrofitApiService;
-import com.damors.zuji.model.UserInfoResponse;
+import com.damors.zuji.model.UserInfoModel;
 import com.damors.zuji.model.response.BaseResponse;
+import com.damors.zuji.network.RetrofitApiService;
+import com.damors.zuji.utils.GsonUtil;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
+import org.json.JSONObject;
 
 public class UserManager {
     private static final String PREF_NAME = "user_pref";
@@ -92,6 +95,34 @@ public class UserManager {
             editor.putString(KEY_TOKEN, token);
         } else {
             editor.remove(KEY_TOKEN);
+        }
+
+        // 使用commit()确保数据立即写入磁盘，解决登录后数据同步问题
+        boolean success = editor.commit();
+        android.util.Log.d("UserManager", "保存用户数据结果: " + success);
+    }
+    /**
+     * 获取用户数据
+     *
+     */
+    public UserInfoModel getUserInfo() {
+        this.currentUserJson = currentUserJson = preferences.getString(KEY_USER, null);
+        return gson.fromJson(currentUserJson, UserInfoModel.class);
+    }
+
+    /**
+     * 保存用户数据
+     *
+     * @param userJson 用户JSON字符串
+     */
+    public void saveUserInfo(UserInfoModel userJson) {
+        this.currentUserJson = GsonUtil.GsonString(userJson);
+
+        SharedPreferences.Editor editor = preferences.edit();
+        if (!TextUtils.isEmpty(currentUserJson)) {
+            editor.putString(KEY_USER, currentUserJson);
+        } else {
+            editor.remove(KEY_USER);
         }
 
         // 使用commit()确保数据立即写入磁盘，解决登录后数据同步问题
@@ -246,18 +277,13 @@ public class UserManager {
 
         // 使用token获取用户信息
         apiService.getUserInfo(
-            new RetrofitApiService.SuccessCallback<UserInfoResponse>() {
+            new RetrofitApiService.SuccessCallback<BaseResponse<UserInfoModel>>() {
                 @Override
-                public void onSuccess(UserInfoResponse response) {
+                public void onSuccess(BaseResponse<UserInfoModel> response) {
                     // 检查响应是否成功
                     if (response != null && response.getCode() == 200 && response.getData() != null) {
-                        // token有效，更新用户信息缓存
-                        String userJson = gson.toJson(response.getData().getUser());
-                        String newToken = response.getData().getToken();
-                        
-                        // 使用返回的新token或保持原token
-                        String tokenToSave = (newToken != null && !newToken.isEmpty()) ? newToken : token;
-                        saveUserAndToken(userJson, tokenToSave);
+
+                        saveUserInfo(response.getData());
                         
                         if (callback != null) {
                             callback.onValidationResult(true, "token验证成功，用户信息已更新");

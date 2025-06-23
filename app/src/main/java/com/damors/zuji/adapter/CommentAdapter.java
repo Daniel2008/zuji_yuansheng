@@ -99,6 +99,8 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
                     .load(avatarUrl)
                     .placeholder(R.drawable.ic_default_avatar)
                     .error(R.drawable.ic_default_avatar)
+                    .skipMemoryCache(true)  // 跳过内存缓存
+                    .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)  // 跳过磁盘缓存
                     .circleCrop()
                     .into(holder.ivUserAvatar);
         } else {
@@ -224,6 +226,8 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
                     .load(replyAvatarUrl)
                     .placeholder(R.drawable.ic_default_avatar)
                     .error(R.drawable.ic_default_avatar)
+                    .skipMemoryCache(true)  // 跳过内存缓存
+                    .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)  // 跳过磁盘缓存
                     .circleCrop() // 添加圆形裁剪，与主评论保持一致
                     .into(ivUserAvatar);
             } else {

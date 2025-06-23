@@ -1348,6 +1348,8 @@ public class MapFragment extends Fragment {
                     .load(avatarUrl)
                     .placeholder(R.drawable.ic_default_avatar) // 加载中显示的默认头像
                     .error(R.drawable.ic_default_avatar) // 加载失败显示的默认头像
+                    .skipMemoryCache(true)  // 跳过内存缓存
+                    .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)  // 跳过磁盘缓存
                     .circleCrop() // 圆形裁剪
                     .into(avatarView);
             } else {

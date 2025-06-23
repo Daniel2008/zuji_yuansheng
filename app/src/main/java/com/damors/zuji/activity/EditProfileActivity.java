@@ -18,7 +18,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-// 移除AlertDialog导入，因为不再使用头像选择对话框
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -26,17 +26,21 @@ import androidx.core.content.ContextCompat;
 import com.bumptech.glide.Glide;
 import com.damors.zuji.R;
 import com.damors.zuji.manager.UserManager;
-import com.damors.zuji.model.UserInfoResponse;
+import com.damors.zuji.model.UserInfoModel;
 import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.network.RetrofitApiService;
 import com.damors.zuji.model.response.BaseResponse;
+import com.damors.zuji.utils.GsonUtil;
 import com.damors.zuji.utils.ImageUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import org.json.JSONObject;
+
 import java.io.File;
+import java.util.Map;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -58,7 +62,7 @@ public class EditProfileActivity extends BaseActivity {
     private androidx.appcompat.widget.Toolbar toolbar;
     
     private UserManager userManager;
-    private RetrofitApiService apiService;
+    private RetrofitApiService retrofitApiService;
     private String currentAvatarUrl;
     private String currentUsername;
     private File tempImageFile;
@@ -98,7 +102,7 @@ public class EditProfileActivity extends BaseActivity {
     
     private void initData() {
         userManager = UserManager.getInstance();
-        apiService = RetrofitApiService.getInstance(this);
+        retrofitApiService = RetrofitApiService.getInstance(this);
     }
     
     private void setupClickListeners() {
@@ -106,7 +110,7 @@ public class EditProfileActivity extends BaseActivity {
         buttonBack.setOnClickListener(v -> finish());
         
         // 头像点击事件 - 直接跳转到相册选择
-        imageViewAvatar.setOnClickListener(v -> checkStoragePermissionAndSelectFromGallery());
+        imageViewAvatar.setOnClickListener(v -> selectFromGallery());
         
         // 保存按钮
         buttonSave.setOnClickListener(v -> saveProfile());
@@ -177,19 +181,8 @@ public class EditProfileActivity extends BaseActivity {
         return null;
     }
     
-    /**
-     * 检查存储权限并从相册选择
-     */
-    private void checkStoragePermissionAndSelectFromGallery() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) 
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, 
-                new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_STORAGE_PERMISSION);
-        } else {
-            selectFromGallery();
-        }
-    }
-    
+
+
     /**
      * 从相册选择
      */
@@ -199,20 +192,8 @@ public class EditProfileActivity extends BaseActivity {
         startActivityForResult(intent, REQUEST_GALLERY);
     }
     
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        
-        switch (requestCode) {
-            case REQUEST_STORAGE_PERMISSION:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    selectFromGallery();
-                } else {
-                    Toast.makeText(this, "需要存储权限才能选择照片", Toast.LENGTH_SHORT).show();
-                }
-                break;
-        }
-    }
+
+
     
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
@@ -307,158 +288,102 @@ public class EditProfileActivity extends BaseActivity {
             return;
         }
         
-        // 构建完整的用户信息JSON
-        String userInfoJson = buildUserInfoJson(username, token);
-        if (TextUtils.isEmpty(userInfoJson)) {
-            Toast.makeText(this, "用户信息构建失败", Toast.LENGTH_SHORT).show();
-            resetSaveButton();
-            return;
+        // 如果有头像文件，先上传头像
+        if (avatarFile != null && avatarFile.exists()) {
+            Log.d(TAG, "开始上传头像: " + avatarFile.getAbsolutePath());
+            uploadUserInfoAndAvatar(username, avatarFile);
+        } else {
+            // 没有头像变更，直接保存用户信息
+            Log.d(TAG, "没有头像变更，直接保存用户信息");
+            saveUserInfoOnly(username);
         }
+    }
+    
+    /**
+     * 先上传头像，成功后再保存用户信息
+     */
+    private void uploadUserInfoAndAvatar(String username, File avatarFile) {
+        Log.d(TAG, "开始上传头像: " + avatarFile.getAbsolutePath());
         
-        // 将userInfoJson转换为RequestBody
+        // 调用头像上传接口
+        retrofitApiService.uploadAvatar(avatarFile,
+            new RetrofitApiService.SuccessCallback<BaseResponse<Map<String,Object>>>() {
+                @Override
+                public void onSuccess(BaseResponse<Map<String,Object>> response) {
+                    Log.d(TAG, "头像上传成功回调被调用");
+                    Log.d(TAG, "响应对象: " + (response != null ? response.toString() : "null"));
+                    Map<String,Object> data = response.getData();
+                    UserInfoModel userInfoModel = userManager.getUserInfo();
+                    userInfoModel.setAvatar(data.get("fileName").toString());
+                    userManager.saveUserInfo(userInfoModel);
+                    runOnUiThread(() -> {
+                        // 头像上传成功后，再保存用户信息
+                        saveUserInfoOnly(username);
+                    });
+                }
+            },
+            new RetrofitApiService.ErrorCallback() {
+                @Override
+                public void onError(String errorMessage) {
+                    Log.e(TAG, "头像上传失败: " + errorMessage);
+                    runOnUiThread(() -> {
+                        Toast.makeText(EditProfileActivity.this, "头像上传失败: " + errorMessage, Toast.LENGTH_SHORT).show();
+                        resetSaveButton();
+                    });
+                }
+            }
+        );
+    }
+    
+    /**
+     * 仅保存用户信息（不包含头像上传）
+     */
+    private void saveUserInfoOnly(String username) {
+        Log.d(TAG, "开始保存用户信息: " + username);
+        
+
+        
+        // 构建用户信息JSON
+        UserInfoModel userinfo = userManager.getUserInfo();
+        userinfo.setUserName(username);
+        
+        // 创建RequestBody
         okhttp3.RequestBody userInfoRequestBody = okhttp3.RequestBody.create(
             okhttp3.MediaType.parse("application/json; charset=utf-8"), 
-            userInfoJson
+            GsonUtil.GsonString(userinfo)
         );
         
         // 调用实际的更新用户资料API
-        apiService.saveUserInfo(userInfoRequestBody, 
+        retrofitApiService.saveUserInfo(userInfoRequestBody, 
             // 成功回调
-            new RetrofitApiService.SuccessCallback<BaseResponse<String>>() {
+            new RetrofitApiService.SuccessCallback<BaseResponse<UserInfoModel>>() {
                 @Override
-                public void onSuccess(BaseResponse<String> response) {
+                public void onSuccess(BaseResponse<UserInfoModel> response) {
                     if (response.getCode() == 200) {
                         Log.d(TAG, "用户信息保存成功: " + response);
-                        
-                        // 解析服务器返回的用户数据，特别是新的头像信息
-                        JsonObject serverUserData = null;
-                        try {
-                            String responseData = response.getData();
-                            Log.d(TAG, "服务器响应数据: " + responseData);
-                            
-                            // 先尝试解析response.getData()，看是否包含用户数据
-                            if (!TextUtils.isEmpty(responseData)) {
-                                try {
-                                    // 如果responseData是JSON格式
-                                    if (responseData.trim().startsWith("{")) {
-                                        serverUserData = JsonParser.parseString(responseData).getAsJsonObject();
-                                        Log.d(TAG, "从响应中解析到用户数据: " + serverUserData.toString());
-                                        } else {
-                                        // 如果responseData只是简单字符串，说明需要重新获取用户信息
-                                        Log.d(TAG, "响应为简单字符串，需要重新获取用户信息: " + responseData);
-                                    }
-                                } catch (Exception parseEx) {
-                                    Log.w(TAG, "解析响应JSON失败: " + parseEx.getMessage());
-                                }
-                            }
-                        } catch (Exception e) {
-                            Log.w(TAG, "处理服务器响应失败: " + e.getMessage());
-                        }
-                        
-                        final JsonObject finalServerUserData = serverUserData;
-                        
-                        // 如果没有从响应中获取到用户数据，需要重新获取用户信息
-                         if (finalServerUserData == null) {
-                             final String username = editTextUsername.getText().toString().trim();
-                             Log.d(TAG, "响应中没有用户数据，重新获取用户信息");
-                     // 获取当前用户的token
-                     String currentToken = UserManager.getInstance().getToken();
-                     if (currentToken != null) {
-                         // 重新获取用户信息以获取最新的头像URL
-                         apiService.getUserInfo(
-                             new RetrofitApiService.SuccessCallback<UserInfoResponse>() {
-                                 @Override
-                                 public void onSuccess(UserInfoResponse response) {
-                                runOnUiThread(() -> {
-                                    if (response.getCode() == 200 && response.getData() != null) {
-                                        // 使用最新的用户信息更新本地数据
-                                        JsonObject userJsonObj = response.getData().getUser();
-                                        JsonObject latestUserData = userJsonObj;
-                                        
-                                        updateLocalUserData(username, latestUserData);
-                                        
-                                        // 更新当前页面头像显示
-                                        String newAvatar = null;
-                                        if (userJsonObj.has("avatar") && !userJsonObj.get("avatar").isJsonNull()) {
-                                            newAvatar = userJsonObj.get("avatar").getAsString();
-                                        }
-                                        if (!TextUtils.isEmpty(newAvatar)) {
-                                            String newAvatarUrl = ApiConfig.getImageBaseUrl() + newAvatar;
-                                            Glide.with(EditProfileActivity.this)
-                                                .load(newAvatarUrl)
-                                                .placeholder(R.drawable.ic_default_avatar)
-                                                .error(R.drawable.ic_default_avatar)
-                                                .circleCrop()
-                                                .into(imageViewAvatar);
-                                            Log.d(TAG, "重新获取用户信息后更新头像: " + newAvatarUrl);
-                                        }
-                                    } else {
-                                        // 如果获取用户信息失败，只更新用户名
-                                        updateLocalUserData(username, null);
-                                    }
-                                    
-                                    Toast.makeText(EditProfileActivity.this, "资料更新成功", Toast.LENGTH_SHORT).show();
-                                    setResult(RESULT_OK);
-                                    finish();
-                                });
-                            }
-                        },
-                        new RetrofitApiService.ErrorCallback() {
-                            @Override
-                            public void onError(String errorMessage) {
-                                Log.w(TAG, "重新获取用户信息失败: " + errorMessage);
-                                runOnUiThread(() -> {
-                                    // 即使获取用户信息失败，也要更新本地用户名
-                                    updateLocalUserData(username, null);
-                                    Toast.makeText(EditProfileActivity.this, "资料更新成功", Toast.LENGTH_SHORT).show();
-                                    setResult(RESULT_OK);
-                                    finish();
-                                });
-                            }
-                        }
-                    );
-                     } else {
-                         Log.w(TAG, "无法获取用户token，跳过重新获取用户信息");
-                         runOnUiThread(() -> {
-                             // 即使无法重新获取用户信息，也要更新本地用户名
-                             updateLocalUserData(username, null);
-                             Toast.makeText(EditProfileActivity.this, "资料更新成功", Toast.LENGTH_SHORT).show();
-                             setResult(RESULT_OK);
-                             finish();
-                         });
-                     }
-                } else {
-                    // 有服务器返回的用户数据，直接使用
-                    runOnUiThread(() -> {
-                        // 更新本地用户数据，传入服务器返回的数据
-                        updateLocalUserData(username, finalServerUserData);
-                        
-                        // 如果有新头像，立即更新当前页面显示
-                        if (finalServerUserData.has("avatar") 
-                            && !finalServerUserData.get("avatar").isJsonNull()) {
-                            String newAvatar = finalServerUserData.get("avatar").getAsString();
-                            if (!TextUtils.isEmpty(newAvatar)) {
-                                String newAvatarUrl = ApiConfig.getImageBaseUrl() + newAvatar;
-                                Glide.with(EditProfileActivity.this)
+                        UserInfoModel userInfoModel = response.getData();
+                        // 更新本地用户数据
+                        updateLocalUserData(username,userInfoModel);
+
+                        if (!TextUtils.isEmpty(userInfoModel.getAvatar())) {
+                            String newAvatarUrl = ApiConfig.getImageBaseUrl() + userInfoModel.getAvatar();
+                            Glide.with(EditProfileActivity.this)
                                     .load(newAvatarUrl)
                                     .placeholder(R.drawable.ic_default_avatar)
                                     .error(R.drawable.ic_default_avatar)
                                     .circleCrop()
                                     .into(imageViewAvatar);
-                                Log.d(TAG, "使用响应数据更新头像: " + newAvatarUrl);
-                            }
+                            Log.d(TAG, "重新获取用户信息后更新头像: " + newAvatarUrl);
                         }
-                        
                         Toast.makeText(EditProfileActivity.this, "资料更新成功", Toast.LENGTH_SHORT).show();
                         setResult(RESULT_OK);
                         finish();
-                    });
-                }
-                    } else {
-                        String msg = response.getMsg() != null ? response.getMsg() : "更新失败";
-                        Log.e(TAG, "用户信息保存失败: " + msg);
+
+
+                     } else {
+                        Log.e(TAG, "用户信息保存失败: " + response);
                         runOnUiThread(() -> {
-                            Toast.makeText(EditProfileActivity.this, "更新失败: " + msg, Toast.LENGTH_SHORT).show();
+                            Toast.makeText(EditProfileActivity.this, "更新失败: " + response, Toast.LENGTH_SHORT).show();
                             resetSaveButton();
                         });
                     }
@@ -477,60 +402,15 @@ public class EditProfileActivity extends BaseActivity {
             }
         );
     }
-    
-    /**
-     * 构建完整的用户信息JSON
-     * 
-     * @param username 用户名
-     * @param token 用户token
-     * @return 用户信息JSON字符串
-     */
-    private String buildUserInfoJson(String username, String token) {
-        try {
-            // 获取当前用户数据作为基础
-            String currentUserJson = userManager.getCurrentUserJson();
-            JsonObject userObj = new JsonObject();
-            
-            if (!TextUtils.isEmpty(currentUserJson)) {
-                // 解析现有用户数据
-                JsonObject currentUserObj = JsonParser.parseString(currentUserJson).getAsJsonObject();
-                
-                // 只复制基本的字符串字段，避免复杂对象导致的序列化问题
-                String[] basicFields = {"userId", "userName", "nickName", "email", "phonenumber", "sex", "avatar", "status"};
-                
-                for (String field : basicFields) {
-                    if (currentUserObj.has(field) && !currentUserObj.get(field).isJsonNull()) {
-                        JsonElement element = currentUserObj.get(field);
-                        // 只处理基本类型，跳过复杂对象
-                        if (element.isJsonPrimitive()) {
-                            userObj.add(field, element);
-                        }
-                    }
-                }
-            }
-            
-            // 更新必要字段
-            userObj.addProperty("nickName", username);
-            
-            // 确保userId字段存在
-            if (!userObj.has("userId") || userObj.get("userId").isJsonNull()) {
-                userObj.addProperty("userId", "");
-            }
-            
-            return new Gson().toJson(userObj);
-        } catch (Exception e) {
-            Log.e(TAG, "构建用户信息JSON失败", e);
-            return null;
-        }
-    }
+
     
     /**
      * 更新本地用户数据
      * 
      * @param username 新的用户名
-     * @param serverUserData 服务器返回的用户数据（可为null）
+     * @param userInfoModel 服务器返回的用户数据（可为null）
      */
-    private void updateLocalUserData(String username, JsonObject serverUserData) {
+    private void updateLocalUserData(String username, UserInfoModel userInfoModel) {
         try {
             // 获取当前用户数据
             String userJson = userManager.getCurrentUserJson();
@@ -541,18 +421,11 @@ public class EditProfileActivity extends BaseActivity {
                 userObj.addProperty("nickName", username);
                 
                 // 如果服务器返回了用户数据，使用服务器的数据更新
-                if (serverUserData != null) {
+                if (userInfoModel != null) {
                     // 更新头像URL（如果服务器返回了新的头像URL）
-                    if (serverUserData.has("avatar") && !serverUserData.get("avatar").isJsonNull()) {
-                        String newAvatarUrl = serverUserData.get("avatar").getAsString();
-                        userObj.addProperty("avatar", newAvatarUrl);
-                        Log.d(TAG, "更新头像URL: " + newAvatarUrl);
-                    }
-                    
+                    userObj.addProperty("avatar", userInfoModel.getAvatar());
                     // 更新其他可能的用户信息字段
-                    if (serverUserData.has("userName") && !serverUserData.get("userName").isJsonNull()) {
-                        userObj.addProperty("userName", serverUserData.get("userName").getAsString());
-                    }
+                    userObj.addProperty("userName", userInfoModel.getUserName());
                 }
                 
                 // 保存更新后的用户数据

@@ -50,20 +50,23 @@
 ## 🛠️ 技术栈
 
 ### 开发环境
-- **开发语言**：Java 11
+- **开发语言**：Java 21
 - **最低SDK版本**：Android 7.0 (API 24)
-- **目标SDK版本**：Android 14 (API 35)
-- **编译SDK版本**：Android 14 (API 35)
+- **目标SDK版本**：Android 14 (API 34)
+- **编译SDK版本**：Android 15 (API 35)
+- **Gradle版本**：8.10.1
 
 ### 核心依赖
-- **UI框架**：Material Design Components 1.11.0
-- **地图服务**：高德地图SDK (3DMap 10.1.300)
-- **数据库**：Room 2.6.1
-- **网络请求**：Hutool 5.8.16
-- **图片加载**：Glide 4.12.0
+- **UI框架**：Material Design Components 1.12.0
+- **地图服务**：高德地图SDK (3DMap)
+- **数据库**：Room 2.7.2
+- **网络请求**：Retrofit 3.0.0 + OkHttp 4.12.0
+- **图片加载**：Glide 4.16.0
 - **图片预览**：PhotoView 2.3.0
-- **JSON解析**：Gson 2.10.1
-- **架构组件**：ViewModel & LiveData 2.7.0
+- **JSON解析**：Gson 2.13.1
+- **架构组件**：ViewModel & LiveData 2.9.1
+- **状态栏管理**：ImmersionBar 3.2.2
+- **应用更新**：XUpdate 2.1.5
 
 ### 项目架构
 ```
@@ -93,79 +96,75 @@ app/src/main/java/com/damors/zuji/
 ```
 project/
 ├── config/
-│   └── app.properties           # 统一配置文件（包含所有环境配置）
+│   └── app.properties           # 应用配置文件（版本信息、环境设置）
 ├── app/
-│   └── build.gradle             # 已配置自动读取环境配置
-└── switch_env.bat               # 环境切换脚本
+│   ├── build.gradle             # 构建配置（已配置自动读取环境配置）
+│   └── src/main/
+│       ├── java/com/damors/zuji/
+│       │   ├── activity/        # Activity类
+│       │   ├── fragment/        # Fragment类
+│       │   ├── adapter/         # RecyclerView适配器
+│       │   ├── model/           # 数据模型
+│       │   ├── database/        # Room数据库
+│       │   ├── network/         # 网络服务
+│       │   ├── manager/         # 管理类
+│       │   ├── utils/           # 工具类
+│       │   ├── dialog/          # 自定义对话框
+│       │   └── viewmodel/       # ViewModel类
+│       ├── res/                 # 资源文件
+│       └── AndroidManifest.xml  # 应用清单
+├── gradle/
+│   └── libs.versions.toml       # 依赖版本管理
+└── README.md                    # 项目文档
 ```
 
 ## 🚀 快速开始
 
-### 🔄 环境配置与切换
+### ⚙️ 应用配置
 
-本项目支持开发环境和正式环境的快速切换，所有配置统一管理在 `config/app.properties` 文件中。
+项目使用统一的配置文件管理应用设置，配置文件位于 `config/app.properties`。
 
-#### 环境切换方法
+#### 配置文件说明
 
-**方法1: 使用批处理脚本（推荐）**
-```bash
-# 切换到开发环境
-.\switch_env.bat dev
+`config/app.properties` 包含应用的核心配置：
+```properties
+# 版本信息
+versionCode=102
+versionName=1.02
 
-# 切换到正式环境
-.\switch_env.bat prod
+# 环境设置
+proMode=true
 ```
 
-**方法2: 使用Gradle任务**
+#### 配置项说明
+- `versionCode` - 应用版本号（用于版本比较）
+- `versionName` - 应用版本名称（显示给用户）
+- `proMode` - 正式模式开关（true=正式环境，false=开发环境）
+
+#### 查看当前配置
+
+使用Gradle任务查看当前环境配置：
 ```bash
-# 切换到开发环境
-.\gradlew switchToDev
-
-# 切换到正式环境
-.\gradlew switchToProd
-
 # 查看当前环境配置
 .\gradlew showEnvironmentConfig
 ```
 
-**方法3: 手动编辑**
-
-编辑 `config/app.properties` 文件中的环境设置：
-```properties
-# 切换到开发环境
-current.environment=dev
-
-# 切换到正式环境
-current.environment=prod
-```
-
-#### 配置文件说明
-
-`config/app.properties` 是唯一的配置文件，包含所有环境的配置，通过前缀区分：
-- `dev.*` - 开发环境配置
-- `prod.*` - 正式环境配置
-- `current.environment` - 当前环境设置
-
 #### 在代码中使用配置
 
 ```java
-// 获取当前环境
-String environment = BuildConfig.ENVIRONMENT;
-
-// 获取API地址
-String apiUrl = BuildConfig.API_BASE_URL;
-
 // 检查是否为正式模式
 boolean isProMode = BuildConfig.PRO_MODE;
 
-// 检查日志是否启用
-boolean logEnabled = BuildConfig.LOG_ENABLED;
+// 获取版本信息
+int versionCode = BuildConfig.VERSION_CODE;
+String versionName = BuildConfig.VERSION_NAME;
 ```
 
 ### 环境要求
-- Android Studio Arctic Fox 或更高版本
-- JDK 11 或更高版本
+- Android Studio Hedgehog 或更高版本
+- JDK 21 或更高版本
 - Android SDK API 24 或更高版本
+- Gradle 8.10.1 或更高版本
 - 高德地图开发者账号和API Key
 
 ### 安装步骤
@@ -185,9 +184,9 @@ boolean logEnabled = BuildConfig.LOG_ENABLED;
        android:value="您的高德地图API Key" />
    ```
 
-3. **配置网络服务**
-   - 在 `ApiConfig.java` 中配置服务器地址
-   - 确保服务器端API接口正常运行
+3. **配置应用设置**
+   - 编辑 `config/app.properties` 文件设置版本信息和环境模式
+   - 根据需要调整 `proMode` 设置（开发/正式环境）
 
 4. **编译运行**
    ```bash
@@ -306,7 +305,10 @@ signingConfigs {
 - [Material Design Components](https://material.io/components)
 - [Glide](https://github.com/bumptech/glide)
 - [Room](https://developer.android.com/training/data-storage/room)
-- [Hutool](https://hutool.cn/)
+- [Retrofit](https://square.github.io/retrofit/)
+- [PhotoView](https://github.com/chrisbanes/PhotoView)
+- [XUpdate](https://github.com/xuexiangjys/XUpdate)
+- [ImmersionBar](https://github.com/gyf-dev/ImmersionBar)
 
 ## 📱 应用截图
 

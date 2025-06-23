@@ -2,7 +2,7 @@ package com.damors.zuji.network;
 
 import com.damors.zuji.model.AppUpdateInfo;
 import com.damors.zuji.model.CommentModel;
-import com.damors.zuji.model.UserInfoResponse;
+import com.damors.zuji.model.UserInfoModel;
 import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.model.response.FootprintMessageResponse;
 import com.damors.zuji.model.response.LoginResponse;
@@ -70,7 +70,7 @@ public interface ApiService {
      * @return 用户信息响应
      */
     @POST("getUserInfo")
-    Call<UserInfoResponse> getUserInfo();
+    Call<BaseResponse<UserInfoModel>> getUserInfo();
 
     /**
      * 保存用户信息
@@ -79,7 +79,7 @@ public interface ApiService {
      * @return 保存响应
      */
     @POST("saveUserInfo")
-    Call<BaseResponse<String>> saveUserInfo(@Body RequestBody userInfo);
+    Call<BaseResponse<UserInfoModel>> saveUserInfo(@Body RequestBody userInfo);
 
     /**
      * 上传头像
@@ -89,7 +89,7 @@ public interface ApiService {
      */
     @Multipart
     @POST("upload")
-    Call<BaseResponse<String>> uploadAvatar(@Part MultipartBody.Part file);
+    Call<BaseResponse<Map<String,Object>>> uploadAvatar(@Part MultipartBody.Part file);
 
     /**
      * 发布足迹

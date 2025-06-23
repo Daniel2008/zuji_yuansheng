@@ -154,6 +154,9 @@ dependencies {
 
     // 状态栏
     implementation libs.immersionbar
+    //lombo
+    implementation libs.lombok
+    annotationProcessor libs.lombok
 
 
     testImplementation libs.junit
