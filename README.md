@@ -317,7 +317,6 @@ signingConfigs {
     <img src="docs/images/2.jpg" alt="历史记录" width="200">
     <img src="docs/images/3.jpg" alt="个人中心" width="200">
     <img src="docs/images/4.jpg" alt="数据统计" width="200">
-    <img src="docs/images/5.jpg" alt="数据统计" width="200">
 </div>
 
 ---
