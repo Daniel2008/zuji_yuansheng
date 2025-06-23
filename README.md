@@ -1,7 +1,7 @@
 # 足迹 (Zuji) - Android 足迹记录应用
 
 <div align="center">
-  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="足迹应用图标" width="120" height="120">
+  <img src="docs/images/logo.png" alt="足迹应用图标" width="120" height="120">
   
   <p>一款基于高德地图的Android足迹记录应用，让您记录生活中的每一个精彩瞬间</p>
   
@@ -313,10 +313,11 @@ signingConfigs {
 ## 📱 应用截图
 
 <div align="center">
-  <img src="screenshots/map_view.png" alt="地图视图" width="200">
-  <img src="screenshots/history_view.png" alt="历史记录" width="200">
-  <img src="screenshots/profile_view.png" alt="个人中心" width="200">
-  <img src="screenshots/statistics_view.png" alt="数据统计" width="200">
+    <img src="docs/images/1.jpg" alt="地图视图" width="200">
+    <img src="docs/images/2.jpg" alt="历史记录" width="200">
+    <img src="docs/images/3.jpg" alt="个人中心" width="200">
+    <img src="docs/images/4.jpg" alt="数据统计" width="200">
+    <img src="docs/images/5.jpg" alt="数据统计" width="200">
 </div>
 
 ---
