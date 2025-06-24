@@ -74,9 +74,9 @@
                         android:layout_width="40dp"
                         android:layout_height="40dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
-                        android:backgroundTint="@color/profile_button_background"
+                        android:backgroundTint="@color/colorPrimary"
                         android:src="@drawable/ic_edit"
-                        app:tint="@color/profile_button_background" />
+                        app:tint="@color/colorPrimary" />
                 </LinearLayout>
 
                 <!-- 统计数据网格 -->

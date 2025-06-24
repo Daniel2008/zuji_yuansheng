@@ -120,7 +120,7 @@
             android:name=".activity.LocationPickerActivity"
             android:exported="false"
             android:label="选择位置"
-            android:theme="@style/Theme.Footprint" />
+            android:theme="@style/Theme.Zuji_yuansheng" />
             
         <!-- 评论列表活动 -->
         <activity
@@ -130,8 +130,14 @@
             android:theme="@style/Theme.Zuji_yuansheng"
             android:windowSoftInputMode="adjustResize" />
             
-
+        <!-- 评论管理活动 -->
+        <activity
+            android:name=".activity.CommentManagementActivity"
+            android:exported="false"
+            android:label="评论管理"
+            android:theme="@style/Theme.Zuji_yuansheng" />
             
+
         <!-- 设置页面活动 -->
         <activity
             android:name=".activity.SettingsActivity"
@@ -151,8 +157,7 @@
         <activity
             android:name="com.amap.api.maps.offlinemap.OfflineMapActivity"
             android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.OfflineMap.Fullscreen" />
+            android:theme="@style/Theme.Zuji_yuansheng" />
             
         <!-- DownloadReceiver已移除，XUpdate会自动处理下载完成事件 -->
         

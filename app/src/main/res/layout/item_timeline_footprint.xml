@@ -124,14 +124,7 @@
             android:orientation="vertical"
             android:padding="12dp">
 
-            <!-- 位置信息 -->
-            <TextView
-                android:id="@+id/text_view_location"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                tools:text="北京 · 天安门" />
+
 
             <!-- 分类标签 -->
             <TextView
@@ -163,6 +156,7 @@
                 layout="@layout/grid_image_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
                 android:visibility="gone" />
 
             <!-- 视频指示器 -->
@@ -173,6 +167,21 @@
                 android:layout_marginTop="8dp"
                 android:background="@drawable/video_indicator_background"
                 android:visibility="gone" />
+
+            <!-- 位置信息 -->
+            <TextView
+                android:id="@+id/text_view_location"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="@color/colorPrimary"
+                android:drawableStart="@drawable/ic_location"
+                android:drawablePadding="4dp"
+                android:gravity="center_vertical"
+                android:background="?attr/selectableItemBackground"
+                android:padding="4dp"
+                tools:text="位置为：经度106.0676，纬度38.6238"
+                tools:visibility="visible" />
 
             <!-- 操作栏：点赞、收藏、评论 -->
             <LinearLayout

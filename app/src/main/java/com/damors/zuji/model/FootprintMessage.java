@@ -2,10 +2,13 @@ package com.damors.zuji.model;
 
 import java.util.List;
 
+import lombok.Data;
+
 /**
  * 足迹动态实体类
  * 用于表示用户发布的足迹动态信息
  */
+@Data
 public class FootprintMessage {
     
     /**
@@ -79,6 +82,11 @@ public class FootprintMessage {
     private String userAvatar;
     
     /**
+     * 用户名
+     */
+    private String userName;
+    
+    /**
      * 删除标志
      */
     private String delFlag;
@@ -87,6 +95,10 @@ public class FootprintMessage {
      * 关联文件列表
      */
     private List<GuluFile> guluFiles;
+    /**
+     * 关联评论列表
+     */
+    private List<CommentModel> comments;
     
     /**
      * 点赞数量
@@ -102,188 +114,5 @@ public class FootprintMessage {
      * 当前用户是否已点赞
      */
     private boolean hasLiked;
-    
-    // 构造函数
-    public FootprintMessage() {
-    }
-    
-    // Getter和Setter方法
-    public String getCreateBy() {
-        return createBy;
-    }
-    
-    public void setCreateBy(String createBy) {
-        this.createBy = createBy;
-    }
-    
-    public String getCreateTime() {
-        return createTime;
-    }
-    
-    public void setCreateTime(String createTime) {
-        this.createTime = createTime;
-    }
-    
-    public String getUpdateBy() {
-        return updateBy;
-    }
-    
-    public void setUpdateBy(String updateBy) {
-        this.updateBy = updateBy;
-    }
-    
-    public String getUpdateTime() {
-        return updateTime;
-    }
-    
-    public void setUpdateTime(String updateTime) {
-        this.updateTime = updateTime;
-    }
-    
-    public String getRemark() {
-        return remark;
-    }
-    
-    public void setRemark(String remark) {
-        this.remark = remark;
-    }
-    
-    public int getId() {
-        return id;
-    }
-    
-    public void setId(int id) {
-        this.id = id;
-    }
-    
-    public int getMsgType() {
-        return msgType;
-    }
-    
-    public void setMsgType(int msgType) {
-        this.msgType = msgType;
-    }
-    
-    public String getTextContent() {
-        return textContent;
-    }
-    
-    public void setTextContent(String textContent) {
-        this.textContent = textContent;
-    }
-    
-    public String getTag() {
-        return tag;
-    }
-    
-    public void setTag(String tag) {
-        this.tag = tag;
-    }
-    
-    public double getLng() {
-        return lng;
-    }
-    
-    public void setLng(double lng) {
-        this.lng = lng;
-    }
-    
-    public double getLat() {
-        return lat;
-    }
-    
-    public void setLat(double lat) {
-        this.lat = lat;
-    }
-    
-    public String getLocaltionTitle() {
-        return localtionTitle;
-    }
-    
-    public void setLocaltionTitle(String localtionTitle) {
-        this.localtionTitle = localtionTitle;
-    }
-    
-    public int getUserId() {
-        return userId;
-    }
-    
-    public void setUserId(int userId) {
-        this.userId = userId;
-    }
-    
-    public String getUserAvatar() {
-        return userAvatar;
-    }
-    
-    public void setUserAvatar(String userAvatar) {
-        this.userAvatar = userAvatar;
-    }
-    
-    public String getDelFlag() {
-        return delFlag;
-    }
-    
-    public void setDelFlag(String delFlag) {
-        this.delFlag = delFlag;
-    }
-    
-    public List<GuluFile> getGuluFiles() {
-        return guluFiles;
-    }
-    
-    public void setGuluFiles(List<GuluFile> guluFiles) {
-        this.guluFiles = guluFiles;
-    }
-    
-    public int getLikeCount() {
-        return likeCount;
-    }
-    
-    public void setLikeCount(int likeCount) {
-        this.likeCount = likeCount;
-    }
-    
 
-
-    public int getCommentCount() {
-        return commentCount;
-    }
-    
-    public void setCommentCount(int commentCount) {
-        this.commentCount = commentCount;
-    }
-
-    public boolean getHasLiked() {
-        return hasLiked;
-    }
-
-    public void setHasLiked(boolean hasLiked) {
-        this.hasLiked = hasLiked;
-    }
-    
-    @Override
-    public String toString() {
-        return "FootprintMessage{" +
-                "createBy='" + createBy + '\'' +
-                ", createTime='" + createTime + '\'' +
-                ", updateBy='" + updateBy + '\'' +
-                ", updateTime='" + updateTime + '\'' +
-                ", remark='" + remark + '\'' +
-                ", id=" + id +
-                ", msgType=" + msgType +
-                ", textContent='" + textContent + '\'' +
-                ", tag='" + tag + '\'' +
-                ", lng=" + lng +
-                ", lat=" + lat +
-                ", localtionTitle='" + localtionTitle + '\'' +
-                ", userId=" + userId +
-                ", userAvatar='" + userAvatar + '\'' +
-                ", delFlag='" + delFlag + '\'' +
-                ", guluFiles=" + guluFiles +
-                ", likeCount=" + likeCount +
-                ", commentCount=" + commentCount +
-                ", hasLiked=" + hasLiked +
-                '}';
-    }
 }

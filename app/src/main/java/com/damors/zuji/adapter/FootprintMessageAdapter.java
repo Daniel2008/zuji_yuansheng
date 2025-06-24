@@ -106,7 +106,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
             String userAvatar = message.getUserAvatar();
             if (userAvatar != null && !userAvatar.isEmpty()) {
                 // 构建完整的头像URL
-                String avatarUrl = getFullImageUrl(userAvatar);
+                String avatarUrl = ImageUtils.getFullImageUrl(userAvatar);
                 
                 // 使用Glide加载头像
                 Glide.with(context)
@@ -420,7 +420,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      * @param imageFile 图片文件
      */
     private void loadImageIntoView(ImageView imageView, GuluFile imageFile) {
-        String imageUrl = getFullImageUrl(imageFile.getFilePath());
+        String imageUrl = ImageUtils.getFullImageUrl(imageFile.getFilePath());
         android.util.Log.d("FootprintMessageAdapter", "加载图片: " + imageUrl);
         
         Glide.with(context)
@@ -453,7 +453,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      */
     private void setActionBar(ViewHolder holder, FootprintMessage message, int position) {
         // 设置点赞状态和数量
-        updateLikeStatus(holder, message.getHasLiked(), message.getLikeCount());
+        updateLikeStatus(holder, message.isHasLiked(), message.getLikeCount());
         
         // 收藏功能已移除
         
@@ -567,35 +567,6 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
     @Override
     public int getItemCount() {
         return messageList != null ? messageList.size() : 0;
-    }
-    
-    /**
-     * 获取完整的图片URL
-     * 使用ApiConfig中的图片基础URL
-     */
-    private String getFullImageUrl(String imagePath) {
-        if (imagePath == null || imagePath.isEmpty()) {
-            android.util.Log.w("FootprintMessageAdapter", "图片路径为空");
-            return "";
-        }
-        
-        // 如果已经是完整URL，直接返回
-        if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
-            android.util.Log.d("FootprintMessageAdapter", "使用完整URL: " + imagePath);
-            return imagePath;
-        }
-        
-        // 使用ApiConfig中的图片基础URL构建完整的图片URL
-        String imageBaseUrl = ApiConfig.getImageBaseUrl();
-        // 确保路径正确拼接
-        if (!imagePath.startsWith("/")) {
-            imagePath = "/" + imagePath;
-        }
-        String fullImageUrl = imageBaseUrl + imagePath;
-        
-        android.util.Log.d("FootprintMessageAdapter", "构建图片URL: " + imagePath + " -> " + fullImageUrl);
-        android.util.Log.d("FootprintMessageAdapter", "图片基础URL: " + imageBaseUrl);
-        return fullImageUrl;
     }
     
     static class ViewHolder extends RecyclerView.ViewHolder {

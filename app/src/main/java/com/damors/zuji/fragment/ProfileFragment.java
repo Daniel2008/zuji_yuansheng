@@ -24,6 +24,7 @@ import com.bumptech.glide.Glide;
 import com.damors.zuji.R;
 import com.damors.zuji.activity.EditProfileActivity;
 import com.damors.zuji.activity.SettingsActivity;
+import com.damors.zuji.activity.CommentManagementActivity;
 import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.utils.MapCacheManager;
@@ -96,8 +97,9 @@ public class ProfileFragment extends Fragment {
         
         // 设置评论管理布局点击事件
         layoutCommentManagement.setOnClickListener(v -> {
-            // TODO: 实现评论管理功能
-            Toast.makeText(getContext(), "评论管理功能开发中", Toast.LENGTH_SHORT).show();
+            // 跳转到评论管理页面
+            Intent intent = new Intent(getContext(), CommentManagementActivity.class);
+            startActivity(intent);
         });
         
         // 设置地图缓存管理布局点击事件 - 直接打开离线地图管理
@@ -124,8 +126,9 @@ public class ProfileFragment extends Fragment {
         
         // 设置评论管理布局点击事件
         layoutCommentManagement.setOnClickListener(v -> {
-            // TODO: 实现评论管理功能
-            Toast.makeText(getContext(), "评论管理功能开发中", Toast.LENGTH_SHORT).show();
+            // 跳转到评论管理页面
+            Intent intent = new Intent(getContext(), CommentManagementActivity.class);
+            startActivity(intent);
         });
         
         // 设置地图缓存管理布局点击事件 - 直接打开离线地图管理
@@ -397,7 +400,7 @@ public class ProfileFragment extends Fragment {
             String avatar = getUserFieldSafely(userObj, "avatar");
             if (!TextUtils.isEmpty(avatar) && imageViewAvatar != null) {
                 // 拼接完整的头像URL
-                String avatarUrl = ApiConfig.getImageBaseUrl() + avatar;
+                String avatarUrl = ApiConfig.getBaseUrl() + avatar;
                 Glide.with(this)
                     .load(avatarUrl)
                     .placeholder(R.drawable.default_avatar)

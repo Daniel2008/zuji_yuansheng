@@ -8,15 +8,10 @@ import com.damors.zuji.BuildConfig;
 public class ApiConfig {
 
     // 测试环境API地址
-    private static final String TEST_BASE_URL = "http://192.168.1.5:8080/zuji/api/";
+    private static final String TEST_BASE_URL = "http://192.168.1.5:8080";
 
     // 生产环境API地址
-    private static final String PROD_BASE_URL = "https://zuji.damors.com/zuji/api/";
-
-    // 图片API地址
-    private static final String IMAGE_BASE_URL = "http://192.168.1.5:8080";
-    // 线上环境地址
-    private static final String PROD_IMAGE_BASE_URL = "https://zuji.damors.com";
+    private static final String PROD_BASE_URL = "https://zuji.damors.com";
 
     public static final String APP_UPDATE_URL = "https://zuji.damors.com/zuji/api/";
 
@@ -37,19 +32,6 @@ public class ApiConfig {
         }
     }
 
-    /**
-     * 获取图片服务器基础URL
-     * @return 图片基础URL
-     */
-    public static String getImageBaseUrl() {
-        if (proMode) {
-            return PROD_IMAGE_BASE_URL;
-        } else {
-            // 默认使用测试环境
-            return IMAGE_BASE_URL;
-        }
-    }
-
     // API超时设置（毫秒）
     public static final int TIMEOUT_MS = 30000;
 
@@ -61,18 +43,20 @@ public class ApiConfig {
 
     // API端点
     public static final class Endpoints {
-        public static final String SEND_VERIFICATION_CODE = "sendMsg";
-        public static final String SMS_LOGIN = "smsLogin";
-        public static final String PUBLISH_FOOTPRINT = "publishMsg";
-        public static final String GET_MSG_LIST = "getMsgList";
-        public static final String GET_MSG_LIST_ALL = "getMsgListAll"; // 地图页mark数据接口
-        public static final String FOOTPRINT_MESSAGES = "getMsgList"; // 足迹动态消息接口
-        public static final String GET_USER_INFO = "getUserInfo"; // 获取用户信息接口
-        public static final String SAVE_USER_INFO = "saveUserInfo"; // 保存用户信息接口
-        public static final String TOGGLE_LIKE = "toggleLike"; // 点赞/取消点赞接口
-        public static final String ADD_COMMENT = "addComment"; // 添加评论接口
-        public static final String GET_COMMENT_LIST = "getCommentList"; // 获取评论列表接口
-        public static final String DELETE_COMMENT = "deleteComment"; // 删除评论接口
-        public static final String CHECK_APP_UPDATE = "checkAppUpdate"; // 检查应用更新接口
+        public static final String SEND_VERIFICATION_CODE = "/zuji/api/sendMsg";
+        public static final String SMS_LOGIN = "/zuji/api/smsLogin";
+        public static final String UPLOAD_AVATAR = "/zuji/api/upload";
+        public static final String PUBLISH_FOOTPRINT = "/zuji/api/publishMsg";
+        public static final String GET_MSG_LIST = "/zuji/api/getMsgList";
+        public static final String GET_MSG_LIST_ALL = "/zuji/api/getMsgListAll"; // 地图页mark数据接口
+        public static final String GET_MSG_DETAIL = "/zuji/api/getMsgDetail"; // 足迹动态消息接口
+        public static final String GET_USER_INFO = "/zuji/api/getUserInfo"; // 获取用户信息接口
+        public static final String SAVE_USER_INFO = "/zuji/api/saveUserInfo"; // 保存用户信息接口
+        public static final String TOGGLE_LIKE = "/zuji/api/toggleLike"; // 点赞/取消点赞接口
+        public static final String ADD_COMMENT = "/zuji/api/addComment"; // 添加评论接口
+        public static final String GET_COMMENT_LIST = "/zuji/api/getCommentList"; // 获取评论列表接口
+        public static final String DELETE_COMMENT = "/zuji/api/deleteComment"; // 删除评论接口
+        public static final String CHECK_APP_UPDATE = "/checkAppUpdate"; // 检查应用更新接口
+        public static final String DELETE_FOOTPRINT = "/zuji/api/deleteMsg";
     }
 }

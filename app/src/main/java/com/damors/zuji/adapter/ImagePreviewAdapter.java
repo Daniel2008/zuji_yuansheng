@@ -103,7 +103,7 @@ public class ImagePreviewAdapter extends RecyclerView.Adapter<ImagePreviewAdapte
             .fitCenter() // 保持图片原始比例，不拉伸变形
             .diskCacheStrategy(DiskCacheStrategy.ALL)
             .placeholder(R.drawable.ic_placeholder_image)
-            .error(R.drawable.ic_error_image)
+            .error(R.drawable.ic_placeholder_image)
             .transition(DrawableTransitionOptions.withCrossFade())
             .listener(new RequestListener<android.graphics.drawable.Drawable>() {
                 @Override

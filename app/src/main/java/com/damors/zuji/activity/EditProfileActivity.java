@@ -143,7 +143,7 @@ public class EditProfileActivity extends BaseActivity {
             String avatar = getUserFieldSafely(userObj, "avatar");
             if (!TextUtils.isEmpty(avatar)) {
                 // 拼接完整的头像URL
-                currentAvatarUrl = ApiConfig.getImageBaseUrl() + avatar;
+                currentAvatarUrl = ApiConfig.getBaseUrl() + avatar;
                 Glide.with(this)
                     .load(currentAvatarUrl)
                     .placeholder(R.drawable.ic_default_avatar)
@@ -366,7 +366,7 @@ public class EditProfileActivity extends BaseActivity {
                         userManager.saveUserInfo(userInfoModel);
 
                         if (!TextUtils.isEmpty(userInfoModel.getAvatar())) {
-                            String newAvatarUrl = ApiConfig.getImageBaseUrl() + userInfoModel.getAvatar();
+                            String newAvatarUrl = ApiConfig.getBaseUrl() + userInfoModel.getAvatar();
                             Glide.with(EditProfileActivity.this)
                                     .load(newAvatarUrl)
                                     .placeholder(R.drawable.ic_default_avatar)

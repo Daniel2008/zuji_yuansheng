@@ -19,6 +19,7 @@ public class BaseActivity extends AppCompatActivity {
     private void setupStatusBar() {
         // 隐藏状态栏
         ImmersionBar.with(this)
+                .statusBarColor(R.color.colorPrimary)
                 .hideBar(BarHide.FLAG_HIDE_BAR).init();
     }
 }

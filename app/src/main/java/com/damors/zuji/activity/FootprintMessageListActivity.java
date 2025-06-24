@@ -19,6 +19,7 @@ import com.damors.zuji.model.response.FootprintMessageResponse;
 import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.network.RetrofitApiService;
 import com.damors.zuji.model.response.BaseResponse;
+import com.damors.zuji.utils.ImageUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -208,15 +209,6 @@ public class FootprintMessageListActivity extends BaseActivity {
     }
     
     /**
-     * 刷新数据
-     */
-    public void refreshData() {
-        currentPage = 1;
-        hasMoreData = true;
-        loadFootprintMessages();
-    }
-    
-    /**
      * 处理图片点击事件
      * @param message 足迹动态
      * @param position 位置
@@ -227,7 +219,7 @@ public class FootprintMessageListActivity extends BaseActivity {
         if (imageFiles != null && imageIndex >= 0 && imageIndex < imageFiles.size()) {
             GuluFile imageFile = imageFiles.get(imageIndex);
             String originalPath = imageFile.getFilePath();
-            String imageUrl = getFullImageUrl(originalPath);
+            String imageUrl = ImageUtils.getFullImageUrl(originalPath);
             
             Log.d("FootprintMessageList", "Image click - Original path: " + originalPath);
             Log.d("FootprintMessageList", "Image click - Full URL: " + imageUrl);
@@ -235,7 +227,7 @@ public class FootprintMessageListActivity extends BaseActivity {
             // 构建图片URL列表
             java.util.ArrayList<String> imageUrls = new java.util.ArrayList<>();
             for (GuluFile file : imageFiles) {
-                imageUrls.add(getFullImageUrl(file.getFilePath()));
+                imageUrls.add(ImageUtils.getFullImageUrl(file.getFilePath()));
             }
             
             // 启动图片预览Activity
@@ -244,32 +236,6 @@ public class FootprintMessageListActivity extends BaseActivity {
         } else {
             Log.w("FootprintMessageList", "Invalid image click - imageFiles: " + imageFiles + ", imageIndex: " + imageIndex);
         }
-    }
-    
-    /**
-     * 构建完整的图片URL
-     * @param imagePath 图片路径
-     * @return 完整的图片URL
-     */
-    private String getFullImageUrl(String imagePath) {
-        if (imagePath == null || imagePath.isEmpty()) {
-            Log.w("FootprintMessageList", "Image path is null or empty");
-            return "";
-        }
-        
-        // 如果已经是完整的URL，直接返回
-        if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
-            Log.d("FootprintMessageList", "Image path is already a full URL: " + imagePath);
-            return imagePath;
-        }
-        
-        // 使用ApiConfig中的图片基础URL构建完整的图片URL
-        String imageBaseUrl = ApiConfig.getImageBaseUrl();
-        String fullUrl = imageBaseUrl + imagePath;
-        
-        Log.d("FootprintMessageList", "Building full URL - Image base: " + imageBaseUrl + ", Full URL: " + fullUrl);
-        
-        return fullUrl;
     }
     
     /**

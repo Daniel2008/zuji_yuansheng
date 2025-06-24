@@ -32,6 +32,7 @@ import com.damors.zuji.model.response.FootprintMessageResponse;
 import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.network.RetrofitApiService;
 import com.damors.zuji.model.response.BaseResponse;
+import com.damors.zuji.utils.ImageUtils;
 import com.damors.zuji.utils.LoadingDialog;
 import com.damors.zuji.viewmodel.FootprintViewModel;
 
@@ -371,7 +372,7 @@ public class FootPrintFragment extends Fragment {
      */
     private void handleLikeClick(FootprintMessage message, int position) {
         // 切换点赞状态
-        boolean newLikeStatus = !message.getHasLiked();
+        boolean newLikeStatus = !message.isHasLiked();
         int newLikeCount = message.getLikeCount() + (newLikeStatus ? 1 : -1);
         
         // 先更新适配器中的数据，提供即时反馈
@@ -543,7 +544,7 @@ public class FootPrintFragment extends Fragment {
         if (imageFiles != null && imageIndex >= 0 && imageIndex < imageFiles.size()) {
             GuluFile imageFile = imageFiles.get(imageIndex);
             String originalPath = imageFile.getFilePath();
-            String imageUrl = getFullImageUrl(originalPath);
+            String imageUrl = ImageUtils.getFullImageUrl(originalPath);
             
             Log.d("HistoryFragment", "Image click - Original path: " + originalPath);
             Log.d("HistoryFragment", "Image click - Full URL: " + imageUrl);
@@ -551,7 +552,7 @@ public class FootPrintFragment extends Fragment {
             // 构建图片URL列表
             java.util.ArrayList<String> imageUrls = new java.util.ArrayList<>();
             for (GuluFile file : imageFiles) {
-                imageUrls.add(getFullImageUrl(file.getFilePath()));
+                imageUrls.add(ImageUtils.getFullImageUrl(file.getFilePath()));
             }
             
             // 启动图片预览Activity
@@ -561,116 +562,6 @@ public class FootPrintFragment extends Fragment {
             Log.w("HistoryFragment", "Invalid image click - imageFiles: " + imageFiles + ", imageIndex: " + imageIndex);
         }
     }
-    
-    /**
-     * 构建完整的图片URL
-     * @param imagePath 图片路径
-     * @return 完整的图片URL
-     */
-    private String getFullImageUrl(String imagePath) {
-        if (imagePath == null || imagePath.isEmpty()) {
-            Log.w("HistoryFragment", "Image path is null or empty");
-            return "";
-        }
-        
-        // 如果已经是完整的URL，直接返回
-        if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
-            Log.d("HistoryFragment", "Image path is already a full URL: " + imagePath);
-            return imagePath;
-        }
-        
-        // 使用ApiConfig中的图片基础URL构建完整的图片URL
-        String imageBaseUrl = ApiConfig.getImageBaseUrl();
-        // 确保路径正确拼接
-        if (!imagePath.startsWith("/")) {
-            imagePath = "/" + imagePath;
-        }
-        String fullUrl = imageBaseUrl + imagePath;
-        
-        Log.d("HistoryFragment", "Building full URL - Image base: " + imageBaseUrl + ", Full URL: " + fullUrl);
-        
-        return fullUrl;
-    }
-    
-    /**
-     * 显示评论输入对话框
-     * @param message 足迹动态消息
-     */
-    private void showCommentDialog(FootprintMessage message) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
-        builder.setTitle("发表评论");
-        
-        // 创建输入框
-        EditText editText = new EditText(requireContext());
-        editText.setHint("请输入评论内容...");
-        editText.setMaxLines(5);
-        editText.setVerticalScrollBarEnabled(true);
-        
-        // 设置输入框的布局参数
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-        params.setMargins(50, 20, 50, 20);
-        editText.setLayoutParams(params);
-        
-        builder.setView(editText);
-        
-        builder.setPositiveButton("发表", (dialog, which) -> {
-            String content = editText.getText().toString().trim();
-            if (content.isEmpty()) {
-                Toast.makeText(requireContext(), "评论内容不能为空", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            
-            // 调用评论接口
-            addComment(message.getId(), content);
-        });
-        
-        builder.setNegativeButton("取消", null);
-        
-        AlertDialog dialog = builder.create();
-        dialog.show();
-        
-        // 自动弹出键盘
-        editText.requestFocus();
-        InputMethodManager imm = (InputMethodManager) requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-        if (imm != null) {
-            imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
-        }
-    }
-    
-    /**
-     * 添加评论
-     * @param msgId 消息ID
-     * @param content 评论内容
-     */
-    private void addComment(Integer msgId, String content) {
-        apiService.addComment(msgId, content, null,
-            new RetrofitApiService.SuccessCallback<BaseResponse<JSONObject>>() {
-                @Override
-                public void onSuccess(BaseResponse<JSONObject> response) {
-                    if (response.getCode() == 200) {
-                        // 评论成功
-                        Toast.makeText(requireContext(), "评论发表成功", Toast.LENGTH_SHORT).show();
-                        Log.d(TAG, "评论发表成功: " + response);
 
-                        // 这里可以刷新评论列表或更新UI
-                        // TODO: 刷新当前页面的评论数据
-                    } else {
-                        String msg = response.getMsg() != null ? response.getMsg() : "评论发表失败";
-                        Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show();
-                    }
-                }
-            },
-            new RetrofitApiService.ErrorCallback() {
-                @Override
-                public void onError(String error) {
-                    // 评论失败
-                    Toast.makeText(requireContext(), "评论发表失败，请重试", Toast.LENGTH_SHORT).show();
-                    Log.e(TAG, "评论发表失败: " + error);
-                }
-            }
-        );
-    }
+
 }

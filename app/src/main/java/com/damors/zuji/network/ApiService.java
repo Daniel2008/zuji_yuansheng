@@ -43,7 +43,7 @@ public interface ApiService {
      * @return 发送响应
      */
     @FormUrlEncoded
-    @POST("sendMsg")
+    @POST(ApiConfig.Endpoints.SEND_VERIFICATION_CODE)
     Call<BaseResponse<JSONObject>> sendVerificationCode(
             @Field("phone") String phone
     );
@@ -57,7 +57,7 @@ public interface ApiService {
      * @return 登录响应
      */
     @FormUrlEncoded
-    @POST("smsLogin")
+    @POST(ApiConfig.Endpoints.SMS_LOGIN)
     Call<BaseResponse<LoginResponse.Data>> smsLogin(
             @Field("phone") String phone,
             @Field("code") String code,
@@ -69,7 +69,7 @@ public interface ApiService {
      * 
      * @return 用户信息响应
      */
-    @POST("getUserInfo")
+    @POST(ApiConfig.Endpoints.GET_USER_INFO)
     Call<BaseResponse<UserInfoModel>> getUserInfo();
 
     /**
@@ -78,7 +78,7 @@ public interface ApiService {
      * @param userInfo 用户信息JSON
      * @return 保存响应
      */
-    @POST("saveUserInfo")
+    @POST(ApiConfig.Endpoints.SAVE_USER_INFO)
     Call<BaseResponse<UserInfoModel>> saveUserInfo(@Body RequestBody userInfo);
 
     /**
@@ -88,7 +88,7 @@ public interface ApiService {
      * @return 上传响应
      */
     @Multipart
-    @POST("upload")
+    @POST(ApiConfig.Endpoints.UPLOAD_AVATAR)
     Call<BaseResponse<Map<String,Object>>> uploadAvatar(@Part MultipartBody.Part file);
 
     /**
@@ -99,7 +99,7 @@ public interface ApiService {
      * @return 发布响应
      */
     @Multipart
-    @POST("publishMsg")
+    @POST(ApiConfig.Endpoints.PUBLISH_FOOTPRINT)
     Call<BaseResponse<JSONObject>> publishFootprint(
             @PartMap Map<String, RequestBody> publishInfo,
             @Part List<MultipartBody.Part> images
@@ -113,7 +113,7 @@ public interface ApiService {
      * @return 足迹消息列表响应
      */
     @FormUrlEncoded
-    @POST("getMsgList")
+    @POST(ApiConfig.Endpoints.GET_MSG_LIST)
     Call<BaseResponse<FootprintMessageResponse.Data>> getFootprintMessages(
             @Field("pageNum") int pageNum,
             @Field("pageSize") int pageSize
@@ -127,11 +127,21 @@ public interface ApiService {
      * @return 地图mark数据响应
      */
     @FormUrlEncoded
-    @POST("getMsgListAll")
+    @POST(ApiConfig.Endpoints.GET_MSG_LIST_ALL)
     Call<BaseResponse<FootprintMessageResponse.Data>> getMsgListAll(
             @Field("pageNum") int pageNum,
             @Field("pageSize") int pageSize
     );
+
+    /**
+     * 获取动态详情
+     * 
+     * @param msgId 消息ID
+     * @return 动态详情响应
+     */
+    @FormUrlEncoded
+    @POST(ApiConfig.Endpoints.GET_MSG_DETAIL)
+    Call<BaseResponse<com.damors.zuji.model.FootprintMessage>> getMsgDetail(@Field("msgId") Integer msgId);
 
     /**
      * 获取评论列表
@@ -140,7 +150,7 @@ public interface ApiService {
      * @return 评论列表响应
      */
     @FormUrlEncoded
-    @POST("getCommentList")
+    @POST(ApiConfig.Endpoints.GET_COMMENT_LIST)
     Call<BaseResponse<List<CommentModel>>> getCommentList(@Field("msgId") Integer msgId);
 
     /**
@@ -152,7 +162,7 @@ public interface ApiService {
      * @return 添加响应
      */
     @FormUrlEncoded
-    @POST("addComment")
+    @POST(ApiConfig.Endpoints.ADD_COMMENT)
     Call<BaseResponse<JSONObject>> addComment(
             @Field("msgId") Integer msgId,
             @Field("content") String content,
@@ -165,7 +175,7 @@ public interface ApiService {
      * @return 删除响应
      */
     @FormUrlEncoded
-    @POST("deleteComment")
+    @POST(ApiConfig.Endpoints.DELETE_COMMENT)
     Call<BaseResponse<String>> deleteComment(
             @Field("commentId") Integer commentId
     );
@@ -177,7 +187,7 @@ public interface ApiService {
      * @return 删除响应
      */
     @FormUrlEncoded
-    @POST("deleteMsg")
+    @POST(ApiConfig.Endpoints.DELETE_FOOTPRINT)
     Call<BaseResponse<String>> deleteFootprint(@Field("msgId") Integer msgId);
 
     /**
@@ -187,7 +197,7 @@ public interface ApiService {
      * @return 点赞响应
      */
     @FormUrlEncoded
-    @POST("toggleLike")
+    @POST(ApiConfig.Endpoints.TOGGLE_LIKE)
     Call<BaseResponse<JSONObject>> toggleLike(@Field("msgId") Integer msgId);
 
     /**
@@ -198,7 +208,7 @@ public interface ApiService {
      * @return 更新信息响应
      */
     @FormUrlEncoded
-    @POST("checkAppUpdate")
+    @POST(ApiConfig.Endpoints.CHECK_APP_UPDATE)
     Call<BaseResponse<AppUpdateInfo>> checkAppUpdate(
             @Field("currentVersionCode") int currentVersionCode,
             @Field("platform") String platform

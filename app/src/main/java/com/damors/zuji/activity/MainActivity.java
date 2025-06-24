@@ -25,6 +25,7 @@ import com.damors.zuji.fragment.MapFragment;
 import com.damors.zuji.fragment.ProfileFragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationBarView;
+import android.content.Intent;
 
 // 高德地图相关导入 (暂时注释)
 import com.amap.api.location.AMapLocationClient;

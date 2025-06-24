@@ -94,7 +94,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         
         // 设置用户头像
         if (!TextUtils.isEmpty(comment.getUserAvatar())) {
-            String avatarUrl = ApiConfig.getImageBaseUrl() + comment.getUserAvatar();
+            String avatarUrl = ApiConfig.getBaseUrl() + comment.getUserAvatar();
             Glide.with(context)
                     .load(avatarUrl)
                     .placeholder(R.drawable.ic_default_avatar)
@@ -114,8 +114,8 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         holder.tvContent.setText(comment.getContent());
         
         // 设置时间
-        if (!TextUtils.isEmpty(comment.getCreateTime())) {
-            holder.tvTime.setText(TimeUtils.formatTime(comment.getCreateTime()));
+        if (!TextUtils.isEmpty(comment.getCreateTime().toString())) {
+            holder.tvTime.setText(TimeUtils.formatTime(comment.getCreateTime().toString()));
         } else {
             holder.tvTime.setText("");
         }
@@ -221,7 +221,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             // 设置用户头像
             if (!TextUtils.isEmpty(reply.getUserAvatar())) {
                 // 构建完整的头像URL
-                String replyAvatarUrl = ApiConfig.getImageBaseUrl() + reply.getUserAvatar();
+                String replyAvatarUrl = ApiConfig.getBaseUrl() + reply.getUserAvatar();
                 Glide.with(context)
                     .load(replyAvatarUrl)
                     .placeholder(R.drawable.ic_default_avatar)
@@ -257,8 +257,8 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             }
             
             // 设置时间
-            if (!TextUtils.isEmpty(reply.getCreateTime())) {
-                tvTime.setText(TimeUtils.formatTime(reply.getCreateTime()));
+            if (!TextUtils.isEmpty(reply.getCreateTime().toString())) {
+                tvTime.setText(TimeUtils.formatTime(reply.getCreateTime().toString()));
             } else {
                 tvTime.setText("");
             }
@@ -295,7 +295,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         TextView tvDelete;
         TextView tvReplyCount;
         LinearLayout layoutReplies;
-        boolean isExpanded = false;
+        boolean isExpanded = true; // 默认展开回复信息
         
         public CommentViewHolder(@NonNull View itemView) {
             super(itemView);

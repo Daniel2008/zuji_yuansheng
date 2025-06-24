@@ -13,6 +13,8 @@ import android.util.Log;
 import androidx.core.content.FileProvider;
 import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat;
 
+import com.damors.zuji.network.ApiConfig;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -260,5 +262,34 @@ public class ImageUtils {
             boolean deleted = file.delete();
             Log.d(TAG, "删除临时文件: " + file.getName() + ", 结果: " + deleted);
         }
+    }
+
+    /**
+     * 获取完整的图片URL
+     */
+    public static String getFullImageUrl(String imagePath) {
+        if (imagePath == null || imagePath.isEmpty()) {
+            return "";
+        }
+
+        if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+            return imagePath;
+        }
+
+        String imageBaseUrl = ApiConfig.getBaseUrl();
+        if (!imagePath.startsWith("/")) {
+            imagePath = "/" + imagePath;
+        }
+        return imageBaseUrl + imagePath;
+    }
+    
+    /**
+     * 将dp值转换为像素值
+     * @param context 上下文
+     * @param dp dp值
+     * @return 像素值
+     */
+    public static int dpToPx(Context context, float dp) {
+        return Math.round(dp * context.getResources().getDisplayMetrics().density);
     }
 }

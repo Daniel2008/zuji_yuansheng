@@ -134,4 +134,13 @@ public class TimeUtils {
     public static String getCurrentTime(String pattern) {
         return formatDate(new Date(), pattern);
     }
+    
+    /**
+     * 格式化相对时间（为了兼容性添加的方法）
+     * @param timeStr 时间字符串
+     * @return 格式化后的相对时间字符串
+     */
+    public static String formatRelativeTime(String timeStr) {
+        return formatTime(timeStr);
+    }
 }

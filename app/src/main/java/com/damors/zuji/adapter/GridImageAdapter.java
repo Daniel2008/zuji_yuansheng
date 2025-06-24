@@ -14,6 +14,8 @@ import com.damors.zuji.R;
 import com.damors.zuji.config.ImageDisplayConfig;
 import com.damors.zuji.model.GuluFile;
 import com.damors.zuji.network.ApiConfig;
+import com.damors.zuji.utils.ImageUtils;
+
 import java.util.List;
 
 /**
@@ -83,13 +85,13 @@ public class GridImageAdapter extends RecyclerView.Adapter<GridImageAdapter.Imag
         GuluFile imageFile = imageFiles.get(position);
         
         // 加载图片
-        String imageUrl = getFullImageUrl(imageFile.getFilePath());
+        String imageUrl = ImageUtils.getFullImageUrl(imageFile.getFilePath());
         
         Glide.with(context)
             .load(imageUrl)
             .diskCacheStrategy(DiskCacheStrategy.ALL)
             .placeholder(R.drawable.ic_placeholder_image)
-            .error(R.drawable.ic_error_image)
+            .error(R.drawable.ic_placeholder_image)
             .centerCrop()
             .thumbnail(ImageDisplayConfig.THUMBNAIL_RATIO) // 添加缩略图支持，提升加载速度
             .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade()) // 添加渐变效果
@@ -133,31 +135,6 @@ public class GridImageAdapter extends RecyclerView.Adapter<GridImageAdapter.Imag
         return Math.min(imageFiles.size(), maxDisplayCount);
     }
 
-    /**
-     * 获取完整的图片URL
-     * @param filePath 文件路径
-     * @return 完整的图片URL
-     */
-    private String getFullImageUrl(String filePath) {
-        if (filePath == null || filePath.isEmpty()) {
-            return "";
-        }
-        
-        // 如果已经是完整URL，直接返回
-        if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
-            return filePath;
-        }
-        
-        // 使用ApiConfig中的图片基础URL构建完整的图片URL
-        String imageBaseUrl = ApiConfig.getImageBaseUrl();
-        // 确保路径正确拼接
-        if (!filePath.startsWith("/")) {
-            filePath = "/" + filePath;
-        }
-        String fullImageUrl = imageBaseUrl + filePath;
-        
-        return fullImageUrl;
-    }
 
     @Override
     public void onViewRecycled(@NonNull ImageViewHolder holder) {

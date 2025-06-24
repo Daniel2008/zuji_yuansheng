@@ -539,6 +539,32 @@ public class RetrofitApiService {
     }
 
     /**
+     * 获取动态详情
+     * 
+     * @param msgId 消息ID
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     */
+    public void getMsgDetail(Integer msgId,
+                            SuccessCallback<BaseResponse<com.damors.zuji.model.FootprintMessage>> successCallback,
+                            ErrorCallback errorCallback) {
+        
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "网络不可用，无法获取动态详情");
+            showNetworkUnavailableMessage();
+            if (errorCallback != null) {
+                errorCallback.onError("网络不可用，请检查网络连接");
+            }
+            return;
+        }
+        
+        Call<BaseResponse<com.damors.zuji.model.FootprintMessage>> call = apiService.getMsgDetail(msgId);
+        call.enqueue(new BaseCallback<BaseResponse<com.damors.zuji.model.FootprintMessage>>(successCallback, errorCallback) {
+            // 使用父类的默认实现
+        });
+    }
+
+    /**
      * 获取评论列表
      * 
      * @param msgId 消息ID

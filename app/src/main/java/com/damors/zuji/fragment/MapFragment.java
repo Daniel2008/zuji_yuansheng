@@ -903,8 +903,7 @@ public class MapFragment extends Fragment {
         TextView tagView = dialogView.findViewById(R.id.text_view_tag);
         TextView contentView = dialogView.findViewById(R.id.text_view_content);
         TextView locationView = dialogView.findViewById(R.id.text_view_location);
-        TextView coordinatesView = dialogView.findViewById(R.id.text_view_coordinates);
-        
+
         // 获取图片相关控件
         FrameLayout frameLayoutImages = dialogView.findViewById(R.id.frame_layout_images);
         ImageView imageViewSingle = dialogView.findViewById(R.id.image_view_single);
@@ -928,16 +927,15 @@ public class MapFragment extends Fragment {
         tagView.setText(message.getTag() != null ? message.getTag() : "动态");
         contentView.setText(message.getTextContent() != null ? message.getTextContent() : "暂无内容");
         locationView.setText(message.getLocaltionTitle() != null ? message.getLocaltionTitle() : "暂无位置信息"); // 可以根据需要进行地理编码获取具体地址
-        coordinatesView.setText(String.format("坐标: %.6f, %.6f", message.getLat(), message.getLng()));
-        
+
         // 设置点赞和评论数据
-        Log.d(TAG, "地图信息卡绑定数据 - 消息ID: " + message.getId() + ", 点赞状态: " + message.getHasLiked() + ", 点赞数量: " + message.getLikeCount() + ", 评论数量: " + message.getCommentCount());
-        updateLikeStatus(ivLike, tvLikeCount, message.getHasLiked(), message.getLikeCount());
+        Log.d(TAG, "地图信息卡绑定数据 - 消息ID: " + message.getId() + ", 点赞状态: " + message.isHasLiked() + ", 点赞数量: " + message.getLikeCount() + ", 评论数量: " + message.getCommentCount());
+        updateLikeStatus(ivLike, tvLikeCount, message.isHasLiked(), message.getLikeCount());
         tvCommentCount.setText(String.valueOf(message.getCommentCount()));
         
         // 设置点赞点击事件
         layoutLike.setOnClickListener(v -> {
-            boolean newLikeStatus = !message.getHasLiked();
+            boolean newLikeStatus = !message.isHasLiked();
             int newLikeCount = message.getLikeCount() + (newLikeStatus ? 1 : -1);
             
             // 先更新UI，提供即时反馈
@@ -1163,7 +1161,7 @@ public class MapFragment extends Fragment {
                 return;
             }
             
-            String imageUrl = getFullImageUrl(imageFile.getFilePath());
+            String imageUrl = ImageUtils.getFullImageUrl(imageFile.getFilePath());
             if (imageUrl.isEmpty()) {
                 Log.w("MapFragment", "图片URL为空，使用默认占位图");
                 imageView.setImageResource(R.drawable.ic_placeholder_image);
@@ -1174,7 +1172,7 @@ public class MapFragment extends Fragment {
                 .load(imageUrl)
                 .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
                 .placeholder(R.drawable.ic_placeholder_image)
-                .error(R.drawable.ic_error_image)
+                .error(R.drawable.ic_placeholder_image)
                 .centerCrop()
                 .thumbnail(ImageDisplayConfig.THUMBNAIL_RATIO)
                 .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade())
@@ -1195,29 +1193,12 @@ public class MapFragment extends Fragment {
         } catch (Exception e) {
             Log.e("MapFragment", "加载图片时发生错误", e);
             if (imageView != null) {
-                imageView.setImageResource(R.drawable.ic_error_image);
+                imageView.setImageResource(R.drawable.ic_placeholder_image);
             }
         }
     }
     
-    /**
-     * 获取完整的图片URL
-     */
-    private String getFullImageUrl(String imagePath) {
-        if (imagePath == null || imagePath.isEmpty()) {
-            return "";
-        }
-        
-        if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
-            return imagePath;
-        }
-        
-        String imageBaseUrl = ApiConfig.getImageBaseUrl();
-        if (!imagePath.startsWith("/")) {
-            imagePath = "/" + imagePath;
-        }
-        return imageBaseUrl + imagePath;
-    }
+
     
 
     
@@ -1234,7 +1215,7 @@ public class MapFragment extends Fragment {
             
             java.util.ArrayList<String> imageUrls = new java.util.ArrayList<>();
             for (GuluFile file : imageFiles) {
-                imageUrls.add(getFullImageUrl(file.getFilePath()));
+                imageUrls.add(ImageUtils.getFullImageUrl(file.getFilePath()));
             }
             
             intent.putStringArrayListExtra("image_urls", imageUrls);
@@ -1341,7 +1322,7 @@ public class MapFragment extends Fragment {
             String userAvatar = message.getUserAvatar();
             if (userAvatar != null && !userAvatar.isEmpty()) {
                 // 构建完整的头像URL
-                String avatarUrl = getFullImageUrl(userAvatar);
+                String avatarUrl = ImageUtils.getFullImageUrl(userAvatar);
                 
                 // 使用Glide加载头像，设置圆形裁剪
                 Glide.with(this)
