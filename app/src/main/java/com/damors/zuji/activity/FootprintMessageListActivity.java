@@ -14,7 +14,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.damors.zuji.R;
 import com.damors.zuji.adapter.FootprintMessageAdapter;
 import com.damors.zuji.model.FootprintMessage;
-import com.damors.zuji.model.GuluFile;
+import com.damors.zuji.model.GuluFileModel;
 import com.damors.zuji.model.response.FootprintMessageResponse;
 import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.network.RetrofitApiService;
@@ -94,7 +94,7 @@ public class FootprintMessageListActivity extends BaseActivity {
             }
             
             @Override
-            public void onImageClick(FootprintMessage message, int position, int imageIndex, List<GuluFile> imageFiles) {
+            public void onImageClick(FootprintMessage message, int position, int imageIndex, List<GuluFileModel> imageFiles) {
                 // 处理图片点击事件，启动图片预览
                 handleImageClick(message, position, imageIndex, imageFiles);
             }
@@ -215,9 +215,9 @@ public class FootprintMessageListActivity extends BaseActivity {
      * @param imageIndex 图片索引
      * @param imageFiles 图片文件列表
      */
-    private void handleImageClick(FootprintMessage message, int position, int imageIndex, List<GuluFile> imageFiles) {
+    private void handleImageClick(FootprintMessage message, int position, int imageIndex, List<GuluFileModel> imageFiles) {
         if (imageFiles != null && imageIndex >= 0 && imageIndex < imageFiles.size()) {
-            GuluFile imageFile = imageFiles.get(imageIndex);
+            GuluFileModel imageFile = imageFiles.get(imageIndex);
             String originalPath = imageFile.getFilePath();
             String imageUrl = ImageUtils.getFullImageUrl(originalPath);
             
@@ -226,7 +226,7 @@ public class FootprintMessageListActivity extends BaseActivity {
             
             // 构建图片URL列表
             java.util.ArrayList<String> imageUrls = new java.util.ArrayList<>();
-            for (GuluFile file : imageFiles) {
+            for (GuluFileModel file : imageFiles) {
                 imageUrls.add(ImageUtils.getFullImageUrl(file.getFilePath()));
             }
             

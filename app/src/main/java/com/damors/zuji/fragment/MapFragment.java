@@ -20,7 +20,7 @@ import com.damors.zuji.activity.CommentListActivity;
 import com.damors.zuji.activity.ImagePreviewActivity;
 import com.damors.zuji.adapter.GridImageAdapter;
 import com.damors.zuji.config.ImageDisplayConfig;
-import com.damors.zuji.model.GuluFile;
+import com.damors.zuji.model.GuluFileModel;
 import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.utils.GridSpacingItemDecoration;
 import com.damors.zuji.utils.ImageUtils;
@@ -1030,9 +1030,9 @@ public class MapFragment extends Fragment {
         // 检查是否有图片文件
         if (message.getGuluFiles() != null && !message.getGuluFiles().isEmpty()) {
             // 筛选出图片文件
-            java.util.List<GuluFile> imageFiles = new java.util.ArrayList<>();
+            java.util.List<GuluFileModel> imageFiles = new java.util.ArrayList<>();
             
-            for (GuluFile file : message.getGuluFiles()) {
+            for (GuluFileModel file : message.getGuluFiles()) {
                 if (ImageUtils.isImageFile(file.getFileType())) {
                     imageFiles.add(file);
                 }
@@ -1071,7 +1071,7 @@ public class MapFragment extends Fragment {
     /**
      * 设置网格图片布局
      */
-    private void setupGridImageLayout(View gridImageLayout, java.util.List<GuluFile> imageFiles) {
+    private void setupGridImageLayout(View gridImageLayout, java.util.List<GuluFileModel> imageFiles) {
         try {
             if (gridImageLayout == null || imageFiles == null || imageFiles.isEmpty()) {
                 Log.w("MapFragment", "setupGridImageLayout: 参数无效");
@@ -1154,7 +1154,7 @@ public class MapFragment extends Fragment {
     /**
      * 加载图片到ImageView
      */
-    private void loadImageIntoView(ImageView imageView, GuluFile imageFile) {
+    private void loadImageIntoView(ImageView imageView, GuluFileModel imageFile) {
         try {
             if (imageView == null || imageFile == null) {
                 Log.w("MapFragment", "loadImageIntoView: 参数无效");
@@ -1205,7 +1205,7 @@ public class MapFragment extends Fragment {
     /**
      * 打开图片预览
      */
-    private void openImagePreview(java.util.List<GuluFile> imageFiles, int currentIndex) {
+    private void openImagePreview(java.util.List<GuluFileModel> imageFiles, int currentIndex) {
         if (getContext() == null || imageFiles == null || imageFiles.isEmpty()) {
             return;
         }
@@ -1214,7 +1214,7 @@ public class MapFragment extends Fragment {
             Intent intent = new Intent(getContext(), ImagePreviewActivity.class);
             
             java.util.ArrayList<String> imageUrls = new java.util.ArrayList<>();
-            for (GuluFile file : imageFiles) {
+            for (GuluFileModel file : imageFiles) {
                 imageUrls.add(ImageUtils.getFullImageUrl(file.getFilePath()));
             }
             

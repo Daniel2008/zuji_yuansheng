@@ -56,6 +56,10 @@ public class CommentManagementActivity extends BaseActivity {
     private LoadingDialog loadingDialog;
     private int unreadCommentCount = 0; // 未读评论数量
     
+    // 刷新控制相关
+    private long lastRefreshTime = 0; // 上次刷新时间
+    private static final long MIN_REFRESH_INTERVAL = 30000; // 最小刷新间隔3秒
+    
     /**
      * 启动评论管理页面
      * @param context 上下文
@@ -177,8 +181,17 @@ public class CommentManagementActivity extends BaseActivity {
      */
     public void markCommentAsRead(Integer commentId) {
         // TODO: 调用API标记评论为已读
-        // 标记成功后，重新加载用户数据以获取最新的未读评论数量
-        refreshUnreadCount();
+        // 标记成功后，直接减少未读数量，避免频繁刷新用户数据
+        if (unreadCommentCount > 0) {
+            unreadCommentCount--;
+            updateUnreadCountBadge();
+            Log.d(TAG, "评论标记为已读，未读数量: " + unreadCommentCount);
+        }
+        
+        // 延迟刷新用户数据，确保服务器数据同步
+        new android.os.Handler().postDelayed(() -> {
+            refreshUserDataAndUnreadCount(true); // 强制刷新以同步服务器数据
+        }, 2000); // 2秒后刷新
     }
     
     /**
@@ -186,7 +199,23 @@ public class CommentManagementActivity extends BaseActivity {
      * 用于在评论状态改变后同步最新数据
      */
     public void refreshUserDataAndUnreadCount() {
+        refreshUserDataAndUnreadCount(false);
+    }
+    
+    /**
+     * 刷新用户数据和未读评论数量（带强制刷新选项）
+     * @param forceRefresh 是否强制刷新，忽略时间间隔限制
+     */
+    public void refreshUserDataAndUnreadCount(boolean forceRefresh) {
         try {
+            long currentTime = System.currentTimeMillis();
+            
+            // 检查刷新间隔，避免频繁刷新
+            if (!forceRefresh && (currentTime - lastRefreshTime) < MIN_REFRESH_INTERVAL) {
+                Log.d(TAG, "跳过刷新：时间间隔未达到最小值");
+                return;
+            }
+            
             // 强制重新加载用户数据
             UserManager userManager = UserManager.getInstance();
             userManager.reloadUserData();
@@ -194,6 +223,9 @@ public class CommentManagementActivity extends BaseActivity {
             
             // 重新加载未读评论数量
             loadUnreadCommentCount();
+            
+            // 更新最后刷新时间
+            lastRefreshTime = currentTime;
         } catch (Exception e) {
             Log.e(TAG, "刷新用户数据时发生异常: " + e.getMessage(), e);
         }

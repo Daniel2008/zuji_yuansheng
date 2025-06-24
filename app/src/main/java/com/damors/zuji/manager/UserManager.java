@@ -24,6 +24,10 @@ public class UserManager {
     private final Gson gson;
     private String currentUserJson; // 存储用户JSON数据
     private String token;
+    
+    // 缓存控制相关
+    private long lastLoadTime = 0; // 上次加载时间
+    private static final long CACHE_VALID_DURATION = 2000; // 缓存有效期2秒
 
     private UserManager(Context context) {
         preferences = context.getApplicationContext()
@@ -52,6 +56,7 @@ public class UserManager {
     private void loadUserData() {
         currentUserJson = preferences.getString(KEY_USER, null);
         token = preferences.getString(KEY_TOKEN, null);
+        lastLoadTime = System.currentTimeMillis(); // 更新加载时间
         
         android.util.Log.d("UserManager", "从SharedPreferences加载用户数据:");
         android.util.Log.d("UserManager", "currentUserJson是否为空: " + TextUtils.isEmpty(currentUserJson));
@@ -70,7 +75,24 @@ public class UserManager {
      * 用于解决登录后数据不同步的问题
      */
     public void reloadUserData() {
+        reloadUserData(false);
+    }
+    
+    /**
+     * 重新加载用户数据（带强制刷新选项）
+     * @param forceRefresh 是否强制刷新，忽略缓存有效期
+     */
+    public void reloadUserData(boolean forceRefresh) {
+        long currentTime = System.currentTimeMillis();
+        
+        // 检查缓存是否仍然有效
+        if (!forceRefresh && (currentTime - lastLoadTime) < CACHE_VALID_DURATION) {
+            android.util.Log.d("UserManager", "使用缓存数据，跳过重新加载");
+            return;
+        }
+        
         loadUserData();
+        lastLoadTime = currentTime;
         android.util.Log.d("UserManager", "强制重新加载用户数据完成");
     }
 

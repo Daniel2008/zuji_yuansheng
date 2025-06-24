@@ -60,6 +60,11 @@ public class ProfileFragment extends Fragment {
     private ExecutorService executorService;
     private Handler mainHandler;
     private UserManager userManager;
+    
+    // 刷新控制相关变量
+    private long lastRefreshTime = 0; // 上次刷新时间
+    private static final long MIN_REFRESH_INTERVAL = 20000; // 最小刷新间隔5秒
+    private boolean isFirstLoad = true; // 是否首次加载
 
     @Nullable
     @Override
@@ -159,29 +164,35 @@ public class ProfileFragment extends Fragment {
         // 页面恢复时刷新统计数据，从缓存中读取最新数据
         refreshUserDataFromCache();
         
-        // 强制刷新用户数据，解决首次登录后显示未登录状态的问题
-        // 延迟执行以确保UserManager数据完全同步
-        mainHandler.postDelayed(() -> {
-            if (isAdded() && getContext() != null && userManager != null) {
-                userManager.reloadUserData();
-                loadUserData();
-                Log.d("ProfileFragment", "onResume中刷新用户数据完成");
-            }
-        }, 100);
+        // 只在必要时刷新用户数据，避免频繁刷新
+        // 检查是否需要强制刷新（例如首次登录或数据过期）
+        if (shouldRefreshUserData()) {
+            mainHandler.postDelayed(() -> {
+                if (isAdded() && getContext() != null && userManager != null) {
+                    userManager.reloadUserData();
+                    loadUserData();
+                    updateLastRefreshTime();
+                    Log.d("ProfileFragment", "onResume中刷新用户数据完成");
+                }
+            }, 100);
+        }
     }
     
     @Override
     public void onStart() {
         super.onStart();
-        // 页面启动时也刷新用户数据，确保登录状态同步
-        // 延迟执行以确保UserManager数据完全同步
-        mainHandler.postDelayed(() -> {
-            if (isAdded() && getContext() != null && userManager != null) {
-                userManager.reloadUserData();
-                loadUserData();
-                Log.d("ProfileFragment", "onStart中刷新用户数据完成");
-            }
-        }, 50);
+        // 页面启动时检查是否需要刷新用户数据
+        // 避免与onResume重复刷新
+        if (shouldRefreshUserData() && !isRecentlyRefreshed()) {
+            mainHandler.postDelayed(() -> {
+                if (isAdded() && getContext() != null && userManager != null) {
+                    userManager.reloadUserData();
+                    loadUserData();
+                    updateLastRefreshTime();
+                    Log.d("ProfileFragment", "onStart中刷新用户数据完成");
+                }
+            }, 50);
+        }
     }
     
     @Override
@@ -219,7 +230,21 @@ public class ProfileFragment extends Fragment {
      * 供外部调用，用于在登录状态变化时刷新界面
      */
     public void refreshUserData() {
+        refreshUserData(false);
+    }
+    
+    /**
+     * 刷新用户数据（带强制刷新选项）
+     * @param forceRefresh 是否强制刷新，忽略时间间隔限制
+     */
+    public void refreshUserData(boolean forceRefresh) {
         if (userManager != null && isAdded() && getContext() != null) {
+            // 检查是否需要刷新
+            if (!forceRefresh && !shouldRefreshUserData()) {
+                Log.d("ProfileFragment", "跳过刷新：时间间隔未达到最小值");
+                return;
+            }
+            
             // 强制重新加载用户数据，确保数据同步
             userManager.reloadUserData();
             
@@ -227,6 +252,7 @@ public class ProfileFragment extends Fragment {
             mainHandler.post(() -> {
                 if (isAdded() && getContext() != null) {
                     loadUserData();
+                    updateLastRefreshTime();
                     Log.d("ProfileFragment", "外部调用刷新用户数据完成");
                 }
             });
@@ -238,17 +264,20 @@ public class ProfileFragment extends Fragment {
      */
     private void startPeriodicRefresh() {
         if (mainHandler != null) {
-            // 每30秒从缓存刷新一次数据
+            // 增加定时刷新间隔到60秒，减少频繁刷新
             mainHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     if (isAdded() && getContext() != null) {
-                        refreshUserDataFromCache();
+                        // 只有在用户已登录且界面可见时才刷新
+                        if (userManager != null && userManager.isLoggedIn() && getUserVisibleHint()) {
+                            refreshUserDataFromCache();
+                        }
                         // 继续下一次定时刷新
-                        mainHandler.postDelayed(this, 30000);
+                        mainHandler.postDelayed(this, 60000); // 改为60秒
                     }
                 }
-            }, 30000);
+            }, 60000); // 改为60秒
         }
     }
     
@@ -540,6 +569,46 @@ public class ProfileFragment extends Fragment {
             refreshUserDataFromCache();
             Toast.makeText(getContext(), "资料更新成功", Toast.LENGTH_SHORT).show();
         }
+    }
+    
+    /**
+     * 检查是否需要刷新用户数据
+     * @return true表示需要刷新
+     */
+    private boolean shouldRefreshUserData() {
+        // 首次加载时需要刷新
+        if (isFirstLoad) {
+            return true;
+        }
+        
+        // 检查用户是否已登录但数据为空
+        if (userManager != null && userManager.isLoggedIn()) {
+            String userJson = userManager.getCurrentUserJson();
+            if (TextUtils.isEmpty(userJson)) {
+                return true;
+            }
+        }
+        
+        // 检查时间间隔
+        long currentTime = System.currentTimeMillis();
+        return (currentTime - lastRefreshTime) > MIN_REFRESH_INTERVAL;
+    }
+    
+    /**
+     * 检查是否最近刚刚刷新过
+     * @return true表示最近刚刷新过
+     */
+    private boolean isRecentlyRefreshed() {
+        long currentTime = System.currentTimeMillis();
+        return (currentTime - lastRefreshTime) < 1000; // 1秒内算作最近刷新
+    }
+    
+    /**
+     * 更新最后刷新时间
+     */
+    private void updateLastRefreshTime() {
+        lastRefreshTime = System.currentTimeMillis();
+        isFirstLoad = false;
     }
     
     /**

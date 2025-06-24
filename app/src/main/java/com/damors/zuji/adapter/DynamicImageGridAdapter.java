@@ -22,7 +22,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.damors.zuji.R;
 import com.damors.zuji.network.ApiConfig;
-import com.damors.zuji.model.GuluFile;
+import com.damors.zuji.model.GuluFileModel;
 
 import java.util.List;
 
@@ -32,14 +32,14 @@ import java.util.List;
 public class DynamicImageGridAdapter extends RecyclerView.Adapter<DynamicImageGridAdapter.ImageViewHolder> {
     
     private Context context;
-    private List<GuluFile> imageFiles;
+    private List<GuluFileModel> imageFiles;
     private OnImageClickListener onImageClickListener;
     
     public interface OnImageClickListener {
-        void onImageClick(int position, GuluFile imageFile);
+        void onImageClick(int position, GuluFileModel imageFile);
     }
     
-    public DynamicImageGridAdapter(Context context, List<GuluFile> imageFiles) {
+    public DynamicImageGridAdapter(Context context, List<GuluFileModel> imageFiles) {
         this.context = context;
         this.imageFiles = imageFiles;
     }
@@ -57,7 +57,7 @@ public class DynamicImageGridAdapter extends RecyclerView.Adapter<DynamicImageGr
     
     @Override
     public void onBindViewHolder(@NonNull ImageViewHolder holder, int position) {
-        GuluFile imageFile = imageFiles.get(position);
+        GuluFileModel imageFile = imageFiles.get(position);
         String baseUrl = ApiConfig.getBaseUrl();
         String filePath = imageFile.getFilePath();
         String imageUrl;

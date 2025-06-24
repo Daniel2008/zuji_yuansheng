@@ -17,7 +17,7 @@ import com.bumptech.glide.request.target.Target;
 import com.damors.zuji.R;
 import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.model.FootprintMessage;
-import com.damors.zuji.model.GuluFile;
+import com.damors.zuji.model.GuluFileModel;
 import com.damors.zuji.config.ImageDisplayConfig;
 import com.damors.zuji.utils.GridSpacingItemDecoration;
 import com.damors.zuji.utils.ImageUtils;
@@ -43,7 +43,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         void onLikeClick(FootprintMessage message, int position);
         void onDeleteClick(FootprintMessage message, int position);
         void onCommentClick(FootprintMessage message, int position);
-        void onImageClick(FootprintMessage message, int position, int imageIndex, List<GuluFile> imageFiles);
+        void onImageClick(FootprintMessage message, int position, int imageIndex, List<GuluFileModel> imageFiles);
     }
     
     public FootprintMessageAdapter(Context context, List<FootprintMessage> messageList) {
@@ -219,9 +219,9 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         
         if (message.getGuluFiles() != null && !message.getGuluFiles().isEmpty()) {
             // 分类文件：只处理图片文件
-            java.util.List<GuluFile> imageFiles = new java.util.ArrayList<>();
+            java.util.List<GuluFileModel> imageFiles = new java.util.ArrayList<>();
             
-            for (GuluFile file : message.getGuluFiles()) {
+            for (GuluFileModel file : message.getGuluFiles()) {
                 if (ImageUtils.isImageFile(file.getFileType())) {
                     imageFiles.add(file);
                 }
@@ -271,7 +271,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      * @param holder ViewHolder
      * @param imageFile 图片文件
      */
-    private void showSingleImage(ViewHolder holder, GuluFile imageFile) {
+    private void showSingleImage(ViewHolder holder, GuluFileModel imageFile) {
         holder.singleImage.setVisibility(View.VISIBLE);
         loadImageIntoView(holder.singleImage, imageFile);
         
@@ -279,7 +279,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         holder.singleImage.setOnClickListener(v -> {
             if (onItemClickListener != null) {
                 FootprintMessage message = messageList.get(holder.getAdapterPosition());
-                List<GuluFile> imageFiles = getImageFiles(message);
+                List<GuluFileModel> imageFiles = getImageFiles(message);
                 onItemClickListener.onImageClick(message, holder.getAdapterPosition(), 0, imageFiles);
             }
         });
@@ -292,7 +292,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      * @param holder ViewHolder
      * @param imageFiles 图片文件列表
      */
-    private void showTwoImages(ViewHolder holder, java.util.List<GuluFile> imageFiles) {
+    private void showTwoImages(ViewHolder holder, java.util.List<GuluFileModel> imageFiles) {
         holder.twoImagesLayout.setVisibility(View.VISIBLE);
         loadImageIntoView(holder.image1Of2, imageFiles.get(0));
         loadImageIntoView(holder.image2Of2, imageFiles.get(1));
@@ -320,7 +320,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      * @param holder ViewHolder
      * @param imageFiles 图片文件列表
      */
-    private void showThreeImages(ViewHolder holder, java.util.List<GuluFile> imageFiles) {
+    private void showThreeImages(ViewHolder holder, java.util.List<GuluFileModel> imageFiles) {
         holder.threeImagesLayout.setVisibility(View.VISIBLE);
         loadImageIntoView(holder.image1Of3, imageFiles.get(0));
         loadImageIntoView(holder.image2Of3, imageFiles.get(1));
@@ -356,7 +356,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      * @param holder ViewHolder
      * @param imageFiles 图片文件列表
      */
-    private void showGridImages(ViewHolder holder, java.util.List<GuluFile> imageFiles) {
+    private void showGridImages(ViewHolder holder, java.util.List<GuluFileModel> imageFiles) {
         holder.gridRecyclerView.setVisibility(View.VISIBLE);
         
         // 设置网格布局管理器
@@ -402,10 +402,10 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      * @param message 足迹动态
      * @return 图片文件列表
      */
-    private List<GuluFile> getImageFiles(FootprintMessage message) {
-        List<GuluFile> imageFiles = new java.util.ArrayList<>();
+    private List<GuluFileModel> getImageFiles(FootprintMessage message) {
+        List<GuluFileModel> imageFiles = new java.util.ArrayList<>();
         if (message.getGuluFiles() != null) {
-            for (GuluFile file : message.getGuluFiles()) {
+            for (GuluFileModel file : message.getGuluFiles()) {
                 if (ImageUtils.isImageFile(file.getFileType())) {
                     imageFiles.add(file);
                 }
@@ -419,7 +419,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      * @param imageView 目标ImageView
      * @param imageFile 图片文件
      */
-    private void loadImageIntoView(ImageView imageView, GuluFile imageFile) {
+    private void loadImageIntoView(ImageView imageView, GuluFileModel imageFile) {
         String imageUrl = ImageUtils.getFullImageUrl(imageFile.getFilePath());
         android.util.Log.d("FootprintMessageAdapter", "加载图片: " + imageUrl);
         

@@ -44,7 +44,7 @@ import com.amap.api.services.core.LatLonPoint;
 
 
 import com.damors.zuji.manager.UserManager;
-import com.damors.zuji.model.PublishTrandsInfoPO;
+import com.damors.zuji.model.TrandsInfoModel;
 
 import com.damors.zuji.network.RetrofitApiService;
 import com.damors.zuji.model.response.BaseResponse;
@@ -504,7 +504,7 @@ public class AddFootprintActivity extends BaseActivity implements GeocodeSearch.
         // 准备发布参数
         
         // 创建发布参数对象
-        PublishTrandsInfoPO publishInfo = new PublishTrandsInfoPO();
+        TrandsInfoModel publishInfo = new TrandsInfoModel();
         publishInfo.setUserId(userId); // 当前用户ID
         publishInfo.setCity(city);
         publishInfo.setContent(content); // 足迹内容

@@ -94,7 +94,7 @@ public class FootprintMessage {
     /**
      * 关联文件列表
      */
-    private List<GuluFile> guluFiles;
+    private List<GuluFileModel> guluFiles;
     /**
      * 关联评论列表
      */

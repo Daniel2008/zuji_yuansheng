@@ -12,8 +12,7 @@ import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.damors.zuji.R;
 import com.damors.zuji.config.ImageDisplayConfig;
-import com.damors.zuji.model.GuluFile;
-import com.damors.zuji.network.ApiConfig;
+import com.damors.zuji.model.GuluFileModel;
 import com.damors.zuji.utils.ImageUtils;
 
 import java.util.List;
@@ -25,7 +24,7 @@ import java.util.List;
 public class GridImageAdapter extends RecyclerView.Adapter<GridImageAdapter.ImageViewHolder> {
 
     private Context context;
-    private List<GuluFile> imageFiles;
+    private List<GuluFileModel> imageFiles;
     private OnImageClickListener onImageClickListener;
     private int maxDisplayCount = ImageDisplayConfig.MAX_GRID_DISPLAY_COUNT; // 最大显示数量
 
@@ -38,7 +37,7 @@ public class GridImageAdapter extends RecyclerView.Adapter<GridImageAdapter.Imag
          * @param position 点击的图片位置
          * @param imageFiles 图片文件列表
          */
-        void onImageClick(int position, List<GuluFile> imageFiles);
+        void onImageClick(int position, List<GuluFileModel> imageFiles);
     }
 
     /**
@@ -46,7 +45,7 @@ public class GridImageAdapter extends RecyclerView.Adapter<GridImageAdapter.Imag
      * @param context 上下文
      * @param imageFiles 图片文件列表
      */
-    public GridImageAdapter(Context context, List<GuluFile> imageFiles) {
+    public GridImageAdapter(Context context, List<GuluFileModel> imageFiles) {
         this.context = context;
         this.imageFiles = imageFiles;
     }
@@ -82,7 +81,7 @@ public class GridImageAdapter extends RecyclerView.Adapter<GridImageAdapter.Imag
 
     @Override
     public void onBindViewHolder(@NonNull ImageViewHolder holder, int position) {
-        GuluFile imageFile = imageFiles.get(position);
+        GuluFileModel imageFile = imageFiles.get(position);
         
         // 加载图片
         String imageUrl = ImageUtils.getFullImageUrl(imageFile.getFilePath());
