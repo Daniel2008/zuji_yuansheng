@@ -20,7 +20,7 @@ import com.damors.zuji.adapter.CommentManagementAdapter;
 import com.damors.zuji.adapter.CommentManagementPagerAdapter;
 import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.CommentModel;
-import com.damors.zuji.model.FootprintMessage;
+import com.damors.zuji.model.TrandsMsgModel;
 import com.damors.zuji.model.UserInfoModel;
 import com.damors.zuji.network.RetrofitApiService;
 import com.damors.zuji.model.response.BaseResponse;

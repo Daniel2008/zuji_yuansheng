@@ -10,7 +10,7 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:background="@color/white"
+        android:background="@color/primary_color"
         android:elevation="4dp">
 
         <!-- 返回按钮 -->
@@ -23,6 +23,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:padding="12dp"
             android:src="@drawable/ic_arrow_back"
+            app:tint="@android:color/white"
             android:contentDescription="返回" />
 
         <!-- 标题 -->
@@ -32,7 +33,7 @@
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
             android:text="评论管理"
-            android:textColor="@color/black"
+            android:textColor="@color/white"
             android:textSize="18sp"
             android:textStyle="bold" />
 

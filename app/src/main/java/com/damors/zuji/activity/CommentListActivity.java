@@ -28,7 +28,7 @@ import com.damors.zuji.utils.ImageUtils;
 import com.damors.zuji.R;
 import com.damors.zuji.adapter.CommentAdapter;
 import com.damors.zuji.model.CommentModel;
-import com.damors.zuji.model.FootprintMessage;
+import com.damors.zuji.model.TrandsMsgModel;
 import com.damors.zuji.model.GuluFileModel;
 import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.network.ApiConfig;
@@ -184,8 +184,32 @@ public class CommentListActivity extends BaseActivity implements CommentAdapter.
         
         // 设置点赞按钮点击事件
         layoutLike.setOnClickListener(v -> {
-            // TODO: 实现点赞功能
-            Toast.makeText(this, "点赞功能待实现", Toast.LENGTH_SHORT).show();
+            // 调用API更新点赞状态
+            apiService.toggleLike(msgId,
+                    new RetrofitApiService.SuccessCallback<BaseResponse<JSONObject>>() {
+                        @Override
+                        public void onSuccess(BaseResponse<JSONObject> response) {
+                            if (response != null && response.getCode() == 200) {
+                                // API调用成功，显示提示信息
+                                Toast.makeText(getContext(), "点赞状态更新成功", Toast.LENGTH_SHORT).show();
+                                Log.d(TAG, "点赞状态更新成功: " + response.getData());
+                            } else {
+
+                                String msg = response != null ? response.getMsg() : "点赞操作失败";
+                                Toast.makeText(getContext(), "点赞状态更新失败", Toast.LENGTH_SHORT).show();
+                                Log.e(TAG, "点赞状态更新失败: " + msg);
+                            }
+                        }
+                    },
+                    new RetrofitApiService.ErrorCallback() {
+                        @Override
+                        public void onError(String error) {
+
+                            Toast.makeText(getContext(), "点赞操作失败，请重试", Toast.LENGTH_SHORT).show();
+                            Log.e(TAG, "点赞状态更新失败: " + error);
+                        }
+                    }
+            );
         });
         
         // 设置评论按钮点击事件
@@ -269,13 +293,13 @@ public class CommentListActivity extends BaseActivity implements CommentAdapter.
         Log.d(TAG, "加载动态详情和评论，msgId: " + msgId);
         
         apiService.getMsgDetail(msgId,
-                new RetrofitApiService.SuccessCallback<BaseResponse<FootprintMessage>>() {
+                new RetrofitApiService.SuccessCallback<BaseResponse<TrandsMsgModel>>() {
                     @Override
-                    public void onSuccess(BaseResponse<FootprintMessage> response) {
+                    public void onSuccess(BaseResponse<TrandsMsgModel> response) {
                         swipeRefreshLayout.setRefreshing(false);
                         
                         if (response != null && response.isSuccess() && response.getData() != null) {
-                            FootprintMessage msgDetail = response.getData();
+                            TrandsMsgModel msgDetail = response.getData();
                             // 显示动态详情
                             displayMsgDetail(msgDetail);
                             
@@ -335,7 +359,7 @@ public class CommentListActivity extends BaseActivity implements CommentAdapter.
      * 显示动态详情
      * @param msgDetail 动态详情数据
      */
-    private void displayMsgDetail(FootprintMessage msgDetail) {
+    private void displayMsgDetail(TrandsMsgModel msgDetail) {
         // 显示动态容器
         llDynamicContainer.setVisibility(View.VISIBLE);
         dividerDynamic.setVisibility(View.VISIBLE);
@@ -420,7 +444,7 @@ public class CommentListActivity extends BaseActivity implements CommentAdapter.
      * @param gridImageLayout 网格图片布局
      * @param textViewImageCount 图片数量文本
      */
-    private void renderImageContent(FootprintMessage message, FrameLayout frameLayoutImages,
+    private void renderImageContent(TrandsMsgModel message, FrameLayout frameLayoutImages,
                                     ImageView imageViewSingle, View gridImageLayout, TextView textViewImageCount) {
 
         // 首先隐藏所有图片相关控件

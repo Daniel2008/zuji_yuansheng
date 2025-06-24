@@ -15,12 +15,14 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
 import com.damors.zuji.R;
+import com.damors.zuji.model.TrandsMsgModel;
 import com.damors.zuji.network.ApiConfig;
-import com.damors.zuji.model.FootprintMessage;
 import com.damors.zuji.model.GuluFileModel;
 import com.damors.zuji.config.ImageDisplayConfig;
 import com.damors.zuji.utils.GridSpacingItemDecoration;
 import com.damors.zuji.utils.ImageUtils;
+import com.damors.zuji.manager.UserManager;
+import com.damors.zuji.model.UserInfoModel;
 
 import android.widget.LinearLayout;
 import android.widget.FrameLayout;
@@ -33,22 +35,24 @@ import java.util.List;
 public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessageAdapter.ViewHolder> {
     
     private Context context;
-    private List<FootprintMessage> messageList;
+    private List<TrandsMsgModel> messageList;
     private OnItemClickListener onItemClickListener;
+    private UserManager userManager;
     
     public interface OnItemClickListener {
-        void onItemClick(FootprintMessage message, int position);
-        void onUserAvatarClick(FootprintMessage message, int position);
-        void onLocationClick(FootprintMessage message, int position);
-        void onLikeClick(FootprintMessage message, int position);
-        void onDeleteClick(FootprintMessage message, int position);
-        void onCommentClick(FootprintMessage message, int position);
-        void onImageClick(FootprintMessage message, int position, int imageIndex, List<GuluFileModel> imageFiles);
+        void onItemClick(TrandsMsgModel message, int position);
+        void onUserAvatarClick(TrandsMsgModel message, int position);
+        void onLocationClick(TrandsMsgModel message, int position);
+        void onLikeClick(TrandsMsgModel message, int position);
+        void onDeleteClick(TrandsMsgModel message, int position);
+        void onCommentClick(TrandsMsgModel message, int position);
+        void onImageClick(TrandsMsgModel message, int position, int imageIndex, List<GuluFileModel> imageFiles);
     }
     
-    public FootprintMessageAdapter(Context context, List<FootprintMessage> messageList) {
+    public FootprintMessageAdapter(Context context, List<TrandsMsgModel> messageList) {
         this.context = context;
         this.messageList = messageList;
+        this.userManager = UserManager.getInstance();
     }
     
     public void setOnItemClickListener(OnItemClickListener listener) {
@@ -65,7 +69,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
     
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        FootprintMessage message = messageList.get(position);
+        TrandsMsgModel message = messageList.get(position);
         
         // 格式化时间显示
         formatDateTime(holder, message.getCreateTime());
@@ -101,7 +105,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      * @param holder ViewHolder
      * @param message 足迹消息
      */
-    private void setUserAvatar(ViewHolder holder, FootprintMessage message) {
+    private void setUserAvatar(ViewHolder holder, TrandsMsgModel message) {
         if (holder.imageViewAvatar != null) {
             String userAvatar = message.getUserAvatar();
             if (userAvatar != null && !userAvatar.isEmpty()) {
@@ -169,7 +173,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      * @param holder ViewHolder
      * @param message 足迹动态
      */
-    private void setLocationInfo(ViewHolder holder, FootprintMessage message) {
+    private void setLocationInfo(ViewHolder holder, TrandsMsgModel message) {
         String locationText = "";
         
         if (message.getLocaltionTitle() != null && !message.getLocaltionTitle().isEmpty()) {
@@ -188,7 +192,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      * @param holder ViewHolder
      * @param message 足迹动态
      */
-    private void setContentInfo(ViewHolder holder, FootprintMessage message) {
+    private void setContentInfo(ViewHolder holder, TrandsMsgModel message) {
         // 设置标签
         if (message.getTag() != null && !message.getTag().isEmpty()) {
             holder.categoryTextView.setText(message.getTag());
@@ -211,7 +215,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      * @param holder ViewHolder
      * @param message 足迹动态
      */
-    private void setImagePreview(ViewHolder holder, FootprintMessage message) {
+    private void setImagePreview(ViewHolder holder, TrandsMsgModel message) {
         android.util.Log.d("FootprintMessageAdapter", "开始设置九宫格图片预览，GuluFiles: " + (message.getGuluFiles() != null ? message.getGuluFiles().size() : "null"));
         
         // 首先隐藏所有布局
@@ -278,7 +282,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         // 添加图片点击事件
         holder.singleImage.setOnClickListener(v -> {
             if (onItemClickListener != null) {
-                FootprintMessage message = messageList.get(holder.getAdapterPosition());
+                TrandsMsgModel message = messageList.get(holder.getAdapterPosition());
                 List<GuluFileModel> imageFiles = getImageFiles(message);
                 onItemClickListener.onImageClick(message, holder.getAdapterPosition(), 0, imageFiles);
             }
@@ -300,14 +304,14 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         // 添加图片点击事件
         holder.image1Of2.setOnClickListener(v -> {
             if (onItemClickListener != null) {
-                FootprintMessage message = messageList.get(holder.getAdapterPosition());
+                TrandsMsgModel message = messageList.get(holder.getAdapterPosition());
                 onItemClickListener.onImageClick(message, holder.getAdapterPosition(), 0, imageFiles);
             }
         });
         
         holder.image2Of2.setOnClickListener(v -> {
             if (onItemClickListener != null) {
-                FootprintMessage message = messageList.get(holder.getAdapterPosition());
+                TrandsMsgModel message = messageList.get(holder.getAdapterPosition());
                 onItemClickListener.onImageClick(message, holder.getAdapterPosition(), 1, imageFiles);
             }
         });
@@ -329,21 +333,21 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         // 添加图片点击事件
         holder.image1Of3.setOnClickListener(v -> {
             if (onItemClickListener != null) {
-                FootprintMessage message = messageList.get(holder.getAdapterPosition());
+                TrandsMsgModel message = messageList.get(holder.getAdapterPosition());
                 onItemClickListener.onImageClick(message, holder.getAdapterPosition(), 0, imageFiles);
             }
         });
         
         holder.image2Of3.setOnClickListener(v -> {
             if (onItemClickListener != null) {
-                FootprintMessage message = messageList.get(holder.getAdapterPosition());
+                TrandsMsgModel message = messageList.get(holder.getAdapterPosition());
                 onItemClickListener.onImageClick(message, holder.getAdapterPosition(), 1, imageFiles);
             }
         });
         
         holder.image3Of3.setOnClickListener(v -> {
             if (onItemClickListener != null) {
-                FootprintMessage message = messageList.get(holder.getAdapterPosition());
+                TrandsMsgModel message = messageList.get(holder.getAdapterPosition());
                 onItemClickListener.onImageClick(message, holder.getAdapterPosition(), 2, imageFiles);
             }
         });
@@ -381,7 +385,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         // 设置图片点击事件
         adapter.setOnImageClickListener((position, files) -> {
             if (onItemClickListener != null) {
-                FootprintMessage message = messageList.get(holder.getAdapterPosition());
+                TrandsMsgModel message = messageList.get(holder.getAdapterPosition());
                 onItemClickListener.onImageClick(message, holder.getAdapterPosition(), position, imageFiles);
             }
         });
@@ -402,7 +406,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      * @param message 足迹动态
      * @return 图片文件列表
      */
-    private List<GuluFileModel> getImageFiles(FootprintMessage message) {
+    private List<GuluFileModel> getImageFiles(TrandsMsgModel message) {
         List<GuluFileModel> imageFiles = new java.util.ArrayList<>();
         if (message.getGuluFiles() != null) {
             for (GuluFileModel file : message.getGuluFiles()) {
@@ -451,7 +455,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      * @param message 足迹动态
      * @param position 位置
      */
-    private void setActionBar(ViewHolder holder, FootprintMessage message, int position) {
+    private void setActionBar(ViewHolder holder, TrandsMsgModel message, int position) {
         // 设置点赞状态和数量
         updateLikeStatus(holder, message.isHasLiked(), message.getLikeCount());
         
@@ -460,16 +464,23 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         // 设置评论数量
         holder.tvCommentCount.setText(String.valueOf(message.getCommentCount()));
         
+        // 根据动态所有者显示删除按钮
+        if (canDeleteFootprint(message)) {
+            holder.layoutDelete.setVisibility(View.VISIBLE);
+            holder.layoutDelete.setOnClickListener(v -> {
+                if (onItemClickListener != null) {
+                    onItemClickListener.onDeleteClick(message, position);
+                }
+            });
+        } else {
+            holder.layoutDelete.setVisibility(View.INVISIBLE);
+            holder.layoutDelete.setOnClickListener(null);
+        }
+        
         // 设置点击事件
         holder.layoutLike.setOnClickListener(v -> {
             if (onItemClickListener != null) {
                 onItemClickListener.onLikeClick(message, position);
-            }
-        });
-        
-        holder.layoutDelete.setOnClickListener(v -> {
-            if (onItemClickListener != null) {
-                onItemClickListener.onDeleteClick(message, position);
             }
         });
         
@@ -499,6 +510,28 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
         holder.tvLikeCount.setText(String.valueOf(likeCount));
     }
     
+    /**
+     * 判断当前用户是否可以删除该动态
+     * @param message 足迹动态
+     * @return 是否可以删除
+     */
+    private boolean canDeleteFootprint(TrandsMsgModel message) {
+        if (userManager == null || !userManager.isLoggedIn()) {
+            return false;
+        }
+        
+        try {
+            UserInfoModel currentUser = userManager.getUserInfo();
+            if (currentUser != null) {
+                return currentUser.getUserId() == message.getUserId();
+            }
+        } catch (Exception e) {
+            android.util.Log.e("FootprintMessageAdapter", "获取当前用户信息失败", e);
+        }
+        
+        return false;
+    }
+    
     // 收藏功能已移除
     
     /**
@@ -509,7 +542,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      */
     public void updateItemLikeStatus(int position, boolean isLiked, int likeCount) {
         if (position >= 0 && position < messageList.size()) {
-            FootprintMessage message = messageList.get(position);
+            TrandsMsgModel message = messageList.get(position);
             message.setHasLiked(isLiked);
             message.setLikeCount(likeCount);
             notifyItemChanged(position);
@@ -525,7 +558,7 @@ public class FootprintMessageAdapter extends RecyclerView.Adapter<FootprintMessa
      */
     public void updateItemCommentCount(int position, int commentCount) {
         if (position >= 0 && position < messageList.size()) {
-            FootprintMessage message = messageList.get(position);
+            TrandsMsgModel message = messageList.get(position);
             message.setCommentCount(commentCount);
             notifyItemChanged(position);
         }

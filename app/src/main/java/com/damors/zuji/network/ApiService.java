@@ -3,9 +3,10 @@ package com.damors.zuji.network;
 import com.damors.zuji.model.AppUpdateInfo;
 import com.damors.zuji.model.CommentModel;
 import com.damors.zuji.model.PageCommentListModel;
+import com.damors.zuji.model.PageTrandsMsgModel;
+import com.damors.zuji.model.TrandsMsgModel;
 import com.damors.zuji.model.UserInfoModel;
 import com.damors.zuji.model.response.BaseResponse;
-import com.damors.zuji.model.response.FootprintMessageResponse;
 import com.damors.zuji.model.response.LoginResponse;
 
 import org.json.JSONObject;
@@ -115,7 +116,7 @@ public interface ApiService {
      */
     @FormUrlEncoded
     @POST(ApiConfig.Endpoints.GET_MSG_LIST)
-    Call<BaseResponse<FootprintMessageResponse.Data>> getFootprintMessages(
+    Call<BaseResponse<PageTrandsMsgModel>> getFootprintMessages(
             @Field("pageNum") int pageNum,
             @Field("pageSize") int pageSize
     );
@@ -129,7 +130,7 @@ public interface ApiService {
      */
     @FormUrlEncoded
     @POST(ApiConfig.Endpoints.GET_MSG_LIST_ALL)
-    Call<BaseResponse<FootprintMessageResponse.Data>> getMsgListAll(
+    Call<BaseResponse<PageTrandsMsgModel>> getMsgListAll(
             @Field("pageNum") int pageNum,
             @Field("pageSize") int pageSize
     );
@@ -142,7 +143,7 @@ public interface ApiService {
      */
     @FormUrlEncoded
     @POST(ApiConfig.Endpoints.GET_MSG_DETAIL)
-    Call<BaseResponse<com.damors.zuji.model.FootprintMessage>> getMsgDetail(@Field("msgId") Integer msgId);
+    Call<BaseResponse<TrandsMsgModel>> getMsgDetail(@Field("msgId") Integer msgId);
 
     /**
      * 获取评论列表
@@ -203,6 +204,19 @@ public interface ApiService {
     @FormUrlEncoded
     @POST(ApiConfig.Endpoints.UPDATE_COMMENTS_STATUS)
     Call<BaseResponse<JSONObject>> updateCommentStatus(@Field("commentId") Integer commentId);
+
+    /**
+     * 获取用户点赞列表
+     * @param pageNum 页码
+     * @param pageSize 每页大小
+     * @return 点赞列表响应
+     */
+    @FormUrlEncoded
+    @POST(ApiConfig.Endpoints.GET_USER_LIKES)
+    Call<BaseResponse<PageTrandsMsgModel>> getUserLikes(
+            @Field("pageNum") int pageNum,
+            @Field("pageSize") int pageSize
+    );
 
     /**
      * 删除足迹

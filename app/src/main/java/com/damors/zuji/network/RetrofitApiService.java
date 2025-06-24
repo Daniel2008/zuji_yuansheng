@@ -11,9 +11,10 @@ import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.AppUpdateInfo;
 import com.damors.zuji.model.CommentModel;
 import com.damors.zuji.model.PageCommentListModel;
+import com.damors.zuji.model.TrandsMsgModel;
 import com.damors.zuji.model.UserInfoModel;
 import com.damors.zuji.model.response.BaseResponse;
-import com.damors.zuji.model.response.FootprintMessageResponse;
+import com.damors.zuji.model.PageTrandsMsgModel;
 import com.damors.zuji.model.response.LoginResponse;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -493,7 +494,7 @@ public class RetrofitApiService {
      * @param errorCallback 错误回调
      */
     public void getFootprintMessages(int pageNum, int pageSize,
-                                    SuccessCallback<BaseResponse<FootprintMessageResponse.Data>> successCallback,
+                                    SuccessCallback<BaseResponse<PageTrandsMsgModel>> successCallback,
                                     ErrorCallback errorCallback) {
         
         if (!isNetworkAvailable()) {
@@ -505,8 +506,8 @@ public class RetrofitApiService {
             return;
         }
         
-        Call<BaseResponse<FootprintMessageResponse.Data>> call = apiService.getFootprintMessages(pageNum, pageSize);
-        call.enqueue(new BaseCallback<BaseResponse<FootprintMessageResponse.Data>>(successCallback, errorCallback) {
+        Call<BaseResponse<PageTrandsMsgModel>> call = apiService.getFootprintMessages(pageNum, pageSize);
+        call.enqueue(new BaseCallback<BaseResponse<PageTrandsMsgModel>>(successCallback, errorCallback) {
             // 使用父类的默认实现
         });
     }
@@ -520,7 +521,7 @@ public class RetrofitApiService {
      * @param errorCallback 错误回调
      */
     public void getMsgListAll(int pageNum, int pageSize,
-                             SuccessCallback<BaseResponse<FootprintMessageResponse.Data>> successCallback,
+                             SuccessCallback<BaseResponse<PageTrandsMsgModel>> successCallback,
                              ErrorCallback errorCallback) {
         
         if (!isNetworkAvailable()) {
@@ -532,8 +533,8 @@ public class RetrofitApiService {
             return;
         }
         
-        Call<BaseResponse<FootprintMessageResponse.Data>> call = apiService.getMsgListAll(pageNum, pageSize);
-        call.enqueue(new BaseCallback<BaseResponse<FootprintMessageResponse.Data>>(successCallback, errorCallback) {
+        Call<BaseResponse<PageTrandsMsgModel>> call = apiService.getMsgListAll(pageNum, pageSize);
+        call.enqueue(new BaseCallback<BaseResponse<PageTrandsMsgModel>>(successCallback, errorCallback) {
             // 使用父类的默认实现
         });
     }
@@ -546,7 +547,7 @@ public class RetrofitApiService {
      * @param errorCallback 错误回调
      */
     public void getMsgDetail(Integer msgId,
-                            SuccessCallback<BaseResponse<com.damors.zuji.model.FootprintMessage>> successCallback,
+                            SuccessCallback<BaseResponse<TrandsMsgModel>> successCallback,
                             ErrorCallback errorCallback) {
         
         if (!isNetworkAvailable()) {
@@ -558,8 +559,8 @@ public class RetrofitApiService {
             return;
         }
         
-        Call<BaseResponse<com.damors.zuji.model.FootprintMessage>> call = apiService.getMsgDetail(msgId);
-        call.enqueue(new BaseCallback<BaseResponse<com.damors.zuji.model.FootprintMessage>>(successCallback, errorCallback) {
+        Call<BaseResponse<TrandsMsgModel>> call = apiService.getMsgDetail(msgId);
+        call.enqueue(new BaseCallback<BaseResponse<TrandsMsgModel>>(successCallback, errorCallback) {
             // 使用父类的默认实现
         });
     }
@@ -793,7 +794,32 @@ public class RetrofitApiService {
         });
     }
 
-
+    /**
+     * 获取用户点赞列表
+     * 
+     * @param pageNum 页码
+     * @param pageSize 每页大小
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     */
+    public void getUserLikes(int pageNum, int pageSize,
+                            SuccessCallback<BaseResponse<PageTrandsMsgModel>> successCallback,
+                            ErrorCallback errorCallback) {
+        
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "网络不可用，无法获取点赞列表");
+            showNetworkUnavailableMessage();
+            if (errorCallback != null) {
+                errorCallback.onError("网络不可用，请检查网络连接");
+            }
+            return;
+        }
+        
+        Call<BaseResponse<PageTrandsMsgModel>> call = apiService.getUserLikes(pageNum, pageSize);
+        call.enqueue(new BaseCallback<BaseResponse<PageTrandsMsgModel>>(successCallback, errorCallback) {
+            // 使用父类的默认实现
+        });
+    }
 
     // ==================== 回调接口定义 ====================
 

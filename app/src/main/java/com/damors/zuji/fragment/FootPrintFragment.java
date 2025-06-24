@@ -26,9 +26,9 @@ import com.damors.zuji.R;
 import com.damors.zuji.activity.CommentListActivity;
 import com.damors.zuji.activity.ImagePreviewActivity;
 import com.damors.zuji.adapter.FootprintMessageAdapter;
-import com.damors.zuji.model.FootprintMessage;
+import com.damors.zuji.model.TrandsMsgModel;
 import com.damors.zuji.model.GuluFileModel;
-import com.damors.zuji.model.response.FootprintMessageResponse;
+import com.damors.zuji.model.PageTrandsMsgModel;
 import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.network.RetrofitApiService;
 import com.damors.zuji.model.response.BaseResponse;
@@ -60,7 +60,7 @@ public class FootPrintFragment extends Fragment {
     private int currentPage = 1;
     private boolean isLoading = false;
     private boolean hasMoreData = true; // 是否还有更多数据
-    private List<FootprintMessage> footprintMessages = new ArrayList<>();
+    private List<TrandsMsgModel> footprintMessages = new ArrayList<>();
 
     @Nullable
     @Override
@@ -119,19 +119,19 @@ public class FootPrintFragment extends Fragment {
         // 设置点击事件
         adapter.setOnItemClickListener(new FootprintMessageAdapter.OnItemClickListener() {
             @Override
-            public void onItemClick(FootprintMessage message, int position) {
+            public void onItemClick(TrandsMsgModel message, int position) {
                 // 移除跳转到发布足迹页面的功能
                 // 如果需要其他处理逻辑，可以在这里添加
             }
             
             @Override
-            public void onUserAvatarClick(FootprintMessage message, int position) {
+            public void onUserAvatarClick(TrandsMsgModel message, int position) {
                 // 点击用户头像时的处理逻辑
                 // 可以跳转到用户详情页或显示用户信息
             }
             
             @Override
-            public void onLocationClick(FootprintMessage message, int position) {
+            public void onLocationClick(TrandsMsgModel message, int position) {
                 // 点击位置信息时的处理逻辑
                 // 可以在地图上显示该位置或跳转到地图页面
                 if (message.getLat() != 0.0 && message.getLng() != 0.0) {
@@ -141,25 +141,25 @@ public class FootPrintFragment extends Fragment {
             }
             
             @Override
-            public void onLikeClick(FootprintMessage message, int position) {
+            public void onLikeClick(TrandsMsgModel message, int position) {
                 // 处理点赞点击事件
                 handleLikeClick(message, position);
             }
             
             @Override
-            public void onDeleteClick(FootprintMessage message, int position) {
+            public void onDeleteClick(TrandsMsgModel message, int position) {
                 // 处理删除点击事件
                 handleDeleteClick(message, position);
             }
             
             @Override
-            public void onCommentClick(FootprintMessage message, int position) {
+            public void onCommentClick(TrandsMsgModel message, int position) {
                 // 处理评论点击事件
                 handleCommentClick(message, position);
             }
             
             @Override
-            public void onImageClick(FootprintMessage message, int position, int imageIndex, List<GuluFileModel> imageFiles) {
+            public void onImageClick(TrandsMsgModel message, int position, int imageIndex, List<GuluFileModel> imageFiles) {
                 // 处理图片点击事件，启动图片预览
                 handleImageClick(message, position, imageIndex, imageFiles);
             }
@@ -202,9 +202,9 @@ public class FootPrintFragment extends Fragment {
         apiService.getFootprintMessages(
             currentPage,
             PAGE_SIZE,
-            new RetrofitApiService.SuccessCallback<BaseResponse<FootprintMessageResponse.Data>>() {
+            new RetrofitApiService.SuccessCallback<BaseResponse<PageTrandsMsgModel>>() {
                 @Override
-                public void onSuccess(BaseResponse<FootprintMessageResponse.Data> response) {
+                public void onSuccess(BaseResponse<PageTrandsMsgModel> response) {
                     if (!isAdded() || getContext() == null) {
                         return;
                     }
@@ -250,9 +250,9 @@ public class FootPrintFragment extends Fragment {
      * 处理足迹动态数据获取成功
      * @param data 足迹动态数据
      */
-    private void handleFootprintMessagesSuccess(FootprintMessageResponse.Data data) {
+    private void handleFootprintMessagesSuccess(PageTrandsMsgModel data) {
         if (data != null && data.getRecords() != null) {
-            List<FootprintMessage> newMessages = data.getRecords();
+            List<TrandsMsgModel> newMessages = data.getRecords();
             
             if (currentPage == 1) {
                 // 第一页，清空原有数据
@@ -370,7 +370,7 @@ public class FootPrintFragment extends Fragment {
      * @param message 足迹动态
      * @param position 位置
      */
-    private void handleLikeClick(FootprintMessage message, int position) {
+    private void handleLikeClick(TrandsMsgModel message, int position) {
         // 切换点赞状态
         boolean newLikeStatus = !message.isHasLiked();
         int newLikeCount = message.getLikeCount() + (newLikeStatus ? 1 : -1);
@@ -421,7 +421,7 @@ public class FootPrintFragment extends Fragment {
      * @param message 足迹动态
      * @param position 位置
      */
-    private void handleDeleteClick(FootprintMessage message, int position) {
+    private void handleDeleteClick(TrandsMsgModel message, int position) {
         // 显示确认删除对话框
         new AlertDialog.Builder(requireContext())
             .setTitle("删除足迹")
@@ -439,7 +439,7 @@ public class FootPrintFragment extends Fragment {
      * @param message 足迹动态
      * @param position 位置
      */
-    private void deleteFootprint(FootprintMessage message, int position) {
+    private void deleteFootprint(TrandsMsgModel message, int position) {
         // 显示加载对话框
         loadingDialog.show("正在删除足迹...");
         
@@ -487,51 +487,12 @@ public class FootPrintFragment extends Fragment {
      * @param message 足迹动态
      * @param position 位置
      */
-    private void handleCommentClick(FootprintMessage message, int position) {
+    private void handleCommentClick(TrandsMsgModel message, int position) {
         // 跳转到评论详情页面
         CommentListActivity.start(requireContext(), message.getId(), 
             message.getTextContent() != null ? message.getTextContent() : "足迹详情");
     }
-    
-    /**
-     * 单元测试方法
-     * 测试足迹动态数据加载功能
-     * @return 是否测试通过
-     */
-    public boolean testFootprintMessageLoading() {
-        try {
-            // 创建测试数据
-            FootprintMessage testMessage = new FootprintMessage();
-            testMessage.setId(1);
-            testMessage.setTextContent("测试足迹动态");
-            testMessage.setLat(39.9087);
-            testMessage.setLng(116.3975);
-            testMessage.setLocaltionTitle("北京天安门");
-            testMessage.setCreateTime("2023-12-01 10:00:00");
-            
-            // 测试数据处理
-            List<FootprintMessage> testMessages = new ArrayList<>();
-            testMessages.add(testMessage);
-            
-            FootprintMessageResponse.Data testData = new FootprintMessageResponse.Data();
-            testData.setRecords(testMessages);
-            testData.setTotal(1);
-            testData.setCurrent(1);
-            testData.setSize(20);
-            testData.setPages(1);
-            
-            // 模拟成功处理
-            handleFootprintMessagesSuccess(testData);
-            
-            // 验证结果
-            return footprintMessages.size() == 1 &&
-                   footprintMessages.get(0).getId() == 1 &&
-                   footprintMessages.get(0).getTextContent().equals("测试足迹动态");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
+
     
     /**
      * 处理图片点击事件
@@ -540,7 +501,7 @@ public class FootPrintFragment extends Fragment {
      * @param imageIndex 图片索引
      * @param imageFiles 图片文件列表
      */
-    private void handleImageClick(FootprintMessage message, int position, int imageIndex, List<GuluFileModel> imageFiles) {
+    private void handleImageClick(TrandsMsgModel message, int position, int imageIndex, List<GuluFileModel> imageFiles) {
         if (imageFiles != null && imageIndex >= 0 && imageIndex < imageFiles.size()) {
             GuluFileModel imageFile = imageFiles.get(imageIndex);
             String originalPath = imageFile.getFilePath();

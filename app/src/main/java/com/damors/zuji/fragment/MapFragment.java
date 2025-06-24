@@ -44,7 +44,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.damors.zuji.viewmodel.FootprintViewModel;
 import com.damors.zuji.network.RetrofitApiService;
-import com.damors.zuji.model.FootprintMessage;
+import com.damors.zuji.model.TrandsMsgModel;
 import com.damors.zuji.model.response.BaseResponse;
 // Glide图片加载库导入
 import com.bumptech.glide.Glide;
@@ -123,7 +123,7 @@ public class MapFragment extends Fragment {
     
     // 缓存管理 - 优化内存使用
     private final java.util.concurrent.ConcurrentHashMap<String, Marker> markerCache = new java.util.concurrent.ConcurrentHashMap<>();
-    private final java.util.List<FootprintMessage> cachedMessages = new java.util.ArrayList<>();
+    private final java.util.List<TrandsMsgModel> cachedMessages = new java.util.ArrayList<>();
 
     @Nullable
     @Override
@@ -248,8 +248,8 @@ public class MapFragment extends Fragment {
         // 设置标记点击监听器
         aMap.setOnMarkerClickListener(marker -> {
             Object footprintObj = marker.getObject();
-            if (footprintObj instanceof FootprintMessage) {
-                showFootprintMessageInfoCard((FootprintMessage) footprintObj);
+            if (footprintObj instanceof TrandsMsgModel) {
+                showFootprintMessageInfoCard((TrandsMsgModel) footprintObj);
                 return true;
             }
             return false;
@@ -711,7 +711,7 @@ public class MapFragment extends Fragment {
      * 在地图上显示足迹动态位置标记
      * @param messages 足迹动态列表
      */
-    private void handleFootprintMessages(List<FootprintMessage> messages) {
+    private void handleFootprintMessages(List<TrandsMsgModel> messages) {
         // 检查Fragment状态
         if (!isAdded() || getContext() == null || isFragmentDestroyed.get()) {
             Log.w(TAG, "Fragment未附加到Activity或已销毁，跳过处理足迹动态数据");
@@ -734,7 +734,7 @@ public class MapFragment extends Fragment {
     /**
      * 批量处理标记
      */
-    private void processBatchMarkers(List<FootprintMessage> messages) {
+    private void processBatchMarkers(List<TrandsMsgModel> messages) {
         // 清除现有标记
         if (aMap != null) {
             aMap.clear();
@@ -743,7 +743,7 @@ public class MapFragment extends Fragment {
         
         List<MarkerOptions> markerOptionsList = new ArrayList<>();
         
-        for (FootprintMessage message : messages) {
+        for (TrandsMsgModel message : messages) {
             if (message.getLat() != 0 && message.getLng() != 0) {
                 LatLng position = new LatLng(message.getLat(), message.getLng());
                 // 创建足迹动态标记，使用旗帜图标
@@ -779,7 +779,7 @@ public class MapFragment extends Fragment {
     /**
      * 批量添加标记到地图
      */
-    private void addMarkersToMap(List<MarkerOptions> markerOptionsList, List<FootprintMessage> messages) {
+    private void addMarkersToMap(List<MarkerOptions> markerOptionsList, List<TrandsMsgModel> messages) {
         if (markerOptionsList.isEmpty() || aMap == null || messages == null) {
             return;
         }
@@ -795,7 +795,7 @@ public class MapFragment extends Fragment {
                     for (int j = start; j < end; j++) {
                         if (j < messages.size()) {
                             MarkerOptions options = markerOptionsList.get(j);
-                            FootprintMessage message = messages.get(j);
+                            TrandsMsgModel message = messages.get(j);
                             
                             Marker marker = aMap.addMarker(options);
                             if (marker != null) {
@@ -885,7 +885,7 @@ public class MapFragment extends Fragment {
      * 显示足迹消息信息卡片
      * @param message 足迹消息对象
      */
-    private void showFootprintMessageInfoCard(FootprintMessage message) {
+    private void showFootprintMessageInfoCard(TrandsMsgModel message) {
         if (getContext() == null || !isAdded()) {
             return;
         }
@@ -1016,7 +1016,7 @@ public class MapFragment extends Fragment {
      * @param gridImageLayout 网格图片布局
      * @param textViewImageCount 图片数量文本
      */
-    private void renderImageContent(FootprintMessage message, FrameLayout frameLayoutImages,
+    private void renderImageContent(TrandsMsgModel message, FrameLayout frameLayoutImages,
                                     ImageView imageViewSingle, View gridImageLayout, TextView textViewImageCount) {
         
         // 首先隐藏所有图片相关控件
@@ -1232,7 +1232,7 @@ public class MapFragment extends Fragment {
      * 显示评论输入对话框
      * @param message 足迹动态消息
      */
-    private void showCommentDialog(FootprintMessage message) {
+    private void showCommentDialog(TrandsMsgModel message) {
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
         builder.setTitle("发表评论");
         
@@ -1317,7 +1317,7 @@ public class MapFragment extends Fragment {
      * @param avatarView 头像ImageView控件
      * @param message 足迹消息对象
      */
-    private void setUserAvatarInDialog(ImageView avatarView, FootprintMessage message) {
+    private void setUserAvatarInDialog(ImageView avatarView, TrandsMsgModel message) {
         if (avatarView != null) {
             String userAvatar = message.getUserAvatar();
             if (userAvatar != null && !userAvatar.isEmpty()) {

@@ -59,6 +59,7 @@ public class ApiConfig {
         public static final String GET_REPLY_COMMENTS = "/zuji/api/getReplyComments"; // 获取收到的评论接口
         public static final String GET_USER_COMMENTS = "/zuji/api/getUserComments"; // 获取我的评论接口
         public static final String UPDATE_COMMENTS_STATUS = "/zuji/api/updateCommentsStatus"; // 更新评论状态接口
+        public static final String GET_USER_LIKES = "/zuji/api/getUserLikes"; // 获取用户点赞列表接口
         public static final String CHECK_APP_UPDATE = "/checkAppUpdate"; // 检查应用更新接口
         public static final String DELETE_FOOTPRINT = "/zuji/api/deleteMsg";
     }

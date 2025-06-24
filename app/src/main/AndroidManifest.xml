@@ -137,6 +137,13 @@
             android:label="评论管理"
             android:theme="@style/Theme.Zuji_yuansheng" />
             
+        <!-- 点赞管理活动 -->
+        <activity
+            android:name=".activity.LikeManagementActivity"
+            android:exported="false"
+            android:label="点赞管理"
+            android:theme="@style/Theme.Zuji_yuansheng" />
+            
 
         <!-- 设置页面活动 -->
         <activity

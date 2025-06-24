@@ -88,7 +88,7 @@ public class ReceivedCommentAdapter extends RecyclerView.Adapter<ReceivedComment
         }
         
         // 设置未读状态指示器
-        if (comment.getParentIsRead() == 0) { // 未读
+        if (null != comment.getParentComment() && comment.getParentIsRead() == 0) { // 未读
             holder.viewUnreadIndicator.setVisibility(View.VISIBLE);
             holder.itemView.setBackgroundResource(R.drawable.bg_unread_comment_item);
         } else { // 已读

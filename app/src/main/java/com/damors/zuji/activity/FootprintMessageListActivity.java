@@ -7,16 +7,14 @@ import android.view.WindowManager;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.damors.zuji.R;
 import com.damors.zuji.adapter.FootprintMessageAdapter;
-import com.damors.zuji.model.FootprintMessage;
+import com.damors.zuji.model.TrandsMsgModel;
 import com.damors.zuji.model.GuluFileModel;
-import com.damors.zuji.model.response.FootprintMessageResponse;
-import com.damors.zuji.network.ApiConfig;
+import com.damors.zuji.model.PageTrandsMsgModel;
 import com.damors.zuji.network.RetrofitApiService;
 import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.utils.ImageUtils;
@@ -34,7 +32,7 @@ public class FootprintMessageListActivity extends BaseActivity {
     
     private RecyclerView recyclerView;
     private FootprintMessageAdapter adapter;
-    private List<FootprintMessage> messageList;
+    private List<TrandsMsgModel> messageList;
     private RetrofitApiService apiService;
     
     // 分页参数
@@ -67,40 +65,39 @@ public class FootprintMessageListActivity extends BaseActivity {
         // 设置点击事件监听器
         adapter.setOnItemClickListener(new FootprintMessageAdapter.OnItemClickListener() {
             @Override
-            public void onItemClick(FootprintMessage message, int position) {
+            public void onItemClick(TrandsMsgModel message, int position) {
                 // 处理条目点击事件
             }
             
             @Override
-            public void onUserAvatarClick(FootprintMessage message, int position) {
+            public void onUserAvatarClick(TrandsMsgModel message, int position) {
                 // 处理用户头像点击事件
             }
             
             @Override
-            public void onLocationClick(FootprintMessage message, int position) {
+            public void onLocationClick(TrandsMsgModel message, int position) {
                 // 处理位置点击事件
             }
             
             @Override
-            public void onLikeClick(FootprintMessage message, int position) {
+            public void onLikeClick(TrandsMsgModel message, int position) {
                 // 处理点赞点击事件
             }
             
-            // 收藏功能已移除
-            
+
             @Override
-            public void onCommentClick(FootprintMessage message, int position) {
+            public void onCommentClick(TrandsMsgModel message, int position) {
                 // 处理评论点击事件
             }
             
             @Override
-            public void onImageClick(FootprintMessage message, int position, int imageIndex, List<GuluFileModel> imageFiles) {
+            public void onImageClick(TrandsMsgModel message, int position, int imageIndex, List<GuluFileModel> imageFiles) {
                 // 处理图片点击事件，启动图片预览
                 handleImageClick(message, position, imageIndex, imageFiles);
             }
             
             @Override
-            public void onDeleteClick(FootprintMessage message, int position) {
+            public void onDeleteClick(TrandsMsgModel message, int position) {
                 // 处理删除点击事件
                 handleDeleteClick(message, position);
             }
@@ -145,15 +142,15 @@ public class FootprintMessageListActivity extends BaseActivity {
         apiService.getFootprintMessages(
             currentPage,
             pageSize,
-            new RetrofitApiService.SuccessCallback<BaseResponse<FootprintMessageResponse.Data>>() {
+            new RetrofitApiService.SuccessCallback<BaseResponse<PageTrandsMsgModel>>() {
                 @Override
-                public void onSuccess(BaseResponse<FootprintMessageResponse.Data> response) {
+                public void onSuccess(BaseResponse<PageTrandsMsgModel> response) {
                     isLoading = false;
                     
                     if (response.getCode() == 200 && response.getData() != null) {
-                        FootprintMessageResponse.Data data = response.getData();
+                        PageTrandsMsgModel data = response.getData();
                         if (data.getRecords() != null) {
-                            List<FootprintMessage> newMessages = data.getRecords();
+                            List<TrandsMsgModel> newMessages = data.getRecords();
                             Log.d(TAG, "获取到 " + newMessages.size() + " 条足迹动态");
                             
                             if (currentPage == 1) {
@@ -215,7 +212,7 @@ public class FootprintMessageListActivity extends BaseActivity {
      * @param imageIndex 图片索引
      * @param imageFiles 图片文件列表
      */
-    private void handleImageClick(FootprintMessage message, int position, int imageIndex, List<GuluFileModel> imageFiles) {
+    private void handleImageClick(TrandsMsgModel message, int position, int imageIndex, List<GuluFileModel> imageFiles) {
         if (imageFiles != null && imageIndex >= 0 && imageIndex < imageFiles.size()) {
             GuluFileModel imageFile = imageFiles.get(imageIndex);
             String originalPath = imageFile.getFilePath();
@@ -243,7 +240,7 @@ public class FootprintMessageListActivity extends BaseActivity {
      * @param message 足迹动态
      * @param position 位置
      */
-    private void handleDeleteClick(FootprintMessage message, int position) {
+    private void handleDeleteClick(TrandsMsgModel message, int position) {
         // 显示确认删除对话框
         new AlertDialog.Builder(this)
             .setTitle("删除足迹")
@@ -261,7 +258,7 @@ public class FootprintMessageListActivity extends BaseActivity {
      * @param message 足迹动态
      * @param position 位置
      */
-    private void deleteFootprint(FootprintMessage message, int position) {
+    private void deleteFootprint(TrandsMsgModel message, int position) {
         // 调用API删除足迹
         apiService.deleteFootprint(message.getId(),
             new RetrofitApiService.SuccessCallback<BaseResponse<String>>() {

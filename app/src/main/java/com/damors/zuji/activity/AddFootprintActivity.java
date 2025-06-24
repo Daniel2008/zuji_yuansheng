@@ -44,7 +44,7 @@ import com.amap.api.services.core.LatLonPoint;
 
 
 import com.damors.zuji.manager.UserManager;
-import com.damors.zuji.model.TrandsInfoModel;
+import com.damors.zuji.model.TrandsMsgModel;
 
 import com.damors.zuji.network.RetrofitApiService;
 import com.damors.zuji.model.response.BaseResponse;
@@ -501,11 +501,10 @@ public class AddFootprintActivity extends BaseActivity implements GeocodeSearch.
             Log.d("AddFootprintActivity", "位置信息有效: 纬度=" + latitude + ", 经度=" + longitude);
         }
         
-        // 准备发布参数
-        
+
         // 创建发布参数对象
-        TrandsInfoModel publishInfo = new TrandsInfoModel();
-        publishInfo.setUserId(userId); // 当前用户ID
+        TrandsMsgModel publishInfo = new TrandsMsgModel();
+        publishInfo.setUserId(Integer.parseInt(userId)); // 当前用户ID
         publishInfo.setCity(city);
         publishInfo.setContent(content); // 足迹内容
         publishInfo.setLocationInfo(location); // 位置信息
@@ -552,7 +551,7 @@ public class AddFootprintActivity extends BaseActivity implements GeocodeSearch.
         
         // 将PublishTrandsInfoPO转换为Map<String, RequestBody>格式
         Map<String, RequestBody> requestBodyMap = new HashMap<>();
-        requestBodyMap.put("userId", RequestBody.create(MediaType.parse("text/plain"), publishInfo.getUserId()));
+        requestBodyMap.put("userId", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(publishInfo.getUserId())));
         requestBodyMap.put("city", RequestBody.create(MediaType.parse("text/plain"), publishInfo.getCity() != null ? publishInfo.getCity() : ""));
         requestBodyMap.put("content", RequestBody.create(MediaType.parse("text/plain"), publishInfo.getContent()));
         requestBodyMap.put("locationInfo", RequestBody.create(MediaType.parse("text/plain"), publishInfo.getLocationInfo()));

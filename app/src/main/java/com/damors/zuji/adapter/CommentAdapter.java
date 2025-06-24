@@ -21,6 +21,8 @@ import com.damors.zuji.R;
 import com.damors.zuji.model.CommentModel;
 import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.utils.TimeUtils;
+import com.damors.zuji.manager.UserManager;
+import com.damors.zuji.model.UserInfoModel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +35,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
     private List<CommentModel> comments;
     private List<CommentModel> allComments; // 存储所有评论数据，包括回复
     private OnCommentClickListener onCommentClickListener;
+    private UserManager userManager;
     
     public interface OnCommentClickListener {
         void onReplyClick(CommentModel comment);
@@ -43,6 +46,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         this.context = context;
         this.comments = comments != null ? comments : new ArrayList<>();
         this.allComments = allComments != null ? allComments : new ArrayList<>();
+        this.userManager = UserManager.getInstance();
     }
     
     public void setComments(List<CommentModel> comments) {
@@ -134,9 +138,9 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             }
         });
         
-        // 根据评论所有者显示删除按钮（这里可以根据实际需求判断是否显示删除按钮）
-        // TODO: 添加判断当前用户是否为评论作者的逻辑
-        holder.tvDelete.setVisibility(View.VISIBLE); // 暂时显示所有删除按钮，后续可根据用户权限控制
+        // 根据评论所有者显示删除按钮
+        boolean canDelete = canDeleteComment(comment);
+        holder.tvDelete.setVisibility(canDelete ? View.VISIBLE : View.GONE);
         
         // 处理子评论显示
         android.util.Log.d("CommentAdapter", "处理评论ID=" + comment.getId() + ", parentId=" + comment.getParentId() + ", 内容=" + comment.getContent());
@@ -172,6 +176,36 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
     @Override
     public int getItemCount() {
         return comments.size();
+    }
+    
+    /**
+     * 判断当前用户是否可以删除评论
+     * @param comment 评论对象
+     * @return 是否可以删除
+     */
+    private boolean canDeleteComment(CommentModel comment) {
+        if (comment == null || userManager == null) {
+            return false;
+        }
+        
+        // 检查用户是否已登录
+        if (!userManager.isLoggedIn()) {
+            return false;
+        }
+        
+        // 获取当前用户信息
+        UserInfoModel currentUser = userManager.getUserInfo();
+        if (currentUser == null || currentUser.getUserId() == null) {
+            return false;
+        }
+        
+        // 判断评论的用户ID是否与当前用户ID相同
+        Integer commentUserId = comment.getUserId();
+        if (commentUserId == null) {
+            return false;
+        }
+        
+        return currentUser.getUserId().equals(commentUserId.longValue());
     }
     
     /**

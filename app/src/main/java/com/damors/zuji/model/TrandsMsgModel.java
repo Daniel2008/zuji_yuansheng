@@ -1,5 +1,7 @@
 package com.damors.zuji.model;
 
+import java.io.File;
+import java.io.Serializable;
 import java.util.List;
 
 import lombok.Data;
@@ -9,7 +11,9 @@ import lombok.Data;
  * 用于表示用户发布的足迹动态信息
  */
 @Data
-public class FootprintMessage {
+public class TrandsMsgModel implements Serializable {
+    
+    private static final long serialVersionUID = 1L;
     
     /**
      * 创建者
@@ -114,5 +118,32 @@ public class FootprintMessage {
      * 当前用户是否已点赞
      */
     private boolean hasLiked;
+
+    /**
+     * 城市
+     */
+    private String city;
+
+    /**
+     * 位置信息
+     */
+    private String locationInfo;
+
+    /**
+     * 类型
+     */
+    private String type;
+
+    /**
+     * 内容
+     */
+    private String content;
+
+
+    /**
+     * 图片文件对象列表（用于文件上传）
+     */
+    private List<File> images;
+
 
 }

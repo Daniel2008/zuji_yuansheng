@@ -25,6 +25,7 @@ import com.damors.zuji.R;
 import com.damors.zuji.activity.EditProfileActivity;
 import com.damors.zuji.activity.SettingsActivity;
 import com.damors.zuji.activity.CommentManagementActivity;
+import com.damors.zuji.activity.LikeManagementActivity;
 import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.utils.MapCacheManager;
@@ -98,8 +99,16 @@ public class ProfileFragment extends Fragment {
         
         // 设置点赞管理布局点击事件
         layoutLikeManagement.setOnClickListener(v -> {
-            // TODO: 实现点赞管理功能
-            Toast.makeText(getContext(), "点赞管理功能开发中", Toast.LENGTH_SHORT).show();
+            Log.d("ProfileFragment", "点赞管理布局被点击");
+            try {
+                // 跳转到点赞管理页面
+                Intent intent = new Intent(getContext(), LikeManagementActivity.class);
+                startActivity(intent);
+                Log.d("ProfileFragment", "成功启动LikeManagementActivity");
+            } catch (Exception e) {
+                Log.e("ProfileFragment", "启动LikeManagementActivity失败: " + e.getMessage(), e);
+                Toast.makeText(getContext(), "跳转失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
         });
         
         // 设置评论管理布局点击事件
@@ -127,8 +136,16 @@ public class ProfileFragment extends Fragment {
         
         // 设置点赞管理布局点击事件
         layoutLikeManagement.setOnClickListener(v -> {
-            // TODO: 实现点赞管理功能
-            Toast.makeText(getContext(), "点赞管理功能开发中", Toast.LENGTH_SHORT).show();
+            Log.d("ProfileFragment", "点赞管理布局被点击");
+            try {
+                // 跳转到点赞管理页面
+                Intent intent = new Intent(getContext(), LikeManagementActivity.class);
+                startActivity(intent);
+                Log.d("ProfileFragment", "成功启动LikeManagementActivity");
+            } catch (Exception e) {
+                Log.e("ProfileFragment", "启动LikeManagementActivity失败: " + e.getMessage(), e);
+                Toast.makeText(getContext(), "跳转失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
         });
         
         // 设置评论管理布局点击事件
