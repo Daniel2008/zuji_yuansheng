@@ -18,6 +18,10 @@ public class CommentModel {
     private String parentUserName;
     /** 父评论用户头像（回复评论时使用） */
     private String parentUserAvatar;
+    /** 父评论 */
+    private String parentComment;
+    /** 父评论用户是否已读（回复评论时使用） */
+    private Integer parentIsRead;
     private String content;       // 对应数据库表的content字段(varchar类型)
     private Integer userId;       // 对应数据库表的user_id字段(int类型)
     private String userAvatar;    // 用户头像

@@ -80,15 +80,15 @@ public class ReceivedCommentAdapter extends RecyclerView.Adapter<ReceivedComment
         }
         
         // 设置动态内容（显示是对哪条动态的评论）
-        if (!TextUtils.isEmpty(comment.getRemark())) {
-            holder.tvDynamicContent.setText("评论了你的动态：" + comment.getRemark());
+        if (!TextUtils.isEmpty(comment.getParentComment())) {
+            holder.tvDynamicContent.setText("评论了你的动态：" + comment.getParentComment());
             holder.tvDynamicContent.setVisibility(View.VISIBLE);
         } else {
             holder.tvDynamicContent.setVisibility(View.GONE);
         }
         
         // 设置未读状态指示器
-        if ("0".equals(comment.getDelFlag())) { // 未读
+        if (comment.getParentIsRead() == 0) { // 未读
             holder.viewUnreadIndicator.setVisibility(View.VISIBLE);
             holder.itemView.setBackgroundResource(R.drawable.bg_unread_comment_item);
         } else { // 已读

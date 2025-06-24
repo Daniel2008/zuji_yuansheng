@@ -19,9 +19,12 @@ import com.damors.zuji.R;
 import com.damors.zuji.activity.CommentListActivity;
 import com.damors.zuji.adapter.ReceivedCommentAdapter;
 import com.damors.zuji.model.CommentModel;
-import com.damors.zuji.network.RetrofitApiService;
+import com.damors.zuji.model.PageCommentListModel;
 import com.damors.zuji.model.response.BaseResponse;
+import com.damors.zuji.network.RetrofitApiService;
 import com.damors.zuji.utils.LoadingDialog;
+
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +51,7 @@ public class ReceivedCommentsFragment extends Fragment {
     // 分页参数
     private int currentPage = 1;
     private int pageSize = 10;
+    private int totalPages = 0;
     private boolean isLoading = false;
     private boolean hasMoreData = true;
     
@@ -93,23 +97,46 @@ public class ReceivedCommentsFragment extends Fragment {
         adapter.setOnCommentClickListener(new ReceivedCommentAdapter.OnCommentClickListener() {
             @Override
             public void onCommentClick(CommentModel comment) {
+                updateCommentStatus(comment);
                 // 点击评论，跳转到对应动态的评论列表
                 CommentListActivity.start(getContext(), comment.getMsgId(), "动态详情");
-                
-                // 标记为已读
-                markCommentAsRead(comment);
             }
             
             @Override
             public void onReplyClick(CommentModel comment) {
+                updateCommentStatus(comment);
                 // 回复评论
                 CommentListActivity.start(getContext(), comment.getMsgId(), "动态详情");
             }
             
             @Override
             public void onDynamicClick(CommentModel comment) {
+                updateCommentStatus(comment);
                 // 点击动态内容，跳转到动态详情
                 CommentListActivity.start(getContext(), comment.getMsgId(), "动态详情");
+            }
+        });
+    }
+
+    private void updateCommentStatus(CommentModel comment) {
+        apiService.updateCommentStatus(comment.getId(), new RetrofitApiService.SuccessCallback<BaseResponse<JSONObject>>() {
+            @Override
+            public void onSuccess(BaseResponse<JSONObject> response) {
+                if (getActivity() == null) return;
+
+                if (response.isSuccess()) {
+                    markCommentAsRead(comment);
+                    Log.d(TAG, "标记评论为已读成功");
+                } else {
+                    Log.e(TAG, "标记评论为已读失败: " + response.getMsg());
+                }
+            }
+        }, new RetrofitApiService.ErrorCallback() {
+            @Override
+            public void onError(String error) {
+                if (getActivity() == null) return;
+
+                Log.e(TAG, "标记评论为已读失败: " + error);
             }
         });
     }
@@ -134,68 +161,102 @@ public class ReceivedCommentsFragment extends Fragment {
             loadingDialog.show("加载中...");
         }
         
-        // TODO: 调用API获取收到的评论数据
-        // 这里先模拟数据
-        simulateLoadReceivedComments();
+        // 调用真实API加载数据
+        loadReceivedCommentsFromApi();
     }
     
     /**
-     * 模拟加载收到的评论数据
+     * 从API加载收到的评论数据
      */
-    private void simulateLoadReceivedComments() {
-        // 模拟网络延迟
-        new android.os.Handler().postDelayed(() -> {
-            List<CommentModel> mockData = createMockReceivedCommentsData();
-            
-            if (currentPage == 1) {
-                receivedCommentsList.clear();
-            }
-            
-            receivedCommentsList.addAll(mockData);
-            adapter.notifyDataSetChanged();
-            
-            // 更新UI状态
-            updateUIState();
-            
-            isLoading = false;
-            swipeRefreshLayout.setRefreshing(false);
-            loadingDialog.dismiss();
-            
-        }, 1000);
-    }
-    
-    /**
-     * 创建模拟收到的评论数据
-     */
-    private List<CommentModel> createMockReceivedCommentsData() {
-        List<CommentModel> mockList = new ArrayList<>();
-        
-        for (int i = 0; i < 8; i++) {
-            CommentModel comment = new CommentModel();
-            comment.setId(i + 1);
-            comment.setMsgId(i + 1);
-            comment.setContent("这是用户" + (i + 1) + "对我动态的评论内容，很有意思的分享！");
-            comment.setUserId(100 + i);
-            comment.setUserName("用户" + (i + 1));
-            comment.setUserAvatar("/avatar/user" + (i + 1) + ".jpg");
-            comment.setCreateTime("2024-01-" + String.format("%02d", (20 + i)) + " 14:30:00");
-            
-            // 设置动态相关信息（用于显示是对哪条动态的评论）
-            comment.setRemark("我的第" + (i + 1) + "条动态内容"); // 使用remark字段存储动态内容
-            
-            // 模拟未读状态
-            if (i < 3) {
-                comment.setDelFlag("0"); // 0表示未读，1表示已读
-            } else {
-                comment.setDelFlag("1");
-            }
-            
-            mockList.add(comment);
+    private void loadReceivedCommentsFromApi() {
+        if (apiService == null) {
+            Log.e(TAG, "ApiService is null");
+            return;
         }
         
-        return mockList;
+        // 显示加载对话框（仅首次加载时）
+        if (currentPage == 1 && loadingDialog != null) {
+            loadingDialog.show();
+        }
+
+        apiService.getReplyComments(
+                new RetrofitApiService.SuccessCallback<BaseResponse<PageCommentListModel>>() {
+                    @Override
+                    public void onSuccess(BaseResponse<PageCommentListModel> response) {
+                        if (getActivity() == null) return;
+
+                        // 停止刷新动画
+                        if (swipeRefreshLayout.isRefreshing()) {
+                            swipeRefreshLayout.setRefreshing(false);
+                        }
+
+                        // 隐藏加载对话框
+                        if (loadingDialog != null && loadingDialog.isShowing()) {
+                            loadingDialog.dismiss();
+                        }
+
+                        if (response.isSuccess() && response.getData() != null) {
+
+                                PageCommentListModel data = response.getData();
+                                List<CommentModel> comments = data.getRecords();
+
+                                if (comments != null) {
+                                    if (currentPage == 1) {
+                                        receivedCommentsList.clear();
+                                    }
+
+                                    receivedCommentsList.addAll(comments);
+                                    adapter.notifyDataSetChanged();
+                                    // 更新分页信息
+                                    totalPages = data.getPages();
+                                    hasMoreData = data.hasMore();
+
+                                    // 更新UI状态
+                                    updateUIState();
+                                }
+                            } else {
+                                Log.e(TAG, "API返回错误: " + response.getMsg());
+                                showErrorMessage("加载失败: " + response.getMsg());
+                            }
+
+
+                        isLoading = false;
+                    }
+                },
+                new RetrofitApiService.ErrorCallback() {
+                    @Override
+                    public void onError(String error) {
+                        if (getActivity() == null) return;
+
+                        Log.e(TAG, "网络请求异常");
+
+                        // 停止刷新动画
+                        if (swipeRefreshLayout.isRefreshing()) {
+                            swipeRefreshLayout.setRefreshing(false);
+                        }
+
+                        // 隐藏加载对话框
+                        if (loadingDialog != null && loadingDialog.isShowing()) {
+                            loadingDialog.dismiss();
+                        }
+
+                        showErrorMessage("网络连接失败，请重试");
+                        isLoading = false;
+                    }
+                }
+        );
+
     }
     
+    /**
+     * 显示错误消息
+     */
+    private void showErrorMessage(String message) {
+        if (getActivity() != null) {
+            Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
+        }
+    }
+
     /**
      * 更新UI状态
      */

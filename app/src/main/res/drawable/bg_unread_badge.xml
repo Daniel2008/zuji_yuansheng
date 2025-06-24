@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="oval">
+    <!-- 红色背景 -->
     <solid android:color="@color/error_color" />
+    <!-- 最小尺寸，实际大小由TextView的layout_width和layout_height控制 -->
     <size
         android:width="8dp"
         android:height="8dp" />

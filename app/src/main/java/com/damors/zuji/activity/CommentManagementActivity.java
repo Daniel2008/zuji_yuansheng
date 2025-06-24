@@ -18,8 +18,10 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.damors.zuji.R;
 import com.damors.zuji.adapter.CommentManagementAdapter;
 import com.damors.zuji.adapter.CommentManagementPagerAdapter;
+import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.CommentModel;
 import com.damors.zuji.model.FootprintMessage;
+import com.damors.zuji.model.UserInfoModel;
 import com.damors.zuji.network.RetrofitApiService;
 import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.utils.LoadingDialog;
@@ -129,9 +131,27 @@ public class CommentManagementActivity extends BaseActivity {
      * 加载未读评论数量
      */
     private void loadUnreadCommentCount() {
-        // TODO: 调用API获取未读评论数量
-        // 这里先模拟数据
-        unreadCommentCount = 5;
+        try {
+            // 从UserManager获取用户信息
+            UserManager userManager = UserManager.getInstance();
+            UserInfoModel userInfo = userManager.getUserInfo();
+            
+            if (userInfo != null && userInfo.getCommentNoReplyCount() != null) {
+                // 获取真实的未读评论数量
+                unreadCommentCount = userInfo.getCommentNoReplyCount().intValue();
+                Log.d(TAG, "获取到未读评论数量: " + unreadCommentCount);
+            } else {
+                // 如果用户信息为空或未读评论数为空，设置为0
+                unreadCommentCount = 0;
+                Log.d(TAG, "用户信息为空或未读评论数为空，设置未读评论数为0");
+            }
+        } catch (Exception e) {
+            // 异常情况下设置为0
+            Log.e(TAG, "获取未读评论数量时发生异常: " + e.getMessage(), e);
+            unreadCommentCount = 0;
+        }
+        
+        // 更新角标显示
         updateUnreadCountBadge();
     }
     
@@ -157,9 +177,25 @@ public class CommentManagementActivity extends BaseActivity {
      */
     public void markCommentAsRead(Integer commentId) {
         // TODO: 调用API标记评论为已读
-        if (unreadCommentCount > 0) {
-            unreadCommentCount--;
-            updateUnreadCountBadge();
+        // 标记成功后，重新加载用户数据以获取最新的未读评论数量
+        refreshUnreadCount();
+    }
+    
+    /**
+     * 刷新用户数据并更新未读评论数量
+     * 用于在评论状态改变后同步最新数据
+     */
+    public void refreshUserDataAndUnreadCount() {
+        try {
+            // 强制重新加载用户数据
+            UserManager userManager = UserManager.getInstance();
+            userManager.reloadUserData();
+            Log.d(TAG, "已刷新用户数据");
+            
+            // 重新加载未读评论数量
+            loadUnreadCommentCount();
+        } catch (Exception e) {
+            Log.e(TAG, "刷新用户数据时发生异常: " + e.getMessage(), e);
         }
     }
     
@@ -173,7 +209,19 @@ public class CommentManagementActivity extends BaseActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // 页面恢复时刷新未读数量
-        refreshUnreadCount();
+        // 页面恢复时刷新用户数据和未读数量
+        refreshUserDataAndUnreadCount();
+    }
+    
+    /**
+     * 通知子Fragment刷新数据
+     * 用于在评论状态改变后同步各个Fragment的数据
+     */
+    public void notifyFragmentsRefresh() {
+        if (pagerAdapter != null) {
+            // 通知ViewPager中的Fragment刷新数据
+            // 这里可以通过接口回调的方式通知各个Fragment刷新
+            Log.d(TAG, "通知子Fragment刷新数据");
+        }
     }
 }

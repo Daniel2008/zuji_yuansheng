@@ -11,6 +11,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -23,6 +24,8 @@ import com.damors.zuji.R;
 import com.damors.zuji.fragment.FootPrintFragment;
 import com.damors.zuji.fragment.MapFragment;
 import com.damors.zuji.fragment.ProfileFragment;
+import com.damors.zuji.manager.UserManager;
+import com.damors.zuji.model.UserInfoModel;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationBarView;
 import android.content.Intent;
@@ -48,6 +51,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
     private BottomNavigationView bottomNavigationView;
     private LocationManager locationManager;
+    private View redDotBadge;
 
     // 主要的Fragment
     private MapFragment mapFragment;
@@ -110,8 +114,24 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     private void initViews() {
         bottomNavigationView = findViewById(R.id.bottom_navigation);
         bottomNavigationView.setOnItemSelectedListener(this);
+        redDotBadge = findViewById(R.id.red_dot_badge);
+        
+        if (redDotBadge != null) {
+            Log.d(TAG, "红点视图初始化成功");
+        } else {
+            Log.e(TAG, "红点视图初始化失败");
+        }
+        
         // 默认选中地图tab
         bottomNavigationView.setSelectedItemId(R.id.nav_map);
+        UserInfoModel userInfoModel = UserManager.getInstance().getUserInfo();
+        // 显示红点提醒
+        if(userInfoModel.getCommentNoReplyCount()> 0){
+            showProfileBadge();
+        }else {
+            hideProfileBadge();
+        }
+
     }
 
     /**
@@ -320,8 +340,28 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             // 有新版本，使用XUpdate自带弹窗进行更新
             AppUpdateManager.getInstance(MainActivity.this).startUpdate();
         } catch (Exception e) {
-            Log.e(TAG, "检查更新异常: " + e.getMessage(), e);
+            Log.e(TAG, "检查更新失败: " + e.getMessage(), e);
         }
     }
 
+    /**
+     * 显示"我的"选项卡的红点提醒
+     */
+    public void showProfileBadge() {
+        if (redDotBadge != null) {
+            redDotBadge.setVisibility(View.VISIBLE);
+            Log.d(TAG, "红点提醒已显示");
+        } else {
+            Log.e(TAG, "红点视图为空，无法显示");
+        }
+    }
+
+    /**
+      * 隐藏"我的"选项卡的红点提醒
+      */
+     public void hideProfileBadge() {
+         if (redDotBadge != null) {
+             redDotBadge.setVisibility(View.GONE);
+         }
+     }
 }

@@ -250,6 +250,21 @@
                         android:textColor="@color/profile_primary_text"
                         android:textSize="16sp" />
 
+                    <!-- 未读评论数标志 -->
+                    <TextView
+                        android:id="@+id/tv_comment_unread_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:background="@drawable/comment_unread_badge"
+                        android:gravity="center"
+                        android:minWidth="20dp"
+                        android:minHeight="20dp"
+                        android:text="0"
+                        android:textColor="@android:color/white"
+                        android:textSize="12sp"
+                        android:visibility="gone" />
+
                     <ImageView
                         android:layout_width="24dp"
                         android:layout_height="24dp"

@@ -50,6 +50,7 @@ public class ProfileFragment extends Fragment {
     private TextView textViewCacheSize;
     private TextView textViewUsername;
     private TextView textViewBio;
+    private TextView textViewCommentUnreadCount; // 未读评论数标志
     private CircleImageView imageViewAvatar;
     private LinearLayout layoutLikeManagement;
     private LinearLayout layoutCommentManagement;
@@ -71,6 +72,7 @@ public class ProfileFragment extends Fragment {
         textViewDaysCount = view.findViewById(R.id.text_view_days_count);
         textViewUsername = view.findViewById(R.id.text_view_username);
         textViewBio = view.findViewById(R.id.text_view_bio);
+        textViewCommentUnreadCount = view.findViewById(R.id.tv_comment_unread_count); // 初始化未读评论数标志
         imageViewAvatar = view.findViewById(R.id.image_view_avatar);
         layoutLikeManagement = view.findViewById(R.id.layout_like_management);
         layoutCommentManagement = view.findViewById(R.id.layout_comment_management);
@@ -452,6 +454,30 @@ public class ProfileFragment extends Fragment {
                 }
             }
             
+            // 更新未读评论数标志
+            String commentNoReplyCountStr = getUserFieldSafely(userObj, "commentNoReplyCount");
+            if (!TextUtils.isEmpty(commentNoReplyCountStr) && textViewCommentUnreadCount != null) {
+                try {
+                    int commentNoReplyCount = Integer.parseInt(commentNoReplyCountStr);
+                    if (commentNoReplyCount > 0) {
+                        // 显示未读评论数
+                        textViewCommentUnreadCount.setText(String.valueOf(commentNoReplyCount));
+                        textViewCommentUnreadCount.setVisibility(View.VISIBLE);
+                    } else {
+                        // 隐藏未读评论数标志
+                        textViewCommentUnreadCount.setVisibility(View.GONE);
+                    }
+                } catch (NumberFormatException e) {
+                    // 解析失败时隐藏标志
+                    textViewCommentUnreadCount.setVisibility(View.GONE);
+                }
+            } else {
+                // 数据为空时隐藏标志
+                if (textViewCommentUnreadCount != null) {
+                    textViewCommentUnreadCount.setVisibility(View.GONE);
+                }
+            }
+            
         } catch (Exception e) {
             Log.e("ProfileFragment", "解析用户数据失败", e);
             setDefaultUserInfo();
@@ -491,6 +517,10 @@ public class ProfileFragment extends Fragment {
         }
         if (imageViewAvatar != null) {
             imageViewAvatar.setImageResource(R.drawable.default_avatar);
+        }
+        // 隐藏未读评论数标志
+        if (textViewCommentUnreadCount != null) {
+            textViewCommentUnreadCount.setVisibility(View.GONE);
         }
     }
 

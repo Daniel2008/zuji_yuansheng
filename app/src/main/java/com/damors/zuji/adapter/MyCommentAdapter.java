@@ -14,7 +14,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.damors.zuji.R;
 import com.damors.zuji.model.CommentModel;
+import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.utils.DateUtils;
+import com.damors.zuji.utils.TimeUtils;
 
 import java.util.Date;
 import java.util.List;
@@ -48,7 +50,7 @@ public class MyCommentAdapter extends RecyclerView.Adapter<MyCommentAdapter.View
         // 设置用户头像
         if (!TextUtils.isEmpty(comment.getUserAvatar())) {
             Glide.with(context)
-                    .load(comment.getUserAvatar())
+                    .load(ApiConfig.getBaseUrl()+comment.getUserAvatar())
                     .placeholder(R.drawable.ic_default_avatar)
                     .error(R.drawable.ic_default_avatar)
                     .circleCrop()
@@ -61,11 +63,10 @@ public class MyCommentAdapter extends RecyclerView.Adapter<MyCommentAdapter.View
         holder.tvUserName.setText(comment.getUserName());
 
         // 设置评论时间
-        String formattedTime = DateUtils.formatTimeAgo(new Date(comment.getCreateTime()).getTime());
-        holder.tvCommentTime.setText(formattedTime);
+        holder.tvCommentTime.setText(TimeUtils.formatRelativeTime(comment.getCreateTime()));
 
         // 设置评论内容
-        if (comment.getParentId() > 0 && !TextUtils.isEmpty(comment.getParentUserName())) {
+        if (null != comment.getParentId() && !TextUtils.isEmpty(comment.getParentUserName())) {
             // 如果是回复评论，显示回复格式
             holder.tvCommentContent.setText(String.format("回复 @%s：%s", 
                     comment.getParentUserName(), comment.getContent()));

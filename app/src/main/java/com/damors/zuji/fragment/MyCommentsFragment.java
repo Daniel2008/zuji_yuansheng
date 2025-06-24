@@ -19,9 +19,11 @@ import com.damors.zuji.R;
 import com.damors.zuji.activity.CommentListActivity;
 import com.damors.zuji.adapter.MyCommentAdapter;
 import com.damors.zuji.model.CommentModel;
+import com.damors.zuji.model.PageCommentListModel;
 import com.damors.zuji.network.RetrofitApiService;
 import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.utils.LoadingDialog;
+import com.damors.zuji.network.ApiService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,11 +45,13 @@ public class MyCommentsFragment extends Fragment {
     // 数据相关
     private List<CommentModel> myCommentsList;
     private RetrofitApiService apiService;
+    private ApiService retrofitApiService;
     private LoadingDialog loadingDialog;
     
     // 分页参数
     private int currentPage = 1;
     private int pageSize = 10;
+    private int totalPages = 0;
     private boolean isLoading = false;
     private boolean hasMoreData = true;
     
@@ -131,67 +135,67 @@ public class MyCommentsFragment extends Fragment {
             loadingDialog.show("加载中...");
         }
         
-        // TODO: 调用API获取我的评论数据
-        // 这里先模拟数据
-        simulateLoadMyComments();
+        // 调用API获取我的评论数据
+        loadMyCommentsFromApi();
     }
     
     /**
-     * 模拟加载我的评论数据
+     * 从API加载我的评论数据
      */
-    private void simulateLoadMyComments() {
-        // 模拟网络延迟
-        new android.os.Handler().postDelayed(() -> {
-            List<CommentModel> mockData = createMockMyCommentsData();
-            
-            if (currentPage == 1) {
-                myCommentsList.clear();
-            }
-            
-            myCommentsList.addAll(mockData);
-            adapter.notifyDataSetChanged();
-            
-            // 更新UI状态
-            updateUIState();
-            
-            isLoading = false;
-            swipeRefreshLayout.setRefreshing(false);
-            loadingDialog.dismiss();
-            
-        }, 1000);
+    private void loadMyCommentsFromApi() {
+        apiService.getUserComments(new RetrofitApiService.SuccessCallback<BaseResponse<PageCommentListModel>>() {
+                    @Override
+                    public void onSuccess(BaseResponse<PageCommentListModel> response) {
+                        isLoading = false;
+                        swipeRefreshLayout.setRefreshing(false);
+                        loadingDialog.dismiss();
+
+                        if (response.isSuccess() && response.getData() != null) {
+                                PageCommentListModel data = response.getData();
+
+                                if (currentPage == 1) {
+                                    myCommentsList.clear();
+                                }
+
+                                if (data.getRecords() != null) {
+                                    myCommentsList.addAll(data.getRecords());
+                                    adapter.notifyDataSetChanged();
+                                }
+
+                                // 更新分页信息
+                                totalPages = data.getPages();
+                                hasMoreData = currentPage < totalPages;
+
+                                updateUIState();
+
+                                Log.d(TAG, "加载我的评论成功，当前页: " + currentPage + ", 总页数: " + totalPages);
+                        } else {
+                            Log.e(TAG, "API返回错误: " + response.getMsg());
+                            showErrorMessage("加载失败: " + response.getMsg());
+                        }
+                    }
+                },
+                new RetrofitApiService.ErrorCallback() {
+                    @Override
+                    public void onError(String error) {
+                        isLoading = false;
+                        swipeRefreshLayout.setRefreshing(false);
+                        loadingDialog.dismiss();
+
+                        Log.e(TAG, "网络请求异常");
+                        showErrorMessage("网络连接异常");
+                    }
+                }
+        );
     }
     
     /**
-     * 创建模拟我的评论数据
+     * 显示错误信息
      */
-    private List<CommentModel> createMockMyCommentsData() {
-        List<CommentModel> mockList = new ArrayList<>();
-        
-        for (int i = 0; i < 6; i++) {
-            CommentModel comment = new CommentModel();
-            comment.setId(i + 1);
-            comment.setMsgId(i + 1);
-            comment.setContent("这是我发表的第" + (i + 1) + "条评论，分享我的看法和感受");
-            comment.setUserId(1); // 当前用户ID
-            comment.setUserName("我");
-            comment.setUserAvatar("/avatar/me.jpg");
-            comment.setCreateTime("2024-01-" + String.format("%02d", (25 + i)) + " 16:30:00");
-            
-            // 设置被评论的动态信息（用于显示是对哪条动态的评论）
-            comment.setRemark("用户" + (i + 1) + "的动态：今天天气真不错，出去走走"); // 使用remark字段存储动态信息
-            
-            // 如果是回复评论，设置父评论信息
-            if (i % 3 == 0) {
-                comment.setParentId(i + 10); // 父评论ID
-                comment.setParentUserName("用户" + (i + 1));
-            }
-            
-            mockList.add(comment);
-        }
-        
-        return mockList;
+    private void showErrorMessage(String message) {
+        Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
     }
-    
+
     /**
      * 更新UI状态
      */
@@ -203,6 +207,7 @@ public class MyCommentsFragment extends Fragment {
             tvEmpty.setVisibility(View.GONE);
             recyclerView.setVisibility(View.VISIBLE);
         }
+        adapter.notifyDataSetChanged();
     }
     
     /**
@@ -224,19 +229,36 @@ public class MyCommentsFragment extends Fragment {
      */
     private void deleteComment(CommentModel comment) {
         // TODO: 调用API删除评论
-        
-        // 模拟删除成功
-        int position = myCommentsList.indexOf(comment);
-        if (position != -1) {
-            myCommentsList.remove(position);
-            adapter.notifyItemRemoved(position);
-            Toast.makeText(getContext(), "评论删除成功", Toast.LENGTH_SHORT).show();
-            
-            // 更新UI状态
-            updateUIState();
-        }
-        
-        Log.d(TAG, "删除评论: " + comment.getId());
+        apiService.deleteComment(comment.getId(),
+                response -> {
+                    if (response != null && response.isSuccess()) {
+                        // 模拟删除成功
+                        int position = myCommentsList.indexOf(comment);
+                        if (position != -1) {
+                            myCommentsList.remove(position);
+                            adapter.notifyItemRemoved(position);
+
+                            // 更新UI状态
+                            updateUIState();
+                        }
+                        // 删除成功
+                        Toast.makeText(getContext(), "评论删除成功", Toast.LENGTH_SHORT).show();
+                        Log.d(TAG, "评论删除成功: " + response.getData());
+
+                        // 更新UI状态
+                        updateUIState();
+                    } else {
+                        String msg = response != null ? response.getMsg() : "评论删除失败";
+                        Toast.makeText(getContext(), msg, Toast.LENGTH_SHORT).show();
+                        Log.e(TAG, "评论删除失败: " + msg);
+                    }
+                },
+                error -> {
+                    // 删除失败
+                    Toast.makeText(getContext(), "评论删除失败，请重试", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "评论删除失败: " + error);
+                }
+        );
     }
     
     /**

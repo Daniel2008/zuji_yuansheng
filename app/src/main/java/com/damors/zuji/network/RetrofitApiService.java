@@ -10,7 +10,7 @@ import com.damors.zuji.ZujiApp;
 import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.model.AppUpdateInfo;
 import com.damors.zuji.model.CommentModel;
-import com.damors.zuji.model.PublishTrandsInfoPO;
+import com.damors.zuji.model.PageCommentListModel;
 import com.damors.zuji.model.UserInfoModel;
 import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.model.response.FootprintMessageResponse;
@@ -586,6 +586,76 @@ public class RetrofitApiService {
         
         Call<BaseResponse<List<CommentModel>>> call = apiService.getCommentList(msgId);
         call.enqueue(new BaseCallback<BaseResponse<List<CommentModel>>>(successCallback, errorCallback) {
+            // 使用父类的默认实现
+        });
+    }
+
+    /**
+     * 获取回复评论列表
+     *
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     */
+    public void getReplyComments( SuccessCallback<BaseResponse<PageCommentListModel>> successCallback,
+                               ErrorCallback errorCallback) {
+
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "网络不可用，无法获取评论列表");
+            showNetworkUnavailableMessage();
+            if (errorCallback != null) {
+                errorCallback.onError("网络不可用，请检查网络连接");
+            }
+            return;
+        }
+
+        Call<BaseResponse<PageCommentListModel>> call = apiService.getReplyComments();
+        call.enqueue(new BaseCallback<BaseResponse<PageCommentListModel>>(successCallback, errorCallback) {
+            // 使用父类的默认实现
+        });
+    }
+
+    /**
+     * 获取用户评论列表
+     *
+     * @param successCallback 成功回调
+     * @param errorCallback 错误回调
+     */
+    public void getUserComments( SuccessCallback<BaseResponse<PageCommentListModel>> successCallback,
+                                  ErrorCallback errorCallback) {
+
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "网络不可用，无法获取评论列表");
+            showNetworkUnavailableMessage();
+            if (errorCallback != null) {
+                errorCallback.onError("网络不可用，请检查网络连接");
+            }
+            return;
+        }
+
+        Call<BaseResponse<PageCommentListModel>> call = apiService.getUserComments();
+        call.enqueue(new BaseCallback<BaseResponse<PageCommentListModel>>(successCallback, errorCallback) {
+            // 使用父类的默认实现
+        });
+    }
+
+    /**
+     * 更新评论状态
+     */
+    public void updateCommentStatus(Integer commentId,
+                                   SuccessCallback<BaseResponse<JSONObject>> successCallback,
+                                   ErrorCallback errorCallback) {
+
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "网络不可用，无法更新评论状态");
+            showNetworkUnavailableMessage();
+            if (errorCallback != null) {
+                errorCallback.onError("网络不可用，请检查网络连接");
+            }
+            return;
+        }
+
+        Call<BaseResponse<JSONObject>> call = apiService.updateCommentStatus(commentId);
+        call.enqueue(new BaseCallback<BaseResponse<JSONObject>>(successCallback, errorCallback) {
             // 使用父类的默认实现
         });
     }

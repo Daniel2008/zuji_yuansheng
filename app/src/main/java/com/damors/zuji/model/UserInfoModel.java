@@ -62,5 +62,7 @@ public class UserInfoModel {
     private Long cityCount;
     /** 在线天数 */
     private Long dayCount;
+    /** 评论数 */
+    private Long commentNoReplyCount;
 
 }

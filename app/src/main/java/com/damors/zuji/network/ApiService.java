@@ -2,6 +2,7 @@ package com.damors.zuji.network;
 
 import com.damors.zuji.model.AppUpdateInfo;
 import com.damors.zuji.model.CommentModel;
+import com.damors.zuji.model.PageCommentListModel;
 import com.damors.zuji.model.UserInfoModel;
 import com.damors.zuji.model.response.BaseResponse;
 import com.damors.zuji.model.response.FootprintMessageResponse;
@@ -179,6 +180,29 @@ public interface ApiService {
     Call<BaseResponse<String>> deleteComment(
             @Field("commentId") Integer commentId
     );
+
+    /**
+     * 获取收到的评论列表
+     * @return 带分页的评论列表响应
+     */
+    @POST(ApiConfig.Endpoints.GET_REPLY_COMMENTS)
+    Call<BaseResponse<PageCommentListModel>> getReplyComments();
+
+    /**
+     * 获取我的评论列表
+     * @return 带分页的评论列表响应
+     */
+    @POST(ApiConfig.Endpoints.GET_USER_COMMENTS)
+    Call<BaseResponse<PageCommentListModel>> getUserComments();
+
+    /**
+     * 更新评论状态
+     * @param commentId 评论ID
+     * @return 更新响应
+     */
+    @FormUrlEncoded
+    @POST(ApiConfig.Endpoints.UPDATE_COMMENTS_STATUS)
+    Call<BaseResponse<JSONObject>> updateCommentStatus(@Field("commentId") Integer commentId);
 
     /**
      * 删除足迹
