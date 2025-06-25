@@ -131,11 +131,11 @@ public class SplashActivity extends BaseActivity {
             updateLoadingTextWithAnimation("正在验证登录状态...");
             
             // 先检查并同步登录状态，确保数据一致性
-            if (userManager.checkAndSyncLoginState()) {
+            if (UserManager.checkAndSyncLoginState()) {
                 Log.d(TAG, "发现有效的本地登录信息，开始验证token有效性");
                 
                 // 验证token有效性
-                userManager.validateTokenAndUpdateUserInfo(apiService, (isValid, message) -> {
+                UserManager.validateTokenAndUpdateUserInfo((isValid, message) -> {
                     Log.d(TAG, "Token验证结果: " + (isValid ? "有效" : "无效") + ", 消息: " + message);
 
                     if (isValid) {

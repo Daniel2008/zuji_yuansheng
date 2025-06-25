@@ -60,7 +60,7 @@ public interface ApiService {
      */
     @FormUrlEncoded
     @POST(ApiConfig.Endpoints.SMS_LOGIN)
-    Call<BaseResponse<LoginResponse.Data>> smsLogin(
+    Call<BaseResponse<LoginResponse>> smsLogin(
             @Field("phone") String phone,
             @Field("code") String code,
             @Field("deviceId") String deviceId
@@ -72,7 +72,7 @@ public interface ApiService {
      * @return 用户信息响应
      */
     @POST(ApiConfig.Endpoints.GET_USER_INFO)
-    Call<BaseResponse<UserInfoModel>> getUserInfo();
+    Call<BaseResponse<LoginResponse>> getUserInfo();
 
     /**
      * 保存用户信息

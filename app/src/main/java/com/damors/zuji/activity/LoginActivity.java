@@ -176,20 +176,19 @@ public class LoginActivity extends BaseActivity {
 
         // 调用登录API
         apiService.smsLogin(phone, code, deviceId,
-                new RetrofitApiService.SuccessCallback<BaseResponse<LoginResponse.Data>>() {
+                new RetrofitApiService.SuccessCallback<BaseResponse<LoginResponse>>() {
                     @Override
-                    public void onSuccess(BaseResponse<LoginResponse.Data> response) {
+                    public void onSuccess(BaseResponse<LoginResponse> response) {
                         try {
                             if (response.getCode() == 200 && response.getData() != null) {
-                                LoginResponse.Data data = response.getData();
+                                LoginResponse data = response.getData();
                                 // 登录成功，获取用户信息和token
                                 String token = data.getToken();
                                 Log.d("LoginActivity", "登录成功，获取到token: " + (token != null ? "有效" : "无效"));
 
                                 // 统一使用UserManager保存用户信息和token（修复重复保存问题）
-                                Gson gson = new Gson();
-                                String userDataJson = gson.toJson(data.getUser());
-                                UserManager.getInstance().saveUserAndToken(userDataJson, token);
+
+                                UserManager.getInstance().saveUserAndToken(data.getUser(), token);
                                 Log.d("LoginActivity", "用户信息已保存到UserManager");
 
                                 // 隐藏加载弹窗

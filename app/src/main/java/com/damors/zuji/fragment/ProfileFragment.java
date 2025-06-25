@@ -27,7 +27,9 @@ import com.damors.zuji.activity.SettingsActivity;
 import com.damors.zuji.activity.CommentManagementActivity;
 import com.damors.zuji.activity.LikeManagementActivity;
 import com.damors.zuji.manager.UserManager;
+import com.damors.zuji.model.UserInfoModel;
 import com.damors.zuji.network.ApiConfig;
+import com.damors.zuji.utils.GsonUtil;
 import com.damors.zuji.utils.MapCacheManager;
 import com.damors.zuji.viewmodel.FootprintViewModel;
 import com.google.gson.JsonObject;
@@ -168,59 +170,20 @@ public class ProfileFragment extends Fragment {
             }
         }, 200);
         
-        // 设置定时刷新机制，每30秒从缓存刷新一次数据
-        startPeriodicRefresh();
-        
-        // 加载缓存大小信息
-        loadCacheSize();
+        loadUserData();
     }
     
     @Override
     public void onResume() {
         super.onResume();
-        // 页面恢复时刷新统计数据，从缓存中读取最新数据
-        refreshUserDataFromCache();
-        
-        // 只在必要时刷新用户数据，避免频繁刷新
-        // 检查是否需要强制刷新（例如首次登录或数据过期）
-        if (shouldRefreshUserData()) {
-            mainHandler.postDelayed(() -> {
-                if (isAdded() && getContext() != null && userManager != null) {
-                    userManager.reloadUserData();
-                    loadUserData();
-                    updateLastRefreshTime();
-                    Log.d("ProfileFragment", "onResume中刷新用户数据完成");
-                }
-            }, 100);
-        }
+        loadUserData();
     }
     
     @Override
     public void onStart() {
         super.onStart();
         // 页面启动时检查是否需要刷新用户数据
-        // 避免与onResume重复刷新
-        if (shouldRefreshUserData() && !isRecentlyRefreshed()) {
-            mainHandler.postDelayed(() -> {
-                if (isAdded() && getContext() != null && userManager != null) {
-                    userManager.reloadUserData();
-                    loadUserData();
-                    updateLastRefreshTime();
-                    Log.d("ProfileFragment", "onStart中刷新用户数据完成");
-                }
-            }, 50);
-        }
-    }
-    
-    @Override
-    public void setUserVisibleHint(boolean isVisibleToUser) {
-        super.setUserVisibleHint(isVisibleToUser);
-        // 当Fragment对用户可见时，强制刷新用户数据
-        if (isVisibleToUser && isResumed() && userManager != null) {
-            Log.d("ProfileFragment", "Fragment变为可见，刷新用户数据");
-            userManager.reloadUserData();
-            loadUserData();
-        }
+        loadUserData();
     }
     
     @Override
@@ -230,119 +193,8 @@ public class ProfileFragment extends Fragment {
             executorService.shutdown();
         }
     }
-    
-    /**
-     * 从缓存刷新用户数据
-     */
-    private void refreshUserDataFromCache() {
-        if (userManager != null && userManager.isLoggedIn()) {
-            // 直接从缓存读取用户数据，无需网络请求
-            loadUserData();
-            Log.d("ProfileFragment", "从缓存刷新用户数据");
-        }
-    }
-    
-    /**
-     * 公共方法：刷新用户数据
-     * 供外部调用，用于在登录状态变化时刷新界面
-     */
-    public void refreshUserData() {
-        refreshUserData(false);
-    }
-    
-    /**
-     * 刷新用户数据（带强制刷新选项）
-     * @param forceRefresh 是否强制刷新，忽略时间间隔限制
-     */
-    public void refreshUserData(boolean forceRefresh) {
-        if (userManager != null && isAdded() && getContext() != null) {
-            // 检查是否需要刷新
-            if (!forceRefresh && !shouldRefreshUserData()) {
-                Log.d("ProfileFragment", "跳过刷新：时间间隔未达到最小值");
-                return;
-            }
-            
-            // 强制重新加载用户数据，确保数据同步
-            userManager.reloadUserData();
-            
-            // 在主线程中延迟执行UI更新，确保数据完全同步
-            mainHandler.post(() -> {
-                if (isAdded() && getContext() != null) {
-                    loadUserData();
-                    updateLastRefreshTime();
-                    Log.d("ProfileFragment", "外部调用刷新用户数据完成");
-                }
-            });
-        }
-    }
-    
-    /**
-     * 启动定时刷新机制
-     */
-    private void startPeriodicRefresh() {
-        if (mainHandler != null) {
-            // 增加定时刷新间隔到60秒，减少频繁刷新
-            mainHandler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    if (isAdded() && getContext() != null) {
-                        // 只有在用户已登录且界面可见时才刷新
-                        if (userManager != null && userManager.isLoggedIn() && getUserVisibleHint()) {
-                            refreshUserDataFromCache();
-                        }
-                        // 继续下一次定时刷新
-                        mainHandler.postDelayed(this, 60000); // 改为60秒
-                    }
-                }
-            }, 60000); // 改为60秒
-        }
-    }
-    
-    /**
-     * 加载地图缓存大小信息
-     */
-    private void loadCacheSize() {
-        executorService.execute(() -> {
-            String cacheSize = MapCacheManager.getFormattedCacheSize();
-            int fileCount = MapCacheManager.getCacheFileCount();
-            
-            mainHandler.post(() -> {
-                if (textViewCacheSize != null) {
-                    textViewCacheSize.setText(String.format("缓存大小: %s (%d 个文件)", cacheSize, fileCount));
-                }
-            });
-        });
-    }
-    
-    /**
-     * 显示地图缓存管理对话框
-     */
-    private void showMapCacheDialog() {
-        executorService.execute(() -> {
-            String cacheSize = MapCacheManager.getFormattedCacheSize();
-            int fileCount = MapCacheManager.getCacheFileCount();
-            String cachePath = MapCacheManager.getCachePath();
-            boolean isAvailable = MapCacheManager.isCacheAvailable();
-            
-            mainHandler.post(() -> {
-                String message = String.format(
-                    "缓存大小: %s\n" +
-                    "文件数量: %d 个\n" +
-                    "缓存路径: %s\n" +
-                    "缓存状态: %s",
-                    cacheSize, fileCount, cachePath, isAvailable ? "可用" : "不可用"
-                );
-                
-                new AlertDialog.Builder(requireContext())
-                    .setTitle("地图缓存管理")
-                    .setMessage(message)
-                    .setPositiveButton("离线地图管理", (dialog, which) -> openOfflineMapManager())
-                    .setNeutralButton("清理缓存", (dialog, which) -> clearMapCache())
-                    .setNegativeButton("取消", null)
-                    .show();
-            });
-        });
-    }
+
+
     
     /**
      * 打开高德地图原生离线地图管理界面
@@ -357,76 +209,19 @@ public class ProfileFragment extends Fragment {
             Toast.makeText(requireContext(), "启动离线地图管理失败", Toast.LENGTH_SHORT).show();
         }
     }
-    
-    /**
-     * 清理地图缓存
-     */
-    private void clearMapCache() {
-        new AlertDialog.Builder(requireContext())
-            .setTitle("清理地图缓存")
-            .setMessage("确定要清理所有地图缓存吗？这将删除所有已下载的地图瓦片，下次使用时需要重新下载。")
-            .setPositiveButton("确定", (dialog, which) -> {
-                executorService.execute(() -> {
-                    boolean success = MapCacheManager.clearCache();
-                    
-                    mainHandler.post(() -> {
-                        if (isAdded() && getContext() != null) {
-                            Toast.makeText(getContext(), 
-                                success ? "地图缓存清理成功" : "地图缓存清理失败", 
-                                Toast.LENGTH_SHORT).show();
-                        }
-                        // 重新加载缓存大小
-                        loadCacheSize();
-                    });
-                });
-            })
-            .setNegativeButton("取消", null)
-            .show();
-    }
-    
-    /**
-     * 清理过期的地图缓存
-     */
-    private void clearExpiredCache() {
-        executorService.execute(() -> {
-            // 清理7天前的缓存文件
-            long maxAge = 7L * 24 * 60 * 60 * 1000; // 7天
-            int deletedCount = MapCacheManager.clearExpiredCache(maxAge);
-            
-            mainHandler.post(() -> {
-                if (isAdded() && getContext() != null) {
-                    Toast.makeText(getContext(), 
-                        String.format("已清理 %d 个过期缓存文件", deletedCount), 
-                        Toast.LENGTH_SHORT).show();
-                }
-                // 重新加载缓存大小
-                loadCacheSize();
-            });
-        });
-    }
-    
     /**
      * 加载用户数据并更新UI
      */
     private void loadUserData() {
         Log.d("ProfileFragment", "开始加载用户数据");
+
         
-        if (userManager == null) {
-            Log.w("ProfileFragment", "UserManager为null，显示默认信息");
-            setDefaultUserInfo();
-            return;
-        }
-        
-        boolean isLoggedIn = userManager.isLoggedIn();
-        String userJson = userManager.getCurrentUserJson();
+        boolean isLoggedIn = UserManager.isLoggedIn();
+        UserInfoModel userInfoModel = UserManager.getUserInfo();
         String token = userManager.getToken();
         
-        Log.d("ProfileFragment", "登录状态检查: isLoggedIn=" + isLoggedIn);
-        Log.d("ProfileFragment", "用户JSON是否为空: " + TextUtils.isEmpty(userJson));
-        Log.d("ProfileFragment", "Token是否为空: " + TextUtils.isEmpty(token));
-        
-        if (!TextUtils.isEmpty(userJson)) {
-            Log.d("ProfileFragment", "用户JSON内容: " + userJson);
+        if (null != userInfoModel) {
+            Log.d("ProfileFragment", "用户JSON内容: " + GsonUtil.GsonString(userInfoModel));
         }
         
         if (!isLoggedIn) {
@@ -435,17 +230,16 @@ public class ProfileFragment extends Fragment {
             return;
         }
         
-        if (TextUtils.isEmpty(userJson)) {
+        if (null == userInfoModel) {
             Log.w("ProfileFragment", "用户JSON为空，显示默认信息");
             setDefaultUserInfo();
             return;
         }
         
         try {
-            JsonObject userObj = JsonParser.parseString(userJson).getAsJsonObject();
-            
+
             // 更新用户头像
-            String avatar = getUserFieldSafely(userObj, "avatar");
+            String avatar = userInfoModel.getAvatar();
             if (!TextUtils.isEmpty(avatar) && imageViewAvatar != null) {
                 // 拼接完整的头像URL
                 String avatarUrl = ApiConfig.getBaseUrl() + avatar;
@@ -460,18 +254,18 @@ public class ProfileFragment extends Fragment {
             }
             
             // 更新用户昵称
-            String nickname = getUserFieldSafely(userObj, "nickName");
+            String nickname = userInfoModel.getNickName();
             if (!TextUtils.isEmpty(nickname) && textViewUsername != null) {
                 textViewUsername.setText(nickname);
             } else {
-                String username = getUserFieldSafely(userObj, "userName");
+                String username = userInfoModel.getUserName();
                 if (!TextUtils.isEmpty(username) && textViewUsername != null) {
                     textViewUsername.setText(username);
                 }
             }
             
             // 更新足迹数
-            String footPrintCountStr = getUserFieldSafely(userObj, "footPrintCount");
+            String footPrintCountStr = String.valueOf(userInfoModel.getFootPrintCount());
             if (!TextUtils.isEmpty(footPrintCountStr) && textViewFootprintCount != null) {
                 try {
                     textViewFootprintCount.setText(footPrintCountStr);
@@ -481,7 +275,7 @@ public class ProfileFragment extends Fragment {
             }
             
             // 更新城市数
-            String cityCountStr = getUserFieldSafely(userObj, "cityCount");
+            String cityCountStr = String.valueOf(userInfoModel.getCityCount());
             if (!TextUtils.isEmpty(cityCountStr) && textViewCityCount != null) {
                 try {
                     textViewCityCount.setText(cityCountStr);
@@ -491,7 +285,7 @@ public class ProfileFragment extends Fragment {
             }
             
             // 更新天数
-            String dayCountStr = getUserFieldSafely(userObj, "dayCount");
+            String dayCountStr = String.valueOf(userInfoModel.getDayCount());
             if (!TextUtils.isEmpty(dayCountStr) && textViewDaysCount != null) {
                 try {
                     textViewDaysCount.setText(dayCountStr);
@@ -501,7 +295,7 @@ public class ProfileFragment extends Fragment {
             }
             
             // 更新未读评论数标志
-            String commentNoReplyCountStr = getUserFieldSafely(userObj, "commentNoReplyCount");
+            String commentNoReplyCountStr = String.valueOf(userInfoModel.getCommentNoReplyCount());
             if (!TextUtils.isEmpty(commentNoReplyCountStr) && textViewCommentUnreadCount != null) {
                 try {
                     int commentNoReplyCount = Integer.parseInt(commentNoReplyCountStr);
@@ -577,56 +371,7 @@ public class ProfileFragment extends Fragment {
         Intent intent = new Intent(getActivity(), EditProfileActivity.class);
         startActivityForResult(intent, 1001);
     }
-    
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 1001 && resultCode == getActivity().RESULT_OK) {
-            // 编辑资料成功，从缓存重新加载用户数据
-            refreshUserDataFromCache();
-            Toast.makeText(getContext(), "资料更新成功", Toast.LENGTH_SHORT).show();
-        }
-    }
-    
-    /**
-     * 检查是否需要刷新用户数据
-     * @return true表示需要刷新
-     */
-    private boolean shouldRefreshUserData() {
-        // 首次加载时需要刷新
-        if (isFirstLoad) {
-            return true;
-        }
-        
-        // 检查用户是否已登录但数据为空
-        if (userManager != null && userManager.isLoggedIn()) {
-            String userJson = userManager.getCurrentUserJson();
-            if (TextUtils.isEmpty(userJson)) {
-                return true;
-            }
-        }
-        
-        // 检查时间间隔
-        long currentTime = System.currentTimeMillis();
-        return (currentTime - lastRefreshTime) > MIN_REFRESH_INTERVAL;
-    }
-    
-    /**
-     * 检查是否最近刚刚刷新过
-     * @return true表示最近刚刷新过
-     */
-    private boolean isRecentlyRefreshed() {
-        long currentTime = System.currentTimeMillis();
-        return (currentTime - lastRefreshTime) < 1000; // 1秒内算作最近刷新
-    }
-    
-    /**
-     * 更新最后刷新时间
-     */
-    private void updateLastRefreshTime() {
-        lastRefreshTime = System.currentTimeMillis();
-        isFirstLoad = false;
-    }
+
     
     /**
      * 打开设置页面

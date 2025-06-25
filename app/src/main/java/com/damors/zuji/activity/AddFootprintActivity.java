@@ -479,13 +479,12 @@ public class AddFootprintActivity extends BaseActivity implements GeocodeSearch.
      */
     private void publishFootprint(String content, String location) {
         // 检查用户登录状态
-        UserManager userManager = UserManager.getInstance();
-        if (!userManager.isLoggedIn()) {
+        if (!UserManager.isLoggedIn()) {
             Toast.makeText(this, "请先登录", Toast.LENGTH_SHORT).show();
             return;
         }
         
-        String userId = userManager.getUserField("userId");
+        String userId = String.valueOf(UserManager.getUserInfo().getUserId());
         if (userId == null) {
             Toast.makeText(this, "获取用户信息失败", Toast.LENGTH_SHORT).show();
             return;

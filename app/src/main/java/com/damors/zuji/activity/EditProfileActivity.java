@@ -123,24 +123,23 @@ public class EditProfileActivity extends BaseActivity {
      * 加载当前用户数据
      */
     private void loadCurrentUserData() {
-        if (userManager == null || !userManager.isLoggedIn()) {
+        if (userManager == null || !UserManager.isLoggedIn()) {
             Toast.makeText(this, "用户未登录", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
         
-        String userJson = userManager.getCurrentUserJson();
-        if (TextUtils.isEmpty(userJson)) {
+        UserInfoModel userInfoModel = UserManager.getUserInfo();
+        if (null == userInfoModel) {
             Toast.makeText(this, "获取用户信息失败", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
         
         try {
-            JsonObject userObj = JsonParser.parseString(userJson).getAsJsonObject();
-            
+
             // 加载头像
-            String avatar = getUserFieldSafely(userObj, "avatar");
+            String avatar = userInfoModel.getAvatar();
             if (!TextUtils.isEmpty(avatar)) {
                 // 拼接完整的头像URL
                 currentAvatarUrl = ApiConfig.getBaseUrl() + avatar;
@@ -153,12 +152,12 @@ public class EditProfileActivity extends BaseActivity {
             }
             
             // 加载用户名
-            String nickname = getUserFieldSafely(userObj, "nickName");
+            String nickname = userInfoModel.getNickName();
             if (!TextUtils.isEmpty(nickname)) {
                 currentUsername = nickname;
                 editTextUsername.setText(nickname);
             } else {
-                String username = getUserFieldSafely(userObj, "userName");
+                String username = userInfoModel.getUserName();
                 if (!TextUtils.isEmpty(username)) {
                     currentUsername = username;
                     editTextUsername.setText(username);
@@ -315,7 +314,7 @@ public class EditProfileActivity extends BaseActivity {
                     Map<String,Object> data = response.getData();
                     UserInfoModel userInfoModel = userManager.getUserInfo();
                     userInfoModel.setAvatar(data.get("fileName").toString());
-                    userManager.saveUserInfo(userInfoModel);
+                    UserManager.saveUserInfo(userInfoModel);
                     runOnUiThread(() -> {
                         // 头像上传成功后，再保存用户信息
                         saveUserInfoOnly(username);

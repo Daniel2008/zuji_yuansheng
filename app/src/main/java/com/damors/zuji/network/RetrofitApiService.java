@@ -57,32 +57,12 @@ public class RetrofitApiService {
     private static RetrofitApiService instance;
     private Context context;
     private ApiService apiService;
-    private NetworkStateMonitor networkStateMonitor;
     private Handler mainHandler;
     
     // 保存失败的请求信息，以便在网络恢复时重试
     private List<RequestInfo> pendingRequests = new ArrayList<>();
     private boolean isRetryingRequests = false;
 
-    /**
-     * 网络状态变化监听器
-     */
-    private NetworkStateMonitor.NetworkStateListener networkStateListener = new NetworkStateMonitor.NetworkStateListener() {
-        @Override
-        public void onNetworkStateChanged(boolean isAvailable) {
-            Log.d(TAG, "网络状态变化: " + (isAvailable ? "可用" : "不可用"));
-            
-            // 如果网络恢复，尝试重试失败的请求
-            if (isAvailable && !pendingRequests.isEmpty() && !isRetryingRequests) {
-                retryPendingRequests();
-            }
-            
-            // 如果网络断开，显示提示
-            if (!isAvailable) {
-                showNetworkUnavailableMessage();
-            }
-        }
-    };
 
     /**
      * 私有构造函数，实现单例模式
@@ -95,14 +75,7 @@ public class RetrofitApiService {
         
         // 初始化Retrofit
         initRetrofit();
-        
-        // 获取ZujiApp中的NetworkStateMonitor实例
-        this.networkStateMonitor = ((ZujiApp) this.context).getNetworkStateMonitor();
-        if (this.networkStateMonitor != null) {
-            this.networkStateMonitor.addNetworkStateListener(networkStateListener);
-        } else {
-            Log.e(TAG, "NetworkStateMonitor未初始化");
-        }
+
     }
 
     /**
@@ -179,9 +152,8 @@ public class RetrofitApiService {
         headers.put("User-Agent", "ZujiApp/1.0");
         
         // 添加token（如果已登录）
-        UserManager userManager = UserManager.getInstance();
-        if (userManager.isLoggedIn()) {
-            String token = userManager.getToken();
+        if (UserManager.isLoggedIn()) {
+            String token = UserManager.getToken();
             if (!TextUtils.isEmpty(token)) {
                 headers.put("Authorization", "Bearer " + token);
             }
@@ -190,14 +162,6 @@ public class RetrofitApiService {
         return headers;
     }
 
-    /**
-     * 检查网络状态
-     * 
-     * @return 网络是否可用
-     */
-    private boolean isNetworkAvailable() {
-        return networkStateMonitor != null && networkStateMonitor.isNetworkAvailable();
-    }
 
     /**
      * 显示网络不可用提示
@@ -322,15 +286,6 @@ public class RetrofitApiService {
                                    SuccessCallback<BaseResponse<JSONObject>> successCallback,
                                    ErrorCallback errorCallback) {
         
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法发送验证码");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
-        
         Call<BaseResponse<JSONObject>> call = apiService.sendVerificationCode(phone);
         call.enqueue(new BaseCallback<BaseResponse<JSONObject>>(successCallback, errorCallback) {
             // 使用父类的默认实现
@@ -347,7 +302,7 @@ public class RetrofitApiService {
      * @param errorCallback 错误回调
      */
     public void smsLogin(String phone, String code, String deviceId,
-                        SuccessCallback<BaseResponse<LoginResponse.Data>> successCallback,
+                        SuccessCallback<BaseResponse<LoginResponse>> successCallback,
                         ErrorCallback errorCallback) {
         smsLogin(phone, code, deviceId, successCallback, errorCallback, null);
     }
@@ -363,25 +318,17 @@ public class RetrofitApiService {
      * @param loadingCallback 加载回调
      */
     public void smsLogin(String phone, String code, String deviceId,
-                        SuccessCallback<BaseResponse<LoginResponse.Data>> successCallback,
+                        SuccessCallback<BaseResponse<LoginResponse>> successCallback,
                         ErrorCallback errorCallback,
                         LoadingCallback loadingCallback) {
-        
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法执行登录");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
+
         
         if (loadingCallback != null) {
             loadingCallback.onLoadingStart();
         }
         
-        Call<BaseResponse<LoginResponse.Data>> call = apiService.smsLogin(phone, code, deviceId);
-        call.enqueue(new BaseCallback<BaseResponse<LoginResponse.Data>>(successCallback, errorCallback, loadingCallback) {
+        Call<BaseResponse<LoginResponse>> call = apiService.smsLogin(phone, code, deviceId);
+        call.enqueue(new BaseCallback<BaseResponse<LoginResponse>>(successCallback, errorCallback, loadingCallback) {
             // 使用父类的默认实现
         });
     }
@@ -392,11 +339,11 @@ public class RetrofitApiService {
      * @param successCallback 成功回调
      * @param errorCallback 错误回调
      */
-    public void getUserInfo(SuccessCallback<BaseResponse<UserInfoModel>> successCallback,
+    public void getUserInfo(SuccessCallback<BaseResponse<LoginResponse>> successCallback,
                            ErrorCallback errorCallback) {
         
-        Call<BaseResponse<UserInfoModel>> call = apiService.getUserInfo();
-        call.enqueue(new BaseCallback<BaseResponse<UserInfoModel>>(successCallback, errorCallback) {
+        Call<BaseResponse<LoginResponse>> call = apiService.getUserInfo();
+        call.enqueue(new BaseCallback<BaseResponse<LoginResponse>>(successCallback, errorCallback) {
             // 使用父类的默认实现
         });
     }
@@ -411,15 +358,7 @@ public class RetrofitApiService {
     public void saveUserInfo(RequestBody userInfo,
                             SuccessCallback<BaseResponse<UserInfoModel>> successCallback,
                             ErrorCallback errorCallback) {
-        
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法保存用户信息");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
+
         
         Call<BaseResponse<UserInfoModel>> call = apiService.saveUserInfo(userInfo);
         call.enqueue(new BaseCallback<BaseResponse<UserInfoModel>>(successCallback, errorCallback) {
@@ -437,15 +376,6 @@ public class RetrofitApiService {
     public void uploadAvatar(File avatarFile,
                             SuccessCallback<BaseResponse<Map<String,Object>>> successCallback,
                             ErrorCallback errorCallback) {
-        
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法上传头像");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
         
         // 创建RequestBody
         RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), avatarFile);
@@ -469,16 +399,7 @@ public class RetrofitApiService {
                                  List<MultipartBody.Part> images,
                                  SuccessCallback<BaseResponse<JSONObject>> successCallback,
                                  ErrorCallback errorCallback) {
-        
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法发布足迹");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
-        
+
         Call<BaseResponse<JSONObject>> call = apiService.publishFootprint(publishInfo, images);
         call.enqueue(new BaseCallback<BaseResponse<JSONObject>>(successCallback, errorCallback) {
             // 使用父类的默认实现
@@ -496,16 +417,7 @@ public class RetrofitApiService {
     public void getFootprintMessages(int pageNum, int pageSize,
                                     SuccessCallback<BaseResponse<PageTrandsMsgModel>> successCallback,
                                     ErrorCallback errorCallback) {
-        
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法获取足迹消息列表");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
-        
+
         Call<BaseResponse<PageTrandsMsgModel>> call = apiService.getFootprintMessages(pageNum, pageSize);
         call.enqueue(new BaseCallback<BaseResponse<PageTrandsMsgModel>>(successCallback, errorCallback) {
             // 使用父类的默认实现
@@ -523,15 +435,7 @@ public class RetrofitApiService {
     public void getMsgListAll(int pageNum, int pageSize,
                              SuccessCallback<BaseResponse<PageTrandsMsgModel>> successCallback,
                              ErrorCallback errorCallback) {
-        
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法获取地图页mark数据");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
+
         
         Call<BaseResponse<PageTrandsMsgModel>> call = apiService.getMsgListAll(pageNum, pageSize);
         call.enqueue(new BaseCallback<BaseResponse<PageTrandsMsgModel>>(successCallback, errorCallback) {
@@ -549,15 +453,7 @@ public class RetrofitApiService {
     public void getMsgDetail(Integer msgId,
                             SuccessCallback<BaseResponse<TrandsMsgModel>> successCallback,
                             ErrorCallback errorCallback) {
-        
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法获取动态详情");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
+
         
         Call<BaseResponse<TrandsMsgModel>> call = apiService.getMsgDetail(msgId);
         call.enqueue(new BaseCallback<BaseResponse<TrandsMsgModel>>(successCallback, errorCallback) {
@@ -575,15 +471,7 @@ public class RetrofitApiService {
     public void getCommentList(Integer msgId,
                               SuccessCallback<BaseResponse<List<CommentModel>>> successCallback,
                               ErrorCallback errorCallback) {
-        
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法获取评论列表");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
+
         
         Call<BaseResponse<List<CommentModel>>> call = apiService.getCommentList(msgId);
         call.enqueue(new BaseCallback<BaseResponse<List<CommentModel>>>(successCallback, errorCallback) {
@@ -600,15 +488,6 @@ public class RetrofitApiService {
     public void getReplyComments( SuccessCallback<BaseResponse<PageCommentListModel>> successCallback,
                                ErrorCallback errorCallback) {
 
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法获取评论列表");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
-
         Call<BaseResponse<PageCommentListModel>> call = apiService.getReplyComments();
         call.enqueue(new BaseCallback<BaseResponse<PageCommentListModel>>(successCallback, errorCallback) {
             // 使用父类的默认实现
@@ -624,15 +503,6 @@ public class RetrofitApiService {
     public void getUserComments( SuccessCallback<BaseResponse<PageCommentListModel>> successCallback,
                                   ErrorCallback errorCallback) {
 
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法获取评论列表");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
-
         Call<BaseResponse<PageCommentListModel>> call = apiService.getUserComments();
         call.enqueue(new BaseCallback<BaseResponse<PageCommentListModel>>(successCallback, errorCallback) {
             // 使用父类的默认实现
@@ -645,15 +515,6 @@ public class RetrofitApiService {
     public void updateCommentStatus(Integer commentId,
                                    SuccessCallback<BaseResponse<JSONObject>> successCallback,
                                    ErrorCallback errorCallback) {
-
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法更新评论状态");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
 
         Call<BaseResponse<JSONObject>> call = apiService.updateCommentStatus(commentId);
         call.enqueue(new BaseCallback<BaseResponse<JSONObject>>(successCallback, errorCallback) {
@@ -673,15 +534,7 @@ public class RetrofitApiService {
     public void addComment(Integer msgId, String content, Long parentId,
                           SuccessCallback<BaseResponse<JSONObject>> successCallback,
                           ErrorCallback errorCallback) {
-        
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法添加评论");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
+
         
         Call<BaseResponse<JSONObject>> call = apiService.addComment(msgId, content, parentId);
         call.enqueue(new BaseCallback<BaseResponse<JSONObject>>(successCallback, errorCallback) {
@@ -699,15 +552,7 @@ public class RetrofitApiService {
     public void deleteComment(Integer commentId,
                              SuccessCallback<BaseResponse<String>> successCallback,
                              ErrorCallback errorCallback) {
-        
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法删除评论");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
+
         
         Call<BaseResponse<String>> call = apiService.deleteComment(commentId);
         call.enqueue(new BaseCallback<BaseResponse<String>>(successCallback, errorCallback) {
@@ -725,15 +570,7 @@ public class RetrofitApiService {
     public void deleteFootprint(Integer msgId,
                                SuccessCallback<BaseResponse<String>> successCallback,
                                ErrorCallback errorCallback) {
-        
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法删除足迹");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
+
         
         Call<BaseResponse<String>> call = apiService.deleteFootprint(msgId);
         call.enqueue(new BaseCallback<BaseResponse<String>>(successCallback, errorCallback) {
@@ -751,15 +588,7 @@ public class RetrofitApiService {
     public void toggleLike(Integer msgId,
                           SuccessCallback<BaseResponse<JSONObject>> successCallback,
                           ErrorCallback errorCallback) {
-        
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法执行点赞操作");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
+
         
         Call<BaseResponse<JSONObject>> call = apiService.toggleLike(msgId);
         call.enqueue(new BaseCallback<BaseResponse<JSONObject>>(successCallback, errorCallback) {
@@ -778,15 +607,7 @@ public class RetrofitApiService {
     public void checkAppUpdate(int currentVersionCode, String platform,
                               SuccessCallback<BaseResponse<AppUpdateInfo>> successCallback,
                               ErrorCallback errorCallback) {
-        
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法检查更新");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
+
         
         Call<BaseResponse<AppUpdateInfo>> call = apiService.checkAppUpdate(currentVersionCode, platform);
         call.enqueue(new BaseCallback<BaseResponse<AppUpdateInfo>>(successCallback, errorCallback) {
@@ -805,15 +626,7 @@ public class RetrofitApiService {
     public void getUserLikes(int pageNum, int pageSize,
                             SuccessCallback<BaseResponse<PageTrandsMsgModel>> successCallback,
                             ErrorCallback errorCallback) {
-        
-        if (!isNetworkAvailable()) {
-            Log.d(TAG, "网络不可用，无法获取点赞列表");
-            showNetworkUnavailableMessage();
-            if (errorCallback != null) {
-                errorCallback.onError("网络不可用，请检查网络连接");
-            }
-            return;
-        }
+
         
         Call<BaseResponse<PageTrandsMsgModel>> call = apiService.getUserLikes(pageNum, pageSize);
         call.enqueue(new BaseCallback<BaseResponse<PageTrandsMsgModel>>(successCallback, errorCallback) {

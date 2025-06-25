@@ -3,9 +3,11 @@ package com.damors.zuji.manager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.damors.zuji.model.UserInfoModel;
 import com.damors.zuji.model.response.BaseResponse;
+import com.damors.zuji.model.response.LoginResponse;
 import com.damors.zuji.network.RetrofitApiService;
 import com.damors.zuji.utils.GsonUtil;
 import com.google.gson.Gson;
@@ -20,18 +22,14 @@ public class UserManager {
     private static final String KEY_TOKEN = "user_token";
 
     private static UserManager instance;
-    private final SharedPreferences preferences;
+    private static SharedPreferences preferences = null;
     private final Gson gson;
-    private String currentUserJson; // 存储用户JSON数据
-    private String token;
-    
-    // 缓存控制相关
-    private long lastLoadTime = 0; // 上次加载时间
-    private static final long CACHE_VALID_DURATION = 2000; // 缓存有效期2秒
+    private static RetrofitApiService apiService;
 
     private UserManager(Context context) {
         preferences = context.getApplicationContext()
                 .getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        apiService = RetrofitApiService.getInstance(context);
         gson = new Gson();
         loadUserData();
     }
@@ -53,62 +51,55 @@ public class UserManager {
         return instance;
     }
 
-    private void loadUserData() {
-        currentUserJson = preferences.getString(KEY_USER, null);
-        token = preferences.getString(KEY_TOKEN, null);
-        lastLoadTime = System.currentTimeMillis(); // 更新加载时间
-        
-        android.util.Log.d("UserManager", "从SharedPreferences加载用户数据:");
-        android.util.Log.d("UserManager", "currentUserJson是否为空: " + TextUtils.isEmpty(currentUserJson));
-        android.util.Log.d("UserManager", "token是否为空: " + TextUtils.isEmpty(token));
-        
-        if (!TextUtils.isEmpty(currentUserJson)) {
-            android.util.Log.d("UserManager", "用户JSON内容: " + currentUserJson);
-        }
-        if (!TextUtils.isEmpty(token)) {
-            android.util.Log.d("UserManager", "Token内容: " + token);
-        }
-    }
-    
-    /**
-     * 强制重新加载用户数据
-     * 用于解决登录后数据不同步的问题
-     */
-    public void reloadUserData() {
-        reloadUserData(false);
-    }
-    
-    /**
-     * 重新加载用户数据（带强制刷新选项）
-     * @param forceRefresh 是否强制刷新，忽略缓存有效期
-     */
-    public void reloadUserData(boolean forceRefresh) {
-        long currentTime = System.currentTimeMillis();
-        
-        // 检查缓存是否仍然有效
-        if (!forceRefresh && (currentTime - lastLoadTime) < CACHE_VALID_DURATION) {
-            android.util.Log.d("UserManager", "使用缓存数据，跳过重新加载");
-            return;
-        }
-        
-        loadUserData();
-        lastLoadTime = currentTime;
-        android.util.Log.d("UserManager", "强制重新加载用户数据完成");
+    public static void loadUserData() {
+        // 使用token获取用户信息
+        apiService.getUserInfo(
+                new RetrofitApiService.SuccessCallback<BaseResponse<LoginResponse>>() {
+                    @Override
+                    public void onSuccess(BaseResponse<LoginResponse> response) {
+                        // 检查响应是否成功
+                        if (response != null && response.getCode() == 200 && response.getData() != null) {
+
+                            saveUserAndToken(response.getData().getUser(),response.getData().getToken());
+                        } else {
+                            logout();
+                        }
+                    }
+                },
+                new RetrofitApiService.ErrorCallback() {
+                    @Override
+                    public void onError(String error) {
+                        // 判断是否为网络错误，避免因网络问题误清除登录状态
+                        boolean isNetworkError = error != null && (
+                                error.contains("网络") ||
+                                        error.contains("连接") ||
+                                        error.contains("超时") ||
+                                        error.contains("timeout") ||
+                                        error.contains("connection") ||
+                                        error.contains("network")
+                        );
+
+                        if (!isNetworkError) {
+                            // 非网络错误，可能是token真正失效，清除本地数据
+                            logout();
+                        }
+                    }
+                }
+        );
     }
 
     /**
      * 保存用户JSON数据和token
      * 
-     * @param userJson 用户JSON字符串
+     * @param userInfoModel 用户JSON字符串
      * @param token 用户token
      */
-    public void saveUserAndToken(String userJson, String token) {
-        this.currentUserJson = userJson;
-        this.token = token;
+    public static void saveUserAndToken(UserInfoModel userInfoModel, String token) {
+        String currentUserJson = GsonUtil.GsonString(userInfoModel);
 
         SharedPreferences.Editor editor = preferences.edit();
-        if (!TextUtils.isEmpty(userJson)) {
-            editor.putString(KEY_USER, userJson);
+        if (!TextUtils.isEmpty(currentUserJson)) {
+            editor.putString(KEY_USER, currentUserJson);
         } else {
             editor.remove(KEY_USER);
         }
@@ -121,24 +112,11 @@ public class UserManager {
 
         // 使用commit()确保数据立即写入磁盘，解决登录后数据同步问题
         boolean success = editor.commit();
-        android.util.Log.d("UserManager", "保存用户数据结果: " + success);
-    }
-    /**
-     * 获取用户数据
-     *
-     */
-    public UserInfoModel getUserInfo() {
-        this.currentUserJson = currentUserJson = preferences.getString(KEY_USER, null);
-        return gson.fromJson(currentUserJson, UserInfoModel.class);
+        Log.d("UserManager", "保存用户数据结果: " + success);
     }
 
-    /**
-     * 保存用户数据
-     *
-     * @param userJson 用户JSON字符串
-     */
-    public void saveUserInfo(UserInfoModel userJson) {
-        this.currentUserJson = GsonUtil.GsonString(userJson);
+    public static void saveUserInfo(UserInfoModel userInfoModel) {
+        String currentUserJson = GsonUtil.GsonString(userInfoModel);
 
         SharedPreferences.Editor editor = preferences.edit();
         if (!TextUtils.isEmpty(currentUserJson)) {
@@ -146,11 +124,29 @@ public class UserManager {
         } else {
             editor.remove(KEY_USER);
         }
-
         // 使用commit()确保数据立即写入磁盘，解决登录后数据同步问题
         boolean success = editor.commit();
-        android.util.Log.d("UserManager", "保存用户数据结果: " + success);
+        Log.d("UserManager", "保存用户数据结果: " + success);
     }
+
+    /**
+     * 获取用户数据
+     *
+     */
+    public static UserInfoModel getUserInfo() {
+        String currentUserJson = preferences.getString(KEY_USER, null);
+        return GsonUtil.GsonToBean(currentUserJson, UserInfoModel.class);
+    }
+
+    /**
+     * 获取用户数据
+     *
+     */
+    public static String getToken() {
+        String token = preferences.getString(KEY_TOKEN, null);
+        return token;
+    }
+
 
     /**
      * 清理旧的登录数据（兼容性处理）
@@ -162,12 +158,12 @@ public class UserManager {
         try {
             SharedPreferences legacyPrefs = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE);
             if (legacyPrefs.contains("token") || legacyPrefs.contains("user_data") || legacyPrefs.contains("is_logged_in")) {
-                android.util.Log.d("UserManager", "发现旧的登录数据，正在清理...");
+                Log.d("UserManager", "发现旧的登录数据，正在清理...");
                 boolean success = legacyPrefs.edit().clear().commit();
-                android.util.Log.d("UserManager", "旧登录数据清理完成，结果: " + success);
+                Log.d("UserManager", "旧登录数据清理完成，结果: " + success);
             }
         } catch (Exception e) {
-            android.util.Log.e("UserManager", "清理旧登录数据时发生错误", e);
+            Log.e("UserManager", "清理旧登录数据时发生错误", e);
         }
     }
 
@@ -175,12 +171,10 @@ public class UserManager {
      * 用户登出
      * 清除所有用户数据和token
      */
-    public void logout() {
-        currentUserJson = null;
-        token = null;
+    public static void logout() {
         // 使用commit()确保数据立即清除
         boolean success = preferences.edit().clear().commit();
-        android.util.Log.d("UserManager", "清除用户数据结果: " + success);
+        Log.d("UserManager", "清除用户数据结果: " + success);
     }
     
     /**
@@ -198,45 +192,10 @@ public class UserManager {
                 clearLegacyLoginData(context);
             }
         } catch (Exception e) {
-            android.util.Log.e("UserManager", "清理旧数据时发生错误", e);
+            Log.e("UserManager", "清理旧数据时发生错误", e);
         }
     }
 
-    /**
-     * 获取当前用户JSON数据
-     * 
-     * @return 用户JSON字符串，如果未登录则返回null
-     */
-    public String getCurrentUserJson() {
-        return currentUserJson;
-    }
-    
-    /**
-     * 获取用户指定字段的值
-     * 
-     * @param fieldName 字段名
-     * @return 字段值，如果字段不存在或用户未登录则返回null
-     */
-    public String getUserField(String fieldName) {
-        if (TextUtils.isEmpty(currentUserJson)) {
-            return null;
-        }
-        
-        try {
-            JsonObject userObj = JsonParser.parseString(currentUserJson).getAsJsonObject();
-            if (userObj.has(fieldName) && !userObj.get(fieldName).isJsonNull()) {
-                return userObj.get(fieldName).getAsString();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        
-        return null;
-    }
-
-    public String getToken() {
-        return token;
-    }
 
     /**
      * 检查用户是否已登录
@@ -244,18 +203,20 @@ public class UserManager {
      * 
      * @return 是否已登录
      */
-    public boolean isLoggedIn() {
+    public static boolean isLoggedIn() {
+        String currentUserJson =  preferences.getString(KEY_USER, null);
+        String token = preferences.getString(KEY_TOKEN,null);
         boolean hasUserJson = !TextUtils.isEmpty(currentUserJson);
         boolean hasToken = !TextUtils.isEmpty(token);
         boolean result = hasUserJson && hasToken;
         
-        android.util.Log.d("UserManager", "登录状态检查: hasUserJson=" + hasUserJson + ", hasToken=" + hasToken + ", result=" + result);
+        Log.d("UserManager", "登录状态检查: hasUserJson=" + hasUserJson + ", hasToken=" + hasToken + ", result=" + result);
         
         if (!hasUserJson) {
-            android.util.Log.w("UserManager", "currentUserJson为空或null");
+            Log.w("UserManager", "currentUserJson为空或null");
         }
         if (!hasToken) {
-            android.util.Log.w("UserManager", "token为空或null");
+            Log.w("UserManager", "token为空或null");
         }
         
         return result;
@@ -267,111 +228,42 @@ public class UserManager {
      * 
      * @return 登录状态是否有效
      */
-    public boolean checkAndSyncLoginState() {
+    public static boolean checkAndSyncLoginState() {
+        String currentUserJson = preferences.getString(KEY_USER,null);
+        String token = preferences.getString(KEY_TOKEN,null);
         boolean hasValidData = !TextUtils.isEmpty(currentUserJson) && !TextUtils.isEmpty(token);
         
         if (!hasValidData) {
             // 如果数据不完整，清理所有登录状态
-            android.util.Log.w("UserManager", "发现不完整的登录数据，正在清理...");
+            Log.w("UserManager", "发现不完整的登录数据，正在清理...");
             logout();
             return false;
         }
         
-        android.util.Log.d("UserManager", "登录状态检查通过");
+        Log.d("UserManager", "登录状态检查通过");
         return true;
     }
 
     /**
      * 验证token有效性并更新用户信息
      * 
-     * @param apiService API服务实例
      * @param callback 验证结果回调
      */
-    public void validateTokenAndUpdateUserInfo(RetrofitApiService apiService,
-                                              TokenValidationCallback callback) {
+    public static void validateTokenAndUpdateUserInfo(TokenValidationCallback callback) {
+        String token = preferences.getString(KEY_TOKEN, null);
         if (TextUtils.isEmpty(token)) {
             // 没有token，直接返回失败
             if (callback != null) {
                 callback.onValidationResult(false, "没有有效的token");
             }
             return;
+        }else {
+            if (callback != null) {
+                callback.onValidationResult(true, "存在token");
+            }
         }
 
-        // 使用token获取用户信息
-        apiService.getUserInfo(
-            new RetrofitApiService.SuccessCallback<BaseResponse<UserInfoModel>>() {
-                @Override
-                public void onSuccess(BaseResponse<UserInfoModel> response) {
-                    // 检查响应是否成功
-                    if (response != null && response.getCode() == 200 && response.getData() != null) {
 
-                        saveUserInfo(response.getData());
-                        
-                        if (callback != null) {
-                            callback.onValidationResult(true, "token验证成功，用户信息已更新");
-                        }
-                    } else {
-                        // 响应失败，需要判断是否为token失效
-                        String errorMsg = (response != null) ? response.getMsg() : "获取用户信息失败";
-                        
-                        // 判断是否为网络相关错误
-                        boolean isNetworkError = errorMsg != null && (
-                            errorMsg.contains("网络") || 
-                            errorMsg.contains("连接") || 
-                            errorMsg.contains("超时") ||
-                            errorMsg.contains("timeout") ||
-                            errorMsg.contains("connection") ||
-                            errorMsg.contains("network")
-                        );
-                        
-                        // 检查是否为token相关错误（通常返回401或403状态码对应的消息）
-                        boolean isTokenError = response != null && (
-                            response.getCode() == 401 || 
-                            response.getCode() == 403 ||
-                            (errorMsg != null && (
-                                errorMsg.contains("未授权") ||
-                                errorMsg.contains("token") ||
-                                errorMsg.contains("登录") ||
-                                errorMsg.contains("权限")
-                            ))
-                        );
-                        
-                        // 只有在明确是token错误时才清除登录状态
-                        if (isTokenError && !isNetworkError) {
-                            logout();
-                        }
-                        
-                        if (callback != null) {
-                            callback.onValidationResult(false, errorMsg);
-                        }
-                    }
-                }
-            },
-            new RetrofitApiService.ErrorCallback() {
-                @Override
-                public void onError(String error) {
-                    // 判断是否为网络错误，避免因网络问题误清除登录状态
-                    boolean isNetworkError = error != null && (
-                        error.contains("网络") || 
-                        error.contains("连接") || 
-                        error.contains("超时") ||
-                        error.contains("timeout") ||
-                        error.contains("connection") ||
-                        error.contains("network")
-                    );
-                    
-                    if (!isNetworkError) {
-                        // 非网络错误，可能是token真正失效，清除本地数据
-                        logout();
-                    }
-                    
-                    if (callback != null) {
-                        String message = isNetworkError ? "网络连接失败，请检查网络后重试" : error;
-                        callback.onValidationResult(false, message);
-                    }
-                }
-            }
-        );
     }
 
     /**

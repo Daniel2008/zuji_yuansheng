@@ -217,8 +217,7 @@ public class CommentManagementActivity extends BaseActivity {
             }
             
             // 强制重新加载用户数据
-            UserManager userManager = UserManager.getInstance();
-            userManager.reloadUserData();
+            UserManager.loadUserData();
             Log.d(TAG, "已刷新用户数据");
             
             // 重新加载未读评论数量
