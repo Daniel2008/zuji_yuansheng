@@ -11,9 +11,9 @@
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 105,
-      "versionName": "1.05",
-      "outputFile": "com.damors.zuji_release_v1.05.apk"
+      "versionCode": 106,
+      "versionName": "1.06",
+      "outputFile": "com.damors.zuji_release_v1.06.apk"
     }
   ],
   "elementType": "File",
@@ -22,14 +22,14 @@
       "minApi": 28,
       "maxApi": 30,
       "baselineProfiles": [
-        "baselineProfiles/1/com.damors.zuji_release_v1.05.dm"
+        "baselineProfiles/1/com.damors.zuji_release_v1.06.dm"
       ]
     },
     {
       "minApi": 31,
       "maxApi": 2147483647,
       "baselineProfiles": [
-        "baselineProfiles/0/com.damors.zuji_release_v1.05.dm"
+        "baselineProfiles/0/com.damors.zuji_release_v1.06.dm"
       ]
     }
   ],

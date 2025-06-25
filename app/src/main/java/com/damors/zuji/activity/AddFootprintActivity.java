@@ -34,6 +34,9 @@ import java.util.Map;
 import okhttp3.RequestBody;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
+import top.zibin.luban.CompressionPredicate;
+import top.zibin.luban.Luban;
+import top.zibin.luban.OnCompressListener;
 
 import com.amap.api.services.geocoder.GeocodeSearch;
 import com.amap.api.services.geocoder.RegeocodeQuery;
@@ -82,6 +85,7 @@ public class AddFootprintActivity extends BaseActivity implements GeocodeSearch.
     private Chip chipTagFood;
 
     private List<Uri> selectedImages = new ArrayList<>();
+    private List<File> compressedImages = new ArrayList<>();
     private ImageGridAdapter imageAdapter;
     private String selectedLocation;
     private double latitude;
@@ -89,11 +93,11 @@ public class AddFootprintActivity extends BaseActivity implements GeocodeSearch.
     private String city;
     private int msgType = 1; // 默认为公开类型
     private Uri photoUri; // 拍照后的图片URI
-    
+
     // 网络服务实例
     private RetrofitApiService apiService;
     private LoadingDialog loadingDialog;
-    
+
     // 位置管理器
     private LocationManager locationManager;
 
@@ -469,7 +473,65 @@ public class AddFootprintActivity extends BaseActivity implements GeocodeSearch.
                 
                 tvLocation.setText(selectedLocation);
             }
+            // 开始压缩图片
+            compressSelectedImages();
+
         }
+    }
+
+    /**
+     * 压缩选中的图片
+     * 将URI转换为文件并进行压缩处理
+     */
+    private void compressSelectedImages() {
+        compressedImages.clear(); // 清空之前的压缩图片列表
+        
+        if (selectedImages.isEmpty()) {
+            return;
+        }
+        
+        // 异步处理图片压缩
+        new Thread(() -> {
+            for (Uri imageUri : selectedImages) {
+                try {
+                    File compressedFile = null;
+                    
+                    if (imageUri.getScheme().equals("content")) {
+                        // content:// URI，需要创建临时文件
+                        File tempFile = createTempImageFile(imageUri);
+                        if (tempFile != null) {
+                            compressedFile = compressImage(tempFile);
+                            if (compressedFile == null) {
+                                compressedFile = tempFile; // 压缩失败时使用原文件
+                            }
+                        }
+                    } else if (imageUri.getScheme().equals("file")) {
+                        // file:// URI，直接处理文件
+                        File originalFile = new File(imageUri.getPath());
+                        if (originalFile.exists()) {
+                            compressedFile = compressImage(originalFile);
+                            if (compressedFile == null) {
+                                compressedFile = originalFile; // 压缩失败时使用原文件
+                            }
+                        }
+                    }
+                    
+                    if (compressedFile != null) {
+                        synchronized (compressedImages) {
+                            compressedImages.add(compressedFile);
+                        }
+                        Log.d("AddFootprint", "图片压缩完成: " + compressedFile.getAbsolutePath());
+                    } else {
+                        Log.e("AddFootprint", "图片处理失败: " + imageUri.toString());
+                    }
+                    
+                } catch (Exception e) {
+                    Log.e("AddFootprint", "处理图片时出错: " + imageUri.toString(), e);
+                }
+            }
+            
+            Log.d("AddFootprint", "所有图片压缩完成，共处理: " + compressedImages.size() + " 张图片");
+        }).start();
     }
 
     /**
@@ -515,39 +577,14 @@ public class AddFootprintActivity extends BaseActivity implements GeocodeSearch.
         
         // 输出调试信息
         Log.d("AddFootprintActivity", "准备发布足迹 - 城市: " + city + ", 位置: " + location + ", 经纬度: (" + latitude + ", " + longitude + ")");
-        
-        // 处理图片文件对象
-        List<File> imageFiles = new ArrayList<>();
-        for (Uri imageUri : selectedImages) {
-            try {
-                // 对于content://类型的URI，需要将图片复制到应用私有目录
-                if ("content".equals(imageUri.getScheme())) {
-                    // 创建临时文件
-                    File tempFile = createTempImageFile(imageUri);
-                    if (tempFile != null && tempFile.exists()) {
-                        imageFiles.add(tempFile);
-                    }
-                } else if ("file".equals(imageUri.getScheme())) {
-                    // 对于file://类型的URI，直接使用路径
-                    String path = imageUri.getPath();
-                    if (path != null) {
-                        File imageFile = new File(path);
-                        if (imageFile.exists()) {
-                            imageFiles.add(imageFile);
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                Log.e("AddFootprint", "处理图片URI失败: " + imageUri, e);
-            }
-        }
-        publishInfo.setImages(imageFiles);
+
+        publishInfo.setImages(compressedImages);
         
         // 显示加载对话框并禁用发布按钮
         loadingDialog.show("正在发布足迹...");
         btnPublish.setEnabled(false);
         btnPublish.setText("发布中...");
-        
+
         // 将PublishTrandsInfoPO转换为Map<String, RequestBody>格式
         Map<String, RequestBody> requestBodyMap = new HashMap<>();
         requestBodyMap.put("userId", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(publishInfo.getUserId())));
@@ -559,20 +596,23 @@ public class AddFootprintActivity extends BaseActivity implements GeocodeSearch.
         requestBodyMap.put("lng", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(publishInfo.getLng())));
         requestBodyMap.put("lat", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(publishInfo.getLat())));
         requestBodyMap.put("msgType", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(publishInfo.getMsgType())));
-        
+
         // 准备图片文件列表
         List<MultipartBody.Part> imageParts = new ArrayList<>();
         if (publishInfo.getImages() != null) {
             for (int i = 0; i < publishInfo.getImages().size(); i++) {
-                File imageFile = publishInfo.getImages().get(i);
-                if (imageFile != null && imageFile.exists()) {
+                File imageFile = publishInfo.getImages().get(i).getAbsoluteFile();
+                if(imageFile.exists()){
                     RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), imageFile);
                     MultipartBody.Part imagePart = MultipartBody.Part.createFormData("images", imageFile.getName(), requestFile);
                     imageParts.add(imagePart);
+                }else{
+                    Log.e("AddFootprintActivity", "图片文件不存在: " + imageFile.getAbsolutePath());
                 }
+
             }
         }
-        
+
         // 调用网络接口发布足迹
         apiService.publishFootprint(requestBodyMap, imageParts,
             new RetrofitApiService.SuccessCallback<BaseResponse<JSONObject>>() {
@@ -582,7 +622,7 @@ public class AddFootprintActivity extends BaseActivity implements GeocodeSearch.
                     loadingDialog.dismiss();
                     btnPublish.setEnabled(true);
                     btnPublish.setText("发布足迹");
-                    
+
                     if (response.getCode() == 200) {
                         // 发布成功
                         runOnUiThread(() -> {
@@ -606,10 +646,10 @@ public class AddFootprintActivity extends BaseActivity implements GeocodeSearch.
                     loadingDialog.dismiss();
                     btnPublish.setEnabled(true);
                     btnPublish.setText("发布足迹");
-                    
+
                     // 发布失败
                     runOnUiThread(() -> {
-                        Toast.makeText(AddFootprintActivity.this, 
+                        Toast.makeText(AddFootprintActivity.this,
                             "发布失败: " + errorMessage, Toast.LENGTH_LONG).show();
                     });
                 }
@@ -746,50 +786,33 @@ public class AddFootprintActivity extends BaseActivity implements GeocodeSearch.
             geocodeSearch.setOnGeocodeSearchListener(null);
         }
     }
-    
+
     /**
-     * 保存足迹到本地数据库
-     * 注释：此功能已被移除，不再支持本地存储
-     * @param content 足迹内容
-     * @param location 位置信息
+     * 压缩图片文件
+     * @param originalFile 原始图片文件
+     * @return 压缩后的文件，如果压缩失败返回null
      */
-    /*
-    private void saveToLocalDatabase(String content, String location) {
-        // 创建足迹对象
-        FootprintEntity footprint = new FootprintEntity();
-        footprint.setDescription(content);
-        footprint.setLocationName(location);
-        footprint.setLatitude(latitude);
-        footprint.setLongitude(longitude);
-        footprint.setTimestamp(System.currentTimeMillis());
-        footprint.setImageUris(selectedImages.toString());
-        
-        // 保存到数据库
-        FootprintViewModel viewModel = new ViewModelProvider(this).get(FootprintViewModel.class);
-        viewModel.insert(footprint);
-    }
-    */
-    
-    /**
-     * 从URI获取文件路径
-     * @param uri 图片URI
-     * @return 文件路径，如果获取失败返回null
-     */
-    private String getPathFromUri(Uri uri) {
+    private File compressImage(File originalFile) {
         try {
-            // 这里简化处理，实际项目中可能需要更复杂的URI到路径转换
-            // 对于content://类型的URI，可能需要使用ContentResolver来获取真实路径
-            if ("file".equals(uri.getScheme())) {
-                return uri.getPath();
-            } else {
-                // 对于content://类型的URI，返回URI字符串
-                // 在实际应用中，可能需要将图片复制到应用私有目录
-                return uri.toString();
+            List<File> compressedFiles = Luban.with(this)
+                    .load(originalFile)
+                    .ignoreBy(300) // 忽略小于100KB的图片
+                    .setTargetDir(getCacheDir().getAbsolutePath())
+                    .filter(new CompressionPredicate() {
+                        @Override
+                        public boolean apply(String path) {
+                            return !(path.toLowerCase().endsWith(".gif"));
+                        }
+                    })
+                    .get();
+            
+            if (compressedFiles != null && !compressedFiles.isEmpty()) {
+                return compressedFiles.get(0);
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            Log.e("AddFootprint", "图片压缩失败: " + originalFile.getAbsolutePath(), e);
         }
+        return null;
     }
 
     /**

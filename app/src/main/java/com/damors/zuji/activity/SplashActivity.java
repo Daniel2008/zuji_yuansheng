@@ -1,5 +1,7 @@
 package com.damors.zuji.activity;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.Intent;
@@ -20,6 +22,7 @@ import com.damors.zuji.BuildConfig;
 import com.damors.zuji.R;
 import com.damors.zuji.manager.UserManager;
 import com.damors.zuji.network.RetrofitApiService;
+import com.damors.zuji.utils.AnimationPerformanceMonitor;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.gyf.immersionbar.ImmersionBar;
 
@@ -40,8 +43,9 @@ import com.gyf.immersionbar.ImmersionBar;
 public class SplashActivity extends BaseActivity {
     
     private static final String TAG = "SplashActivity";
-    private static final int SPLASH_DELAY_MS = 2000; // 启动页显示时间（毫秒）
-    private static final int ANIMATION_DURATION = 800; // 动画持续时间（毫秒）
+    private static final int SPLASH_DELAY_MS = 1500; // 启动页显示时间（毫秒）- 优化：减少等待时间
+    private static final int ANIMATION_DURATION = 400; // 动画持续时间（毫秒）- 优化：缩短动画时长
+    private static final int STAGGER_DELAY = 100; // 动画错开延迟（毫秒）- 优化：减少错开时间
     
     // UI组件
     private CardView logoContainer;
@@ -59,6 +63,7 @@ public class SplashActivity extends BaseActivity {
     private RetrofitApiService apiService;
     private UserManager userManager;
     private Handler mainHandler;
+    private AnimationPerformanceMonitor performanceMonitor;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,6 +77,9 @@ public class SplashActivity extends BaseActivity {
         // 初始化视图
         initViews();
         
+        // 启用硬件加速优化
+        enableHardwareAcceleration();
+        
         // 开始自动登录检查
         startAutoLoginCheck();
     }
@@ -83,6 +91,7 @@ public class SplashActivity extends BaseActivity {
         apiService = RetrofitApiService.getInstance(getApplicationContext());
         userManager = UserManager.getInstance();
         mainHandler = new Handler(Looper.getMainLooper());
+        performanceMonitor = AnimationPerformanceMonitor.getInstance();
         
         Log.d(TAG, "组件初始化完成");
     }
@@ -116,6 +125,28 @@ public class SplashActivity extends BaseActivity {
         startEntranceAnimations();
         
         Log.d(TAG, "视图初始化完成");
+    }
+    
+    /**
+     * 启用硬件加速优化
+     * 为关键视图启用硬件加速以提高动画性能
+     */
+    private void enableHardwareAcceleration() {
+        // 为主要动画视图启用硬件加速
+        if (contentContainer != null) {
+            contentContainer.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        }
+        if (logoContainer != null) {
+            logoContainer.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        }
+        if (decorCircle1 != null) {
+            decorCircle1.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        }
+        if (decorCircle2 != null) {
+            decorCircle2.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        }
+        
+        Log.d(TAG, "硬件加速优化已启用");
     }
     
     /**
@@ -163,13 +194,13 @@ public class SplashActivity extends BaseActivity {
         Log.d(TAG, "跳转到主页面");
         
         loadingTextView.setText("登录成功，正在进入...");
-        
+        Intent intent = new Intent(SplashActivity.this, MainActivity.class);
+        startActivity(intent);
+        finish(); // 结束启动页面
         // 延迟一小段时间以显示成功消息
         mainHandler.postDelayed(() -> {
-            Intent intent = new Intent(SplashActivity.this, MainActivity.class);
-            startActivity(intent);
-            finish(); // 结束启动页面
-        }, 1000);
+
+        }, 500);
     }
     
     /**
@@ -192,12 +223,41 @@ public class SplashActivity extends BaseActivity {
     protected void onDestroy() {
         super.onDestroy();
         
+        // 停止性能监控
+        if (BuildConfig.DEBUG && performanceMonitor != null && performanceMonitor.isMonitoring()) {
+            performanceMonitor.stopMonitoring();
+        }
+        
         // 清理Handler中的回调，防止内存泄漏
         if (mainHandler != null) {
             mainHandler.removeCallbacksAndMessages(null);
         }
         
+        // 清理硬件加速，释放GPU资源
+        cleanupHardwareAcceleration();
+        
         Log.d(TAG, "SplashActivity销毁");
+    }
+    
+    /**
+     * 清理硬件加速资源
+     * 在Activity销毁时释放GPU资源
+     */
+    private void cleanupHardwareAcceleration() {
+        if (contentContainer != null) {
+            contentContainer.setLayerType(View.LAYER_TYPE_NONE, null);
+        }
+        if (logoContainer != null) {
+            logoContainer.setLayerType(View.LAYER_TYPE_NONE, null);
+        }
+        if (decorCircle1 != null) {
+            decorCircle1.setLayerType(View.LAYER_TYPE_NONE, null);
+        }
+        if (decorCircle2 != null) {
+            decorCircle2.setLayerType(View.LAYER_TYPE_NONE, null);
+        }
+        
+        Log.d(TAG, "硬件加速资源已清理");
     }
     
     /**
@@ -225,107 +285,117 @@ public class SplashActivity extends BaseActivity {
     }
     
     /**
-     * 启动入场动画
+     * 启动入场动画（优化版本）
+     * 简化动画逻辑，减少同时运行的动画数量
      */
     private void startEntranceAnimations() {
         // 延迟启动动画，确保布局完成
         mainHandler.postDelayed(() -> {
-            // 装饰圆圈动画
-            startDecorativeAnimations();
-            
-            // 主内容动画
-            startMainContentAnimations();
-            
-            // 版本信息动画
-            startVersionInfoAnimation();
-            
-        }, 100);
+            // 使用序列动画替代并行动画，提高性能
+            startOptimizedAnimationSequence();
+        }, 50); // 减少延迟时间
     }
     
     /**
-     * 启动装饰性动画
+     * 优化的动画序列
+     * 使用ViewPropertyAnimator提高性能，减少动画复杂度
      */
-    private void startDecorativeAnimations() {
-        // 装饰圆圈1动画
-        ObjectAnimator scaleX1 = ObjectAnimator.ofFloat(decorCircle1, "scaleX", 0f, 1f);
-        ObjectAnimator scaleY1 = ObjectAnimator.ofFloat(decorCircle1, "scaleY", 0f, 1f);
-        ObjectAnimator rotation1 = ObjectAnimator.ofFloat(decorCircle1, "rotation", 0f, 360f);
+    private void startOptimizedAnimationSequence() {
+        Log.d(TAG, "开始优化动画序列");
         
-        AnimatorSet decorSet1 = new AnimatorSet();
-        decorSet1.playTogether(scaleX1, scaleY1, rotation1);
-        decorSet1.setDuration(ANIMATION_DURATION * 2);
-        decorSet1.setInterpolator(new AccelerateDecelerateInterpolator());
-        decorSet1.start();
+        // 启动性能监控
+        if (BuildConfig.DEBUG) {
+            performanceMonitor.startMonitoring();
+        }
+        // 第一阶段：装饰圆圈简化动画（仅缩放，移除旋转）
+        decorCircle1.animate()
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(ANIMATION_DURATION)
+                .setInterpolator(new AccelerateDecelerateInterpolator())
+                .start();
         
-        // 装饰圆圈2动画（延迟启动）
+        // 第二阶段：主内容动画（延迟启动）
         mainHandler.postDelayed(() -> {
-            ObjectAnimator scaleX2 = ObjectAnimator.ofFloat(decorCircle2, "scaleX", 0f, 1f);
-            ObjectAnimator scaleY2 = ObjectAnimator.ofFloat(decorCircle2, "scaleY", 0f, 1f);
-            ObjectAnimator rotation2 = ObjectAnimator.ofFloat(decorCircle2, "rotation", 0f, -360f);
+            startMainContentOptimizedAnimation();
+        }, STAGGER_DELAY);
+        
+        // 第三阶段：装饰圆圈2和版本信息（进一步延迟）
+        mainHandler.postDelayed(() -> {
+            decorCircle2.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(ANIMATION_DURATION)
+                    .setInterpolator(new AccelerateDecelerateInterpolator())
+                    .start();
             
-            AnimatorSet decorSet2 = new AnimatorSet();
-            decorSet2.playTogether(scaleX2, scaleY2, rotation2);
-            decorSet2.setDuration(ANIMATION_DURATION * 2);
-            decorSet2.setInterpolator(new AccelerateDecelerateInterpolator());
-            decorSet2.start();
-        }, 200);
+            versionTextView.animate()
+                    .alpha(1f)
+                    .setDuration(ANIMATION_DURATION)
+                    .start();
+        }, STAGGER_DELAY * 2);
     }
     
     /**
-     * 启动主内容动画
+     * 优化的主内容动画
+     * 使用ViewPropertyAnimator替代ObjectAnimator，提高性能
      */
-    private void startMainContentAnimations() {
-        // Logo容器弹性缩放动画
-        ObjectAnimator logoScaleX = ObjectAnimator.ofFloat(logoContainer, "scaleX", 0f, 1f);
-        ObjectAnimator logoScaleY = ObjectAnimator.ofFloat(logoContainer, "scaleY", 0f, 1f);
+    private void startMainContentOptimizedAnimation() {
+        // Logo容器弹性缩放动画（简化弹性效果）
+        logoContainer.animate()
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(ANIMATION_DURATION)
+                .setInterpolator(new OvershootInterpolator(1.1f)) // 减少弹性强度
+                .setListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        // 动画结束后恢复软件渲染以节省资源
+                        logoContainer.setLayerType(View.LAYER_TYPE_NONE, null);
+                    }
+                })
+                .start();
         
-        AnimatorSet logoAnimSet = new AnimatorSet();
-        logoAnimSet.playTogether(logoScaleX, logoScaleY);
-        logoAnimSet.setDuration(ANIMATION_DURATION);
-        logoAnimSet.setInterpolator(new OvershootInterpolator(1.2f));
-        logoAnimSet.setStartDelay(300);
-        logoAnimSet.start();
-        
-        // 内容容器淡入和上移动画
-        ObjectAnimator contentAlpha = ObjectAnimator.ofFloat(contentContainer, "alpha", 0f, 1f);
-        ObjectAnimator contentTransY = ObjectAnimator.ofFloat(contentContainer, "translationY", 100f, 0f);
-        
-        AnimatorSet contentAnimSet = new AnimatorSet();
-        contentAnimSet.playTogether(contentAlpha, contentTransY);
-        contentAnimSet.setDuration(ANIMATION_DURATION);
-        contentAnimSet.setInterpolator(new AccelerateDecelerateInterpolator());
-        contentAnimSet.setStartDelay(400);
-        contentAnimSet.start();
+        // 内容容器淡入和上移动画（同时进行）
+        contentContainer.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(ANIMATION_DURATION)
+                .setInterpolator(new AccelerateDecelerateInterpolator())
+                .setStartDelay(STAGGER_DELAY)
+                .setListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        // 动画结束后恢复软件渲染以节省资源
+                        contentContainer.setLayerType(View.LAYER_TYPE_NONE, null);
+                    }
+                })
+                .start();
     }
     
     /**
-     * 启动版本信息动画
-     */
-    private void startVersionInfoAnimation() {
-        ObjectAnimator versionAlpha = ObjectAnimator.ofFloat(versionTextView, "alpha", 0f, 1f);
-        versionAlpha.setDuration(ANIMATION_DURATION);
-        versionAlpha.setStartDelay(800);
-        versionAlpha.start();
-    }
-    
-    /**
-     * 更新加载状态文本（带动画效果）
+     * 更新加载状态文本（优化版本）
+     * 使用ViewPropertyAnimator提高性能
      * @param text 要显示的文本
      */
     private void updateLoadingTextWithAnimation(String text) {
         if (loadingTextView != null) {
-            // 淡出当前文本
-            ObjectAnimator fadeOut = ObjectAnimator.ofFloat(loadingTextView, "alpha", 1f, 0f);
-            fadeOut.setDuration(200);
-            fadeOut.start();
-            
-            // 延迟更新文本并淡入
-            mainHandler.postDelayed(() -> {
-                loadingTextView.setText(text);
-                ObjectAnimator fadeIn = ObjectAnimator.ofFloat(loadingTextView, "alpha", 0f, 1f);
-                fadeIn.setDuration(200);
-                fadeIn.start();
-            }, 200);
+            // 使用ViewPropertyAnimator进行优化的文本切换动画
+            loadingTextView.animate()
+                    .alpha(0f)
+                    .setDuration(150) // 缩短动画时间
+                    .setListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            loadingTextView.setText(text);
+                            loadingTextView.animate()
+                                    .alpha(1f)
+                                    .setDuration(150)
+                                    .setListener(null)
+                                    .start();
+                        }
+                    })
+                    .start();
         }
     }
 }

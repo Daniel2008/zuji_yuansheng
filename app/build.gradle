@@ -157,7 +157,8 @@ dependencies {
     //lombo
     implementation libs.lombok
     annotationProcessor libs.lombok
-
+    //luban
+    implementation libs.luban.turbo
 
     testImplementation libs.junit
     testImplementation libs.mockito.core

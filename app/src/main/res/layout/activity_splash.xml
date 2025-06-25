@@ -5,13 +5,14 @@
     android:layout_height="match_parent"
     android:background="@drawable/splash_gradient_background">
 
-    <!-- 背景装饰圆圈 -->
+    <!-- 背景装饰圆圈 - 优化：添加硬件加速 -->
     <View
         android:id="@+id/decorCircle1"
         android:layout_width="200dp"
         android:layout_height="200dp"
         android:background="@drawable/splash_circle_decoration"
         android:alpha="0.1"
+        android:layerType="hardware"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="-100dp"
@@ -23,30 +24,33 @@
         android:layout_height="150dp"
         android:background="@drawable/splash_circle_decoration"
         android:alpha="0.08"
+        android:layerType="hardware"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         android:layout_marginBottom="-75dp"
         android:layout_marginStart="-75dp" />
 
-    <!-- 主要内容容器 -->
+    <!-- 主要内容容器 - 优化：添加硬件加速提示 -->
     <LinearLayout
         android:id="@+id/contentContainer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center"
+        android:layerType="hardware"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginBottom="80dp">
 
-        <!-- Logo容器 -->
+        <!-- Logo容器 - 优化：添加硬件加速 -->
         <androidx.cardview.widget.CardView
             android:id="@+id/logoContainer"
             android:layout_width="140dp"
             android:layout_height="140dp"
             android:layout_marginBottom="32dp"
+            android:layerType="hardware"
             app:cardCornerRadius="70dp"
             app:cardElevation="12dp"
             app:cardBackgroundColor="@color/white">
