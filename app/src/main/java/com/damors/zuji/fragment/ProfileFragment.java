@@ -176,6 +176,7 @@ public class ProfileFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        UserManager.loadUserData();
         loadUserData();
     }
     
@@ -214,11 +215,8 @@ public class ProfileFragment extends Fragment {
      */
     private void loadUserData() {
         Log.d("ProfileFragment", "开始加载用户数据");
-
-        
         boolean isLoggedIn = UserManager.isLoggedIn();
         UserInfoModel userInfoModel = UserManager.getUserInfo();
-        String token = userManager.getToken();
         
         if (null != userInfoModel) {
             Log.d("ProfileFragment", "用户JSON内容: " + GsonUtil.GsonString(userInfoModel));
@@ -323,20 +321,7 @@ public class ProfileFragment extends Fragment {
             setDefaultUserInfo();
         }
     }
-    
-    /**
-     * 安全地获取用户字段值
-     * 
-     * @param userObj 用户JSON对象
-     * @param fieldName 字段名
-     * @return 字段值，如果不存在或为null则返回null
-     */
-    private String getUserFieldSafely(JsonObject userObj, String fieldName) {
-        if (userObj.has(fieldName) && !userObj.get(fieldName).isJsonNull()) {
-            return userObj.get(fieldName).getAsString();
-        }
-        return null;
-    }
+
     
     /**
      * 设置默认用户信息

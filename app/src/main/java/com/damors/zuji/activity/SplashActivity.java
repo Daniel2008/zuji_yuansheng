@@ -128,7 +128,7 @@ public class SplashActivity extends BaseActivity {
         // 延迟开始检查，等待动画完成
         mainHandler.postDelayed(() -> {
             // 更新加载提示（带动画效果）
-            updateLoadingTextWithAnimation("正在验证登录状态...");
+            updateLoadingTextWithAnimation("欢迎回来");
             
             // 先检查并同步登录状态，确保数据一致性
             if (UserManager.checkAndSyncLoginState()) {
@@ -169,7 +169,7 @@ public class SplashActivity extends BaseActivity {
             Intent intent = new Intent(SplashActivity.this, MainActivity.class);
             startActivity(intent);
             finish(); // 结束启动页面
-        }, 500);
+        }, 1000);
     }
     
     /**
