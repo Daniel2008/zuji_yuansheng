@@ -25,6 +25,7 @@ import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.utils.GridSpacingItemDecoration;
 import com.damors.zuji.utils.ImageUtils;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.damors.zuji.ui.widget.ModernTabBar;
 
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -94,6 +95,10 @@ public class MapFragment extends Fragment {
     // UI组件
     private MapView mapView;
     private FloatingActionButton addFootprintButton;
+    
+    // ModernTabBar组件
+    private ModernTabBar modernTabBar;
+    private boolean isPersonalMode = true; // 默认显示个人数据
     
     // 高德地图相关
     private AMap aMap;
@@ -186,11 +191,91 @@ public class MapFragment extends Fragment {
         mapView = view.findViewById(R.id.map);
         addFootprintButton = view.findViewById(R.id.btn_add_footprint);
         
+        // 初始化ModernTabBar组件
+        modernTabBar = view.findViewById(R.id.modern_tab_bar);
+        
+        // 调试：检查TabBar是否正确初始化
+        if (modernTabBar != null) {
+            Log.d(TAG, "ModernTabBar初始化成功");
+            modernTabBar.setVisibility(View.VISIBLE);
+        } else {
+            Log.e(TAG, "ModernTabBar初始化失败 - findViewById返回null");
+        }
 
+        // 设置ModernTabBar监听器
+        setupModernTabBarListeners();
+
+        
+        // 强制设置TabBar为可见并置于最前端
+        if (modernTabBar != null) {
+            modernTabBar.setVisibility(View.VISIBLE);
+            modernTabBar.setAlpha(1.0f);
+            modernTabBar.bringToFront();
+            modernTabBar.requestLayout();
+
+
+            // 确保TabBar使用正确的背景
+            // modernTabBar.setBackgroundResource(R.drawable.modern_tab_background);
+            
+            Log.d(TAG, "强制设置ModernTabBar可见性和层级");
+            Log.d(TAG, "TabBar尺寸: " + modernTabBar.getWidth() + "x" + modernTabBar.getHeight());
+            Log.d(TAG, "TabBar位置: (" + modernTabBar.getX() + ", " + modernTabBar.getY() + ")");
+        }
         
         Log.d(TAG, "核心组件初始化完成");
     }
     
+    /**
+     * 设置ModernTabBar监听器
+     */
+    private void setupModernTabBarListeners() {
+        if (modernTabBar != null) {
+            Log.d(TAG, "设置ModernTabBar监听器");
+            modernTabBar.setOnTabSelectedListener(new ModernTabBar.OnTabSelectedListener() {
+                @Override
+                public void onTabSelected(boolean isPersonal) {
+                    Log.d(TAG, "TabBar选择事件: isPersonal=" + isPersonal);
+                    if (isPersonal && !isPersonalMode) {
+                        switchToPersonalMode();
+                    } else if (!isPersonal && isPersonalMode) {
+                        switchToWorldMode();
+                    }
+                }
+            });
+            
+            // 设置初始状态为个人模式
+            modernTabBar.setSelectedTab(true);
+            Log.d(TAG, "ModernTabBar初始状态设置完成");
+        } else {
+            Log.e(TAG, "无法设置ModernTabBar监听器 - modernTabBar为null");
+        }
+    }
+    
+    /**
+     * 切换到个人模式
+     */
+    private void switchToPersonalMode() {
+        isPersonalMode = true;
+        if (modernTabBar != null) {
+            modernTabBar.selectTab(true); // 带动画切换到个人Tab
+        }
+        loadFootprintMessages(); // 重新加载个人数据
+        Log.d(TAG, "切换到个人模式");
+    }
+    
+    /**
+     * 切换到世界模式
+     */
+    private void switchToWorldMode() {
+        isPersonalMode = false;
+        if (modernTabBar != null) {
+            modernTabBar.selectTab(false); // 带动画切换到世界Tab
+        }
+        loadFootprintMessages(); // 重新加载世界数据
+        Log.d(TAG, "切换到世界模式");
+    }
+
+
     /**
      * 初始化高德地图配置 - 优化版本
      */
@@ -275,6 +360,11 @@ public class MapFragment extends Fragment {
     private void setupUIListeners() {
         if (addFootprintButton != null) {
             addFootprintButton.setOnClickListener(v -> addCurrentLocationFootprint());
+        }
+        
+        // 设置初始TabBar状态
+        if (modernTabBar != null) {
+            modernTabBar.setSelectedTab(true); // 初始化时不使用动画
         }
     }
     
@@ -661,43 +751,86 @@ public class MapFragment extends Fragment {
         Log.d(TAG, "开始获取地图mark数据");
         
         try {
-            // 调用API获取地图页mark数据（使用getMsgListAll接口）
-            apiService.getMsgListAll(
-                1, // 页码
-                50, // 每页大小
+            // 根据当前模式调用不同的API接口
+            if (isPersonalMode) {
+                // 个人模式：调用getMsgList接口
+                Log.d(TAG, "加载个人地图mark数据");
+                apiService.getFootprintMessages(
+                    1, // 页码
+                    50, // 每页大小
                     response -> {
                         try {
-                            Log.d(TAG, "获取地图mark数据成功，记录数: " + response.getData().getRecords().size());
+                            Log.d(TAG, "获取个人地图mark数据成功，记录数: " + response.getData().getRecords().size());
 
                             // 在主线程更新UI
                             if (mainHandler != null) {
                                 mainHandler.post(() -> {
                                     try {
                                         handleFootprintMessages(response.getData().getRecords());
-                                        Log.d(TAG, "地图mark数据显示完成");
+                                        Log.d(TAG, "个人地图mark数据显示完成");
                                     } catch (Exception e) {
-                                        Log.e(TAG, "显示地图mark数据失败: " + e.getMessage(), e);
-                                        showToast("显示地图mark数据失败");
+                                        Log.e(TAG, "显示个人地图mark数据失败: " + e.getMessage(), e);
+                                        showToast("显示个人地图mark数据失败");
                                     }
                                 });
                             }
                         } catch (Exception e) {
-                            Log.e(TAG, "处理足迹动态响应失败: " + e.getMessage(), e);
-                            showToast("处理数据失败");
+                            Log.e(TAG, "处理个人足迹动态响应失败: " + e.getMessage(), e);
+                            showToast("处理个人数据失败");
                         } finally {
                             isLoadingMessages.set(false);
                         }
                     },
                     errorMessage -> {
-                        Log.e(TAG, "获取地图mark数据失败: " + errorMessage);
+                        Log.e(TAG, "获取个人地图mark数据失败: " + errorMessage);
 
                         String displayMessage = errorMessage.contains("timeout") ? "网络连接超时，请重试" :
                                                errorMessage.contains("network") ? "网络连接失败，请检查网络设置" :
-                                               "获取地图mark数据失败: " + errorMessage;
+                                               "获取个人地图mark数据失败: " + errorMessage;
                         showToast(displayMessage);
                         isLoadingMessages.set(false);
                     }
-            );
+                );
+            } else {
+                // 世界模式：调用getMsgListAll接口
+                Log.d(TAG, "加载世界地图mark数据");
+                apiService.getMsgListAll(
+                    1, // 页码
+                    50, // 每页大小
+                    response -> {
+                        try {
+                            Log.d(TAG, "获取世界地图mark数据成功，记录数: " + response.getData().getRecords().size());
+
+                            // 在主线程更新UI
+                            if (mainHandler != null) {
+                                mainHandler.post(() -> {
+                                    try {
+                                        handleFootprintMessages(response.getData().getRecords());
+                                        Log.d(TAG, "世界地图mark数据显示完成");
+                                    } catch (Exception e) {
+                                        Log.e(TAG, "显示世界地图mark数据失败: " + e.getMessage(), e);
+                                        showToast("显示世界地图mark数据失败");
+                                    }
+                                });
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "处理世界足迹动态响应失败: " + e.getMessage(), e);
+                            showToast("处理世界数据失败");
+                        } finally {
+                            isLoadingMessages.set(false);
+                        }
+                    },
+                    errorMessage -> {
+                        Log.e(TAG, "获取世界地图mark数据失败: " + errorMessage);
+
+                        String displayMessage = errorMessage.contains("timeout") ? "网络连接超时，请重试" :
+                                               errorMessage.contains("network") ? "网络连接失败，请检查网络设置" :
+                                               "获取世界地图mark数据失败: " + errorMessage;
+                        showToast(displayMessage);
+                        isLoadingMessages.set(false);
+                    }
+                );
+            }
             
         } catch (Exception e) {
             Log.e(TAG, "启动足迹动态加载失败: " + e.getMessage(), e);

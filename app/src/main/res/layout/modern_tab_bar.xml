@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 现代化TabBar布局 -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/modern_tab_container"
+    android:layout_width="match_parent"
+    android:layout_height="38dp"
+    android:layout_marginStart="100dp"
+    android:layout_marginEnd="100dp"
+    android:background="@drawable/modern_tab_background"
+    android:elevation="12dp"
+    app:layout_constraintTop_toTopOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent">
+
+    <!-- Tab按钮容器 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="4dp">
+
+        <!-- 个人Tab -->
+        <LinearLayout
+            android:id="@+id/modern_tab_personal"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/tab_button_selector"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="8dp">
+
+            <!-- 个人图标 -->
+            <ImageView
+                android:id="@+id/icon_personal"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginEnd="6dp"
+                android:src="@drawable/ic_person"
+                android:tint="@color/indigo_500" />
+
+            <!-- 个人文本 -->
+            <TextView
+                android:id="@+id/text_personal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="个人"
+                android:textSize="10sp"
+                android:textColor="@color/indigo_500"
+                android:textStyle="bold"
+                android:fontFamily="sans-serif-medium" />
+
+        </LinearLayout>
+
+        <!-- 世界Tab -->
+        <LinearLayout
+            android:id="@+id/modern_tab_world"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/tab_button_selector"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="8dp">
+
+            <!-- 世界图标 -->
+            <ImageView
+                android:id="@+id/icon_world"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginEnd="6dp"
+                android:src="@drawable/ic_public"
+                android:tint="@color/colorDarkGray" />
+
+            <!-- 世界文本 -->
+            <TextView
+                android:id="@+id/text_world"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="世界"
+                android:textSize="10sp"
+                android:textColor="@color/colorDarkGray"
+                android:textStyle="normal"
+                android:fontFamily="sans-serif" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- 动态指示器 -->
+    <View
+        android:id="@+id/modern_tab_indicator"
+        android:layout_width="0dp"
+        android:layout_height="3dp"
+        android:layout_gravity="bottom"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="4dp"
+        android:background="@drawable/tab_indicator_background"
+        android:visibility="visible" />
+
+</FrameLayout>
