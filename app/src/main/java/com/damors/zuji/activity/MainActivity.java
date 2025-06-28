@@ -25,6 +25,7 @@ import com.damors.zuji.fragment.FootPrintFragment;
 import com.damors.zuji.fragment.MapFragment;
 import com.damors.zuji.fragment.ProfileFragment;
 import com.damors.zuji.manager.UserManager;
+import com.damors.zuji.manager.BadgeManager;
 import com.damors.zuji.model.UserInfoModel;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationBarView;
@@ -124,14 +125,20 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         
         // 默认选中地图tab
         bottomNavigationView.setSelectedItemId(R.id.nav_map);
-        UserInfoModel userInfoModel = UserManager.getInstance().getUserInfo();
-        // 显示红点提醒
-        if(userInfoModel.getCommentNoReplyCount()> 0){
-            showProfileBadge();
-        }else {
-            hideProfileBadge();
-        }
-
+        
+        // 注册角标更新监听器
+        BadgeManager.getInstance().registerListener(unreadCount -> {
+            runOnUiThread(() -> {
+                if (unreadCount > 0) {
+                    showProfileBadge();
+                } else {
+                    hideProfileBadge();
+                }
+            });
+        });
+        
+        // 初始化角标状态
+        BadgeManager.updateMainActivityBadge(this);
     }
 
     /**
@@ -267,6 +274,8 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
                 == PackageManager.PERMISSION_GRANTED) {
             startLocationUpdates();
         }
+        // 页面恢复时更新角标状态
+        BadgeManager.updateMainActivityBadge(this);
     }
 
 
@@ -278,6 +287,17 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             locationManager.removeUpdates(this);
             Log.d(TAG, "已停止位置更新");
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // 停止位置更新
+        if (locationManager != null) {
+            locationManager.removeUpdates(this);
+        }
+        // 注销角标监听器
+        BadgeManager.getInstance().clearAllListeners();
     }
 
     /**
@@ -298,6 +318,11 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         // 如果需要，可以在这里将位置信息传递给其他组件
     }
 
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+        Log.d(TAG, "位置提供者状态变化: " + provider + ", 状态: " + status);
+    }
+
     /**
      * 位置提供者状态变化回调
      */
@@ -313,6 +338,14 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     public void onProviderDisabled(@NonNull String provider) {
         Log.d(TAG, "位置提供者已禁用: " + provider);
         Toast.makeText(this, "请开启" + (provider.equals(LocationManager.GPS_PROVIDER) ? "GPS" : "网络定位"), Toast.LENGTH_SHORT).show();
+    }
+
+    /**
+     * 获取红点角标View，供BadgeManager使用
+     * @return View实例
+     */
+    public View getRedDotBadgeView() {
+        return redDotBadge;
     }
 
     /**

@@ -19,6 +19,7 @@ import com.damors.zuji.R;
 import com.damors.zuji.adapter.CommentManagementAdapter;
 import com.damors.zuji.adapter.CommentManagementPagerAdapter;
 import com.damors.zuji.manager.UserManager;
+import com.damors.zuji.manager.BadgeManager;
 import com.damors.zuji.model.CommentModel;
 import com.damors.zuji.model.TrandsMsgModel;
 import com.damors.zuji.model.UserInfoModel;
@@ -157,6 +158,8 @@ public class CommentManagementActivity extends BaseActivity {
         
         // 更新角标显示
         updateUnreadCountBadge();
+        // 同步更新BadgeManager
+        BadgeManager.getInstance().updateBadgeCount(unreadCommentCount);
     }
     
     /**
@@ -185,6 +188,8 @@ public class CommentManagementActivity extends BaseActivity {
         if (unreadCommentCount > 0) {
             unreadCommentCount--;
             updateUnreadCountBadge();
+            // 同步更新BadgeManager
+            BadgeManager.getInstance().updateBadgeCount(unreadCommentCount);
             Log.d(TAG, "评论标记为已读，未读数量: " + unreadCommentCount);
         }
         
@@ -233,8 +238,10 @@ public class CommentManagementActivity extends BaseActivity {
     /**
      * 刷新未读评论数量
      */
-    public void refreshUnreadCount() {
+    private void refreshUnreadCount() {
         loadUnreadCommentCount();
+        // 确保BadgeManager同步更新
+        BadgeManager.getInstance().updateBadgeCount(unreadCommentCount);
     }
     
     @Override
@@ -242,6 +249,8 @@ public class CommentManagementActivity extends BaseActivity {
         super.onResume();
         // 页面恢复时刷新用户数据和未读数量
         refreshUserDataAndUnreadCount();
+        // 更新BadgeManager
+        BadgeManager.updateCommentManagementActivityBadge(this);
     }
     
     /**
@@ -254,5 +263,13 @@ public class CommentManagementActivity extends BaseActivity {
             // 这里可以通过接口回调的方式通知各个Fragment刷新
             Log.d(TAG, "通知子Fragment刷新数据");
         }
+    }
+    
+    /**
+     * 获取未读数量TextView，供BadgeManager使用
+     * @return TextView实例
+     */
+    public TextView getUnreadCountTextView() {
+        return tvUnreadCount;
     }
 }

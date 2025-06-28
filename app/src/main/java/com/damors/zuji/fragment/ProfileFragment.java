@@ -27,6 +27,7 @@ import com.damors.zuji.activity.SettingsActivity;
 import com.damors.zuji.activity.CommentManagementActivity;
 import com.damors.zuji.activity.LikeManagementActivity;
 import com.damors.zuji.manager.UserManager;
+import com.damors.zuji.manager.BadgeManager;
 import com.damors.zuji.model.UserInfoModel;
 import com.damors.zuji.network.ApiConfig;
 import com.damors.zuji.utils.GsonUtil;
@@ -178,6 +179,8 @@ public class ProfileFragment extends Fragment {
         super.onResume();
         UserManager.loadUserData();
         loadUserData();
+        // 更新角标状态
+        BadgeManager.updateProfileFragmentBadge(this);
     }
     
     @Override
@@ -185,6 +188,8 @@ public class ProfileFragment extends Fragment {
         super.onStart();
         // 页面启动时检查是否需要刷新用户数据
         loadUserData();
+        // 更新角标状态
+        BadgeManager.updateProfileFragmentBadge(this);
     }
     
     @Override
@@ -292,7 +297,7 @@ public class ProfileFragment extends Fragment {
                 }
             }
             
-            // 更新未读评论数标志
+            // 更新未读评论数标志 - 使用BadgeManager统一管理
             String commentNoReplyCountStr = String.valueOf(userInfoModel.getCommentNoReplyCount());
             if (!TextUtils.isEmpty(commentNoReplyCountStr) && textViewCommentUnreadCount != null) {
                 try {
@@ -305,15 +310,19 @@ public class ProfileFragment extends Fragment {
                         // 隐藏未读评论数标志
                         textViewCommentUnreadCount.setVisibility(View.GONE);
                     }
+                    // 更新BadgeManager中的角标数量
+                    BadgeManager.getInstance().updateBadgeCount(commentNoReplyCount);
                 } catch (NumberFormatException e) {
                     // 解析失败时隐藏标志
                     textViewCommentUnreadCount.setVisibility(View.GONE);
+                    BadgeManager.getInstance().updateBadgeCount(0);
                 }
             } else {
                 // 数据为空时隐藏标志
                 if (textViewCommentUnreadCount != null) {
                     textViewCommentUnreadCount.setVisibility(View.GONE);
                 }
+                BadgeManager.getInstance().updateBadgeCount(0);
             }
             
         } catch (Exception e) {
@@ -362,7 +371,15 @@ public class ProfileFragment extends Fragment {
      * 打开设置页面
      */
     private void openSettingsActivity() {
-        Intent intent = new Intent(getContext(), SettingsActivity.class);
+        Intent intent = new Intent(getActivity(), SettingsActivity.class);
         startActivity(intent);
+    }
+    
+    /**
+     * 获取评论未读数量TextView，供BadgeManager使用
+     * @return TextView实例
+     */
+    public TextView getCommentUnreadCountTextView() {
+        return textViewCommentUnreadCount;
     }
 }
